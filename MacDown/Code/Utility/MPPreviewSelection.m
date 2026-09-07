@@ -245,6 +245,11 @@ NSString *MPSelectionWatchScript(void)
     // words in a span would move every offset after them.
     @"::highlight(macdown-picked){"
     @"background-color:color-mix(in srgb, Highlight 55%, transparent)}"
+    // The same words when the editor could not find them: still marked, so
+    // the reader knows which ones it was, and plainly not the same answer.
+    @"::highlight(macdown-lost){"
+    @"background-color:color-mix(in srgb, Highlight 15%, transparent);"
+    @"text-decoration:underline dotted}"
     @"';"
     @"document.head.appendChild(style);"
     @"function blocks(){"
@@ -289,18 +294,28 @@ NSString *MPSelectionWatchScript(void)
     // How much of this block's text comes before the selection. It is what
     // tells the second "test" of a paragraph from the first, and it is
     // measured on the page because only the page knows what it shows.
-    @"var offset=-1;"
-    @"try{var r=sel.getRangeAt(0);var pre=document.createRange();"
+    @"var offset=-1,r=null;"
+    @"try{r=sel.getRangeAt(0);var pre=document.createRange();"
     @"pre.selectNodeContents(node);"
     @"pre.setEnd(r.startContainer,r.startOffset);"
     @"offset=pre.toString().length;}catch(e){offset=-1;}"
+    // Where the selection *ends*, which is not always the block it began
+    // in: three paragraphs dragged over are three blocks, and a window
+    // that stopped at the first would send the search looking for them
+    // somewhere else in the document.
+    @"var last=begin;"
+    @"try{var e=r.endContainer;"
+    @"if(e.nodeType===3)e=e.parentElement;"
+    @"while(e&&!e.hasAttribute('data-src'))e=e.parentElement;"
+    @"if(e)last=parseInt(e.getAttribute('data-src'),10);}catch(x){}"
+    @"if(last<begin)last=begin;"
     // The next block that starts somewhere *else*. A list and its first
     // item begin at the same character, and a block that ends where it
     // begins is no window to search in.
     @"var end=-1;"
-    @"for(var k=i+1;k>0&&k<all.length;k++){"
+    @"for(var k=0;k<all.length;k++){"
     @"var s=parseInt(all[k].getAttribute('data-src'),10);"
-    @"if(s>begin){end=s;break;}}"
+    @"if(s>last){end=s;break;}}"
     @"if(done&&!sel.isCollapsed)keep(sel);"
     @"window.webkit.messageHandlers.macdownSelection.postMessage("
     @"{begin:begin,end:end,cell:cell,offset:offset,"
@@ -308,14 +323,25 @@ NSString *MPSelectionWatchScript(void)
     @"action:action||''});}"
     // A cloned range, because the live one goes with the selection the
     // moment the editor takes the focus.
+    @"var picked=null;"
     @"function keep(sel){"
     @"if(typeof CSS==='undefined'||!CSS.highlights)return;"
-    @"try{CSS.highlights.set('macdown-picked',"
-    @"new Highlight(sel.getRangeAt(0).cloneRange()));}catch(e){}}"
+    @"try{picked=sel.getRangeAt(0).cloneRange();"
+    @"CSS.highlights.delete('macdown-lost');"
+    @"CSS.highlights.set('macdown-picked',new Highlight(picked));}"
+    @"catch(e){}}"
     @"function forget(){"
     @"if(typeof CSS==='undefined'||!CSS.highlights)return;"
-    @"CSS.highlights.delete('macdown-picked');}"
+    @"CSS.highlights.delete('macdown-picked');"
+    @"CSS.highlights.delete('macdown-lost');"
+    @"picked=null;}"
     @"window.MacDownForgetPicked=forget;"
+    // Said by the editor when it could not find those words in the source.
+    @"window.MacDownPickedLost=function(){"
+    @"if(typeof CSS==='undefined'||!CSS.highlights||!picked)return;"
+    @"CSS.highlights.delete('macdown-picked');"
+    @"try{CSS.highlights.set('macdown-lost',new Highlight(picked));}"
+    @"catch(e){}};"
     @"var pending=false,quiet=null;"
     // A selection that has stopped changing has been made, however it was
     // made: with the keyboard, or by a drag that ended outside the page

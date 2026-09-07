@@ -210,7 +210,10 @@ for them. Click a cell in the preview and the caret goes to that cell.
   way back — `“così”` finds `"così"`, `l’editor` finds `l'editor`, `10–12`
   finds `10--12`, `&` finds `&amp;`. A selection that cannot be placed with
   certainty leaves the editor alone rather than selecting nearly the right
-  thing. Switch it
+  thing — and says so where you are looking, by leaving the words marked in
+  the preview with a dotted line instead of the filled one. A selection over
+  several paragraphs is searched for across all of them, not only the one it
+  began in. Switch it
   off in *Rendering* if the preview should stay a page to read.
 - **A sidebar with the document outline** (⌥⌘S), for moving around a long
   file.

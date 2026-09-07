@@ -453,14 +453,94 @@ static NSString * const kMPPage =
 }
 
 
+- (void)testASelectionOverTwoBlocksAsksForBoth
+{
+    [self loadPageWithScript];
+
+    XCTestExpectation *done = [self expectationWithDescription:@"selezione"];
+    [self.webView evaluateJavaScript:
+        @"var ps = document.querySelectorAll('p');"
+        @"var range = document.createRange();"
+        @"range.setStart(ps[0].firstChild, 0);"
+        @"range.setEnd(ps[1].firstChild, 8);"
+        @"var sel = document.getSelection();"
+        @"sel.removeAllRanges(); sel.addRange(range);"
+        @"ps[1].dispatchEvent(new MouseEvent('mouseup', {bubbles: true}));"
+                   completionHandler:^(id result, NSError *error) {
+        XCTAssertNil(error);
+        [done fulfill];
+    }];
+    [self waitForExpectations:@[done] timeout:kMPPatience];
+
+    NSDictionary *body = [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    // The window covers both paragraphs: it ends where the block *after
+    // the last one touched* begins, not where the second one does.
+    XCTAssertEqualObjects(body[@"begin"], @0);
+    XCTAssertEqualObjects(body[@"end"], @60);
+}
+
+- (void)testWordsTheEditorCannotFindAreMarkedDifferently
+{
+    [self loadPageWithScript];
+    [self selectWordAndRelease:YES];
+    [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    XCTAssertTrue([self isPainted:@"macdown-picked"]);
+    XCTAssertFalse([self isPainted:@"macdown-lost"]);
+
+    // What the document says when it looked and found nothing.
+    XCTestExpectation *told = [self expectationWithDescription:@"detto"];
+    [self.webView evaluateJavaScript:@"MacDownPickedLost()"
+                   completionHandler:^(id result, NSError *error) {
+        XCTAssertNil(error);
+        [told fulfill];
+    }];
+    [self waitForExpectations:@[told] timeout:kMPPatience];
+
+    XCTAssertFalse([self isPainted:@"macdown-picked"]);
+    XCTAssertTrue([self isPainted:@"macdown-lost"]);
+}
+
+- (void)testTheNextGestureTakesBothMarksAway
+{
+    [self loadPageWithScript];
+    [self selectWordAndRelease:YES];
+    [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    XCTestExpectation *told = [self expectationWithDescription:@"detto"];
+    [self.webView evaluateJavaScript:@"MacDownPickedLost()"
+                   completionHandler:^(id r, NSError *e) { [told fulfill]; }];
+    [self waitForExpectations:@[told] timeout:kMPPatience];
+
+    XCTestExpectation *pressed = [self expectationWithDescription:@"premuto"];
+    [self.webView evaluateJavaScript:
+        @"document.querySelector('p').dispatchEvent("
+        @"new MouseEvent('mousedown',{bubbles:true}))"
+                   completionHandler:^(id r, NSError *e) { [pressed fulfill]; }];
+    [self waitForExpectations:@[pressed] timeout:kMPPatience];
+
+    XCTAssertFalse([self isPainted:@"macdown-lost"]);
+    XCTAssertFalse([self isPainted:@"macdown-picked"]);
+}
+
+
 /// What the page is painting, if anything.
 - (BOOL)highlightIsPainted
 {
+    return [self isPainted:@"macdown-picked"];
+}
+
+- (BOOL)isPainted:(NSString *)name
+{
     XCTestExpectation *asked = [self expectationWithDescription:@"chiesto"];
     __block BOOL painted = NO;
-    [self.webView evaluateJavaScript:
+    [self.webView evaluateJavaScript:[NSString stringWithFormat:
         @"(typeof CSS!=='undefined'&&CSS.highlights"
-        @"&&CSS.highlights.has('macdown-picked'))?1:0"
+        @"&&CSS.highlights.has('%@'))?1:0", name]
                    completionHandler:^(id result, NSError *error) {
         painted = [result boolValue];
         [asked fulfill];
@@ -553,6 +633,34 @@ static NSString * const kMPPage =
                                                 inBlock);
     XCTAssertEqual(range.location,
                    [source rangeOfString:@"test là"].location);
+}
+
+
+#pragma mark - Across more than one block
+
+- (void)testASelectionOverTwoParagraphsIsFoundWhole
+{
+    // What the browser hands over between two blocks is a newline; the
+    // source has a blank line, and any whitespace matches any other.
+    NSString *source = @"Primo paragrafo.\n\nSecondo paragrafo.\n";
+    NSRange both = NSMakeRange(0, source.length);
+    NSRange range = MPSourceRangeForPreviewText(source,
+        @"paragrafo.\nSecondo", both, 6);
+    XCTAssertEqualObjects([source substringWithRange:range],
+                          @"paragrafo.\n\nSecondo");
+}
+
+- (void)testAcrossTwoBlocksTheRightPairIsTaken
+{
+    // The same two words twice over: the window and the offset are what
+    // tell the second pair from the first.
+    NSString *source = @"uno.\n\ndue.\n\nuno.\n\ndue.\n";
+    NSUInteger secondPair = [source rangeOfString:@"uno.\n\ndue."
+        options:NSBackwardsSearch].location;
+    NSRange window = NSMakeRange(secondPair, source.length - secondPair);
+    NSRange range = MPSourceRangeForPreviewText(source, @"uno.\ndue.",
+                                                window, 0);
+    XCTAssertEqual(range.location, secondPair);
 }
 
 

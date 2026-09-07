@@ -2210,6 +2210,12 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
     {
         MPNote(@"  selection not placed: %lu characters",
                (unsigned long)selected.length);
+        // Said where the reader is looking: the words stay marked in the
+        // page, in the other colour. Nothing happening and nothing being
+        // said are the same thing from where they are sitting.
+        [self.preview evaluateJavaScript:
+            @"window.MacDownPickedLost&&MacDownPickedLost();"
+               completionHandler:nil];
         return;
     }
 
