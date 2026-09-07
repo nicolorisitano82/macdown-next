@@ -2160,7 +2160,10 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
             [self selectInEditor:selected
                        fromBlock:NSMakeRange(begin, end - begin)
                         rendered:reported < 0 ? NSNotFound
-                                              : (NSUInteger)reported];
+                                              : (NSUInteger)reported
+                           focus:[body[@"focus"] boolValue]
+                          delete:[body[@"action"]
+                                     isEqualToString:@"delete"]];
             return;
         }
 
@@ -2196,6 +2199,8 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
  */
 - (void)selectInEditor:(NSString *)selected fromBlock:(NSRange)block
               rendered:(NSUInteger)renderedOffset
+                 focus:(BOOL)takeFocus
+                delete:(BOOL)removeIt
 {
     NSString *text = self.editor.string ?: @"";
     NSRange range = MPSourceRangeForPreviewText(text, selected, block,
@@ -2210,9 +2215,23 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
 
     self.editor.selectedRange = range;
     [self.editor scrollRangeToVisible:range];
-    [self.editor.window makeFirstResponder:self.editor];
-    MPNote(@"selected from the preview: %lu characters at %lu",
-           (unsigned long)range.length, (unsigned long)range.location);
+    // The focus moves only when the gesture is over and the reader is
+    // plainly finished with the page: a mouse released in it, or delete
+    // pressed on what they had chosen. A selection still being extended
+    // with the keyboard is followed, not taken over.
+    if (takeFocus)
+        [self.editor.window makeFirstResponder:self.editor];
+    if (removeIt && [self.editor shouldChangeTextInRange:range
+                                       replacementString:@""])
+    {
+        [self.editor.textStorage replaceCharactersInRange:range
+                                               withString:@""];
+        [self.editor didChangeText];
+    }
+    MPNote(@"selected from the preview: %lu characters at %lu%@%@",
+           (unsigned long)range.length, (unsigned long)range.location,
+           takeFocus ? @", with the focus" : @"",
+           removeIt ? @", deleted" : @"");
 }
 
 

@@ -194,7 +194,13 @@ for them. Click a cell in the preview and the caret goes to that cell.
 - **Text selected in the preview is selected in the editor.** Pick the words
   out of the rendered page, and when you let go of the mouse the same words
   are selected in the source with the focus there: delete removes them,
-  typing replaces them. What you picked **stays marked in the preview** —
+  typing replaces them. A selection made **with the keyboard** — ⇧ and the
+  arrows, ⌘A — is followed as soon as it stops changing, and so is a drag
+  that ends outside the page where no mouse release ever reaches it; in
+  neither case does the focus move, since somebody still holding shift is
+  not finished. Pressing delete on a selection made in the preview takes
+  those words out of the source, focus and all. What you picked **stays
+  marked in the preview** —
   the focus has gone to the editor, where the page's own selection would be
   dimmed or gone — until the next time you press the mouse in the page. The words are looked for inside the block they came
   from — and *which* "test" of that paragraph, since the page says how much

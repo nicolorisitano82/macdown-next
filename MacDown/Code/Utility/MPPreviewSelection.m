@@ -258,7 +258,8 @@ NSString *MPSelectionWatchScript(void)
     @"for(var j=0;j<all.length;j++)"
     @"all[j].classList.toggle('macdown-here',all[j]===found);"
     @"};"
-    @"function report(done){"
+    @"var action='';"
+    @"function report(done,focus){"
     @"var sel=document.getSelection();"
     @"if(!sel||!sel.anchorNode)return;"
     @"var node=sel.anchorNode;"
@@ -291,7 +292,8 @@ NSString *MPSelectionWatchScript(void)
     @"if(done&&!sel.isCollapsed)keep(sel);"
     @"window.webkit.messageHandlers.macdownSelection.postMessage("
     @"{begin:begin,end:end,cell:cell,offset:offset,"
-    @"text:done?sel.toString():'',done:!!done});}"
+    @"text:done?sel.toString():'',done:!!done,focus:!!focus,"
+    @"action:action||''});}"
     // A cloned range, because the live one goes with the selection the
     // moment the editor takes the focus.
     @"function keep(sel){"
@@ -302,22 +304,44 @@ NSString *MPSelectionWatchScript(void)
     @"if(typeof CSS==='undefined'||!CSS.highlights)return;"
     @"CSS.highlights.delete('macdown-picked');}"
     @"window.MacDownForgetPicked=forget;"
-    @"var pending=false;"
+    @"var pending=false,quiet=null;"
+    // A selection that has stopped changing has been made, however it was
+    // made: with the keyboard, or by a drag that ended outside the page
+    // where no mouseup of ours ever arrives. The editor follows it, but
+    // the focus does not move — somebody holding shift and an arrow key is
+    // not finished, and a reader who paused mid-drag is not either.
+    @"function settle(){"
+    @"clearTimeout(quiet);"
+    @"quiet=setTimeout(function(){report(true,false);},400);}"
     // setTimeout rather than requestAnimationFrame: a frame callback only
     // arrives while the page is being drawn, and a preview whose pane is
     // collapsed is not. Measured — headless, nothing ever reported.
     @"document.addEventListener('selectionchange',function(){"
+    @"settle();"
     @"if(pending)return;pending=true;"
-    @"setTimeout(function(){pending=false;report(false);},0);"
+    @"setTimeout(function(){pending=false;report(false,false);},0);"
     @"});"
-    // The end of the gesture, and the only moment the selected text is
-    // worth sending: reporting it while the pointer is still down would
-    // take the focus away from a reader in the middle of dragging one.
+    // The end of a gesture made with the mouse, and the one moment the
+    // focus follows the selection: reporting it while the pointer is still
+    // down would take the focus away from somebody mid-drag.
     @"document.addEventListener('mouseup',function(){"
-    @"setTimeout(function(){report(true);},0);"
+    @"clearTimeout(quiet);"
+    @"setTimeout(function(){report(true,true);},0);"
     @"});"
     // The start of the next gesture is the moment the last one stops being
     // what the reader means.
     @"document.addEventListener('mousedown',forget);"
+    // Delete, pressed on a selection made in the preview, means the same
+    // thing it means anywhere: take those words out. The page cannot do
+    // it, so it says so and the editor does it — with the focus, since
+    // what comes next is typing.
+    @"document.addEventListener('keydown',function(e){"
+    @"if(e.key!=='Backspace'&&e.key!=='Delete')return;"
+    @"var sel=document.getSelection();"
+    @"if(!sel||sel.isCollapsed)return;"
+    @"e.preventDefault();"
+    @"clearTimeout(quiet);"
+    @"action='delete';report(true,true);action='';"
+    @"});"
     @"})();";
 }

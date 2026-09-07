@@ -334,6 +334,59 @@ static NSString * const kMPPage =
 }
 
 
+- (void)testASelectionThatStopsChangingIsReportedWithoutTheFocus
+{
+    // The keyboard, or a drag released outside the page: no mouseup of ours
+    // ever arrives, and the selection simply stops changing.
+    [self loadPageWithScript];
+    [self selectOccurrence:1 release:NO];
+
+    NSDictionary *body = [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    XCTAssertEqualObjects(body[@"text"], @"test");
+    // Followed, not taken over: somebody holding shift and an arrow key is
+    // not finished.
+    XCTAssertFalse([body[@"focus"] boolValue]);
+    XCTAssertEqualObjects(body[@"action"], @"");
+    // And what they picked is marked, as it is after a mouse gesture.
+    XCTAssertTrue([self highlightIsPainted]);
+}
+
+- (void)testAMouseGestureAsksForTheFocus
+{
+    [self loadPageWithScript];
+    [self selectWordAndRelease:YES];
+
+    NSDictionary *body = [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue] && [b[@"focus"] boolValue];
+    }];
+    XCTAssertEqualObjects(body[@"text"], @"test");
+}
+
+- (void)testDeletePressedOnASelectionSaysSo
+{
+    [self loadPageWithScript];
+    [self selectOccurrence:1 release:NO];
+
+    XCTestExpectation *pressed = [self expectationWithDescription:@"canc"];
+    [self.webView evaluateJavaScript:
+        @"document.dispatchEvent(new KeyboardEvent('keydown',"
+        @"{key:'Backspace',bubbles:true,cancelable:true}))"
+                   completionHandler:^(id result, NSError *error) {
+        [pressed fulfill];
+    }];
+    [self waitForExpectations:@[pressed] timeout:kMPPatience];
+
+    NSDictionary *body = [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"action"] isEqualToString:@"delete"];
+    }];
+    XCTAssertEqualObjects(body[@"text"], @"test");
+    // Deleting is the end of it, and what comes next is typing.
+    XCTAssertTrue([body[@"focus"] boolValue]);
+}
+
+
 /// What the page is painting, if anything.
 - (BOOL)highlightIsPainted
 {
