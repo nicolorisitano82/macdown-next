@@ -239,6 +239,12 @@ NSString *MPSelectionWatchScript(void)
     @"tr.macdown-here>:first-child::before{content:\"\";position:absolute;"
     @"left:-14px;top:0;bottom:0;width:3px;border-radius:2px;"
     @"background:currentColor;opacity:0.35}"
+    // What was selected stays visible after the focus goes to the editor,
+    // where the native selection would be dimmed or gone. Painted through
+    // the highlight API rather than by changing the page: wrapping the
+    // words in a span would move every offset after them.
+    @"::highlight(macdown-picked){"
+    @"background-color:color-mix(in srgb, Highlight 55%, transparent)}"
     @"';"
     @"document.head.appendChild(style);"
     @"function blocks(){"
@@ -282,9 +288,20 @@ NSString *MPSelectionWatchScript(void)
     @"offset=pre.toString().length;}catch(e){offset=-1;}"
     @"var end=(i>=0&&i+1<all.length)"
     @"?parseInt(all[i+1].getAttribute('data-src'),10):-1;"
+    @"if(done&&!sel.isCollapsed)keep(sel);"
     @"window.webkit.messageHandlers.macdownSelection.postMessage("
     @"{begin:begin,end:end,cell:cell,offset:offset,"
     @"text:done?sel.toString():'',done:!!done});}"
+    // A cloned range, because the live one goes with the selection the
+    // moment the editor takes the focus.
+    @"function keep(sel){"
+    @"if(typeof CSS==='undefined'||!CSS.highlights)return;"
+    @"try{CSS.highlights.set('macdown-picked',"
+    @"new Highlight(sel.getRangeAt(0).cloneRange()));}catch(e){}}"
+    @"function forget(){"
+    @"if(typeof CSS==='undefined'||!CSS.highlights)return;"
+    @"CSS.highlights.delete('macdown-picked');}"
+    @"window.MacDownForgetPicked=forget;"
     @"var pending=false;"
     // setTimeout rather than requestAnimationFrame: a frame callback only
     // arrives while the page is being drawn, and a preview whose pane is
@@ -299,5 +316,8 @@ NSString *MPSelectionWatchScript(void)
     @"document.addEventListener('mouseup',function(){"
     @"setTimeout(function(){report(true);},0);"
     @"});"
+    // The start of the next gesture is the moment the last one stops being
+    // what the reader means.
+    @"document.addEventListener('mousedown',forget);"
     @"})();";
 }

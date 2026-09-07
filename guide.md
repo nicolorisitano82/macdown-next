@@ -194,7 +194,9 @@ for them. Click a cell in the preview and the caret goes to that cell.
 - **Text selected in the preview is selected in the editor.** Pick the words
   out of the rendered page, and when you let go of the mouse the same words
   are selected in the source with the focus there: delete removes them,
-  typing replaces them. The words are looked for inside the block they came
+  typing replaces them. What you picked **stays marked in the preview** —
+  the focus has gone to the editor, where the page's own selection would be
+  dimmed or gone — until the next time you press the mouse in the page. The words are looked for inside the block they came
   from — and *which* "test" of that paragraph, since the page says how much
   of its own text came before the selection; a selection that
   crosses an emphasis takes the asterisks with it, since that is what the

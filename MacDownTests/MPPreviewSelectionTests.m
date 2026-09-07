@@ -334,6 +334,57 @@ static NSString * const kMPPage =
 }
 
 
+/// What the page is painting, if anything.
+- (BOOL)highlightIsPainted
+{
+    XCTestExpectation *asked = [self expectationWithDescription:@"chiesto"];
+    __block BOOL painted = NO;
+    [self.webView evaluateJavaScript:
+        @"(typeof CSS!=='undefined'&&CSS.highlights"
+        @"&&CSS.highlights.has('macdown-picked'))?1:0"
+                   completionHandler:^(id result, NSError *error) {
+        painted = [result boolValue];
+        [asked fulfill];
+    }];
+    [self waitForExpectations:@[asked] timeout:kMPPatience];
+    return painted;
+}
+
+- (void)testWhatWasSelectedStaysPaintedWhenTheFocusLeaves
+{
+    [self loadPageWithScript];
+    XCTAssertFalse([self highlightIsPainted]);
+
+    [self selectWordAndRelease:YES];
+    [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    // The editor is about to take the focus, and the native selection with
+    // it: this is what is left behind for the reader to see.
+    XCTAssertTrue([self highlightIsPainted]);
+}
+
+- (void)testTheNextGestureTakesTheMarkAway
+{
+    [self loadPageWithScript];
+    [self selectWordAndRelease:YES];
+    [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    XCTAssertTrue([self highlightIsPainted]);
+
+    XCTestExpectation *pressed = [self expectationWithDescription:@"premuto"];
+    [self.webView evaluateJavaScript:
+        @"document.querySelector('p').dispatchEvent("
+        @"new MouseEvent('mousedown',{bubbles:true}))"
+                   completionHandler:^(id result, NSError *error) {
+        [pressed fulfill];
+    }];
+    [self waitForExpectations:@[pressed] timeout:kMPPatience];
+    XCTAssertFalse([self highlightIsPainted]);
+}
+
+
 #pragma mark - Which occurrence of the same words
 
 /// Where the reader was, counted in the *rendered* text of the block.
