@@ -6,7 +6,9 @@
 #import "MDQuickLookProvider.h"
 
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
+#import <os/log.h>
 
+#import "MDDiagramRenderer.h"
 #import "MDPreviewPage.h"
 #import "MDQuickLookStrings.h"
 
@@ -20,6 +22,16 @@ static const NSUInteger kMDMarkdownAtMost = 2 * 1024 * 1024;
 
 /// The size Finder is asked to open the preview at.
 static const CGSize kMDPreviewSize = (CGSize){800.0, 1000.0};
+
+/// How long the diagrams may take, all of them together. Quick Look is
+/// waiting, and a preview that arrives late has not arrived; past this the
+/// fences that are left stay as source, which is what they were before.
+static const NSTimeInterval kMDDrawingBudget = 2.5;
+
+/// How many diagrams a glance is worth drawing, and how long one may be.
+/// A document with fifty diagrams in it is not a document being glanced at.
+static const NSUInteger kMDDiagramsAtMost = 8;
+static const NSUInteger kMDDiagramSourceAtMost = 16 * 1024;
 
 /// The same reading of Markdown the app's own preview uses, minus the parts
 /// that need something loaded from the network to show at all.
@@ -61,17 +73,72 @@ static NSString *MDBodyForMarkdown(NSString *markdown)
                    completionHandler:(void (^)(QLPreviewReply *, NSError *))handler
 {
     NSURL *fileURL = request.fileURL;
-    QLPreviewReply *reply = [[QLPreviewReply alloc]
+    NSError *error = nil;
+    NSString *markdown = [self markdownAt:fileURL error:&error];
+    if (!markdown)
+    {
+        os_log_error(OS_LOG_DEFAULT, "MacDown preview: not read, %{public}@",
+                     error.localizedDescription ?: @"no reason given");
+        handler(nil, error);
+        return;
+    }
+
+    // The Markdown is turned into HTML here rather than inside the reply's
+    // block, because the diagrams in it have to be drawn before there is a
+    // page to hand over, and drawing them takes a web view and a moment.
+    NSString *body = MDBodyForMarkdown(MDMarkdownWithoutFrontMatter(markdown));
+    NSArray<MDDiagramFence *> *fences = [self drawableFencesIn:body];
+    if (!fences.count)
+    {
+        handler([self replyForBody:body markdown:markdown documentAt:fileURL],
+                nil);
+        return;
+    }
+
+    NSMutableArray<NSString *> *sources =
+        [NSMutableArray arrayWithCapacity:fences.count];
+    for (MDDiagramFence *fence in fences)
+        [sources addObject:fence.source];
+
+    NSURL *mermaid = [[NSBundle bundleForClass:[self class]]
+        URLForResource:@"mermaid.min" withExtension:@"js"];
+    [MDDiagramRenderer drawSources:sources
+                     mermaidScript:mermaid
+                            within:kMDDrawingBudget
+                        completion:^(NSArray *drawings) {
+        NSString *drawn = MDHTMLByDrawingFences(body, fences, drawings);
+        handler([self replyForBody:drawn markdown:markdown documentAt:fileURL],
+                nil);
+    }];
+}
+
+
+/// The fences worth drawing: the first few, and none of them enormous.
+- (NSArray<MDDiagramFence *> *)drawableFencesIn:(NSString *)body
+{
+    NSMutableArray<MDDiagramFence *> *wanted = [NSMutableArray array];
+    for (MDDiagramFence *fence in MDDiagramFencesInHTML(body))
+    {
+        if (fence.source.length > kMDDiagramSourceAtMost)
+            continue;               // left as source, and honestly so
+        [wanted addObject:fence];
+        if (wanted.count >= kMDDiagramsAtMost)
+            break;
+    }
+    return wanted;
+}
+
+
+/// The reply for a page that is ready to be built.
+- (QLPreviewReply *)replyForBody:(NSString *)body
+                        markdown:(NSString *)markdown
+                      documentAt:(NSURL *)fileURL
+{
+    return [[QLPreviewReply alloc]
         initWithDataOfContentType:UTTypeHTML
                       contentSize:kMDPreviewSize
                 dataCreationBlock:^NSData *(QLPreviewReply *reply,
                                             NSError **error) {
-        NSString *markdown = [self markdownAt:fileURL error:error];
-        if (!markdown)
-            return nil;
-
-        NSString *body =
-            MDBodyForMarkdown(MDMarkdownWithoutFrontMatter(markdown));
         MDPreviewPage *page =
             [MDPreviewPage pageForBody:body
                                  title:MDPreviewTitleForMarkdown(markdown,
@@ -82,7 +149,6 @@ static NSString *MDBodyForMarkdown(NSString *markdown)
         reply.stringEncoding = NSUTF8StringEncoding;
         return [page.html dataUsingEncoding:NSUTF8StringEncoding];
     }];
-    handler(reply, nil);
 }
 
 

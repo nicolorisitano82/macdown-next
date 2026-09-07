@@ -93,6 +93,40 @@ niente script, niente immagini remote, nessun modo di mandare fuori quello
 che ha letto. E il tempo di lettura ha un tetto: due megabyte di testo, poi
 la pagina dice che il resto non è mostrato.
 
+### I diagrammi mermaid, disegnati prima di consegnare la pagina
+
+Un recinto ```` ```mermaid ```` in anteprima era codice: la pagina non ha
+script — `default-src 'none'` e niente da eseguire — quindi il diagramma non
+può disegnarsi lì. Adesso lo disegna **l'estensione**, in una web view sua,
+e quello che arriva nella pagina è SVG finito.
+
+Come funziona, in ordine: si trovano i recinti nell'HTML (`MDDiagramFencesInHTML`),
+si disfa l'escaping che hoedown ci ha messo — `A --&gt; B` non è un diagramma
+per mermaid —, si carica una pagina con `mermaid.min.js` dentro e si chiede
+un disegno per volta con `callAsyncJavaScript`. Poi ogni recinto viene
+sostituito dal suo SVG, ripulito di tutto quello che potrebbe girare:
+`<script>`, attributi `on*`, `href="javascript:"`. mermaid non ne mette, ma
+il diagramma viene da un documento che arriva da qualunque parte, e quella
+pagina è l'unico posto dell'estensione dove il markup non è scappato.
+
+I numeri, misurati dentro la sandbox: la pagina si carica in **312 ms**, due
+diagrammi si disegnano in **428 ms** in tutto. Il tetto è **2,5 secondi per
+tutti** i diagrammi, al massimo **otto** per documento e 16 KB di sorgente
+ciascuno: un'anteprima che arriva tardi non è arrivata, e quello che non si
+disegna in tempo resta il suo recinto — cioè quello che l'anteprima mostrava
+prima.
+
+**E qui il pedaggio**: WebKit non chiude un caricamento senza
+`com.apple.security.network.client`, nemmeno per una pagina costruita in
+memoria. Misurato: con il permesso, disegnati due diagrammi su due; senza,
+`didFinishNavigation` non arriva mai e dopo 2,7 secondi il conto è zero su
+due. Quindi l'estensione ha il permesso di rete e **non lo usa**: mermaid è
+letto dal bundle, la pagina del disegno è una stringa, e la pagina che il
+Finder riceve continua a portare `default-src 'none'`.
+
+Graphviz (`dot`, `neato`, e gli altri) userebbe la stessa macchina —
+`viz.js` è già fra le estensioni dell'app — e per adesso resta sorgente.
+
 ---
 
 ## Tre inciampi da ricordare, se l'estensione «non compare»

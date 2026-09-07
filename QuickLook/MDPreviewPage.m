@@ -22,7 +22,11 @@ static NSString * const kMDPageStyle =
     @"img { max-width: 100%; height: auto; }\n"
     @"pre { overflow-x: auto; }\n"
     @"li.task { list-style: none; margin-left: -1.2em; }\n"
-    @"li.task > input { margin-right: 0.4em; vertical-align: baseline; }\n";
+    @"li.task > input { margin-right: 0.4em; vertical-align: baseline; }\n"
+    // A drawn diagram is SVG in the page rather than a picture in the
+    // reply, so it needs telling that it may not be wider than the column.
+    @".macdown-diagram { margin: 1em 0; text-align: center; }\n"
+    @".macdown-diagram svg { max-width: 100%; height: auto; }\n";
 
 
 NS_INLINE NSString *MDTrimmed(NSString *line)
