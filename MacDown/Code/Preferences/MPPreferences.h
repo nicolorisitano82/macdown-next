@@ -116,6 +116,8 @@ extern NSString * const MPDidDetectFreshInstallationNotification;
 /// Whether the card on a web link asks the page what it is. Off: the card
 /// takes the address apart instead, and nothing is fetched.
 @property (assign) BOOL previewFetchesLinkPages;
+/// Whether selecting text in the preview selects it in the editor too.
+@property (assign) BOOL previewSelectionSelectsSource;
 
 /// Whether the application looks for a newer release by itself, once a day.
 @property (assign) BOOL updatesCheckAutomatically;

@@ -49,6 +49,7 @@
 #import "MPLinkPreview.h"
 #import "MPLinkPreviewViewController.h"
 #import "MPWebClipper.h"
+#import "MPPreviewSelection.h"
 #import "MPRichExport.h"
 #import "MPTextBundle.h"
 #import "MPSendTo.h"
@@ -1228,73 +1229,10 @@ static NSString * const kMPScrollReporterSource =
     @"schedule();"
     @"})();";
 
-/** Keeps the two panes pointing at the same block.
- *
- * The blocks carry data-src, the byte offset they were rendered from; see
- * the patch to hoedown. Everything here works off that.
- *
- * The style is injected rather than added to the renderer's stylesheets on
- * purpose: a bar marking where the reader is working is an aid to editing,
- * and has no business in an exported document.
+/* The script that keeps the two panes pointing at the same block, and
+ * reports what was selected, lives in MPPreviewSelection: a page script
+ * nobody can call from a test is a page script nobody has tried.
  */
-static NSString * const kMPSelectionSource =
-    @"(function(){"
-    @"var style=document.createElement('style');"
-    @"style.textContent='"
-    // Never on a table row. An absolutely positioned pseudo-element is
-    // still a child of the row, and a row lays its children out in cells:
-    // the browser makes an anonymous one to hold it, and the whole header
-    // shifts a column to the right. The row hangs its bar from its first
-    // cell instead, which is an ordinary block and takes one happily.
-    @"[data-src]:not(tr){position:relative}"
-    @"tr.macdown-here>:first-child{position:relative}"
-    @".macdown-here:not(tr)::before,"
-    @"tr.macdown-here>:first-child::before{content:\"\";position:absolute;"
-    @"left:-14px;top:0;bottom:0;width:3px;border-radius:2px;"
-    @"background:currentColor;opacity:0.35}"
-    @"';"
-    @"document.head.appendChild(style);"
-    @"function blocks(){"
-    @"return Array.prototype.slice.call("
-    @"document.querySelectorAll('[data-src]'));}"
-    @"window.MacDownMarkHere=function(offset){"
-    @"var all=blocks(),found=null;"
-    @"for(var i=0;i<all.length;i++){"
-    @"if(parseInt(all[i].getAttribute('data-src'),10)<=offset)found=all[i];"
-    @"else break;}"
-    @"for(var j=0;j<all.length;j++)"
-    @"all[j].classList.toggle('macdown-here',all[j]===found);"
-    @"};"
-    @"function report(){"
-    @"var sel=document.getSelection();"
-    @"if(!sel||!sel.anchorNode)return;"
-    @"var node=sel.anchorNode;"
-    @"if(node.nodeType===3)node=node.parentElement;"
-    // Which cell of its row, when the click landed in one. Only for a
-    // click that selects nothing: dragging across a table is someone
-    // copying out of the preview, and taking the focus away mid-drag
-    // would throw the selection they were making.
-    @"var cell=-1;"
-    @"if(sel.isCollapsed){"
-    @"var c=node;"
-    @"while(c&&c.tagName!=='TD'&&c.tagName!=='TH'&&c.tagName!=='TABLE')"
-    @"c=c.parentElement;"
-    @"if(c&&c.tagName!=='TABLE'&&c.parentElement)"
-    @"cell=Array.prototype.indexOf.call(c.parentElement.children,c);}"
-    @"while(node&&!node.hasAttribute('data-src'))node=node.parentElement;"
-    @"if(!node)return;"
-    @"var all=blocks(),i=all.indexOf(node);"
-    @"var begin=parseInt(node.getAttribute('data-src'),10);"
-    @"var end=(i>=0&&i+1<all.length)"
-    @"?parseInt(all[i+1].getAttribute('data-src'),10):-1;"
-    @"window.webkit.messageHandlers.macdownSelection.postMessage("
-    @"{begin:begin,end:end,cell:cell});}"
-    @"var pending=false;"
-    @"document.addEventListener('selectionchange',function(){"
-    @"if(pending)return;pending=true;"
-    @"requestAnimationFrame(function(){pending=false;report();});"
-    @"});"
-    @"})();";
 
 
 - (WKWebView *)buildPreviewWebView
@@ -1319,7 +1257,7 @@ static NSString * const kMPSelectionSource =
     [content addUserScript:reporter];
 
     WKUserScript *selection = [[WKUserScript alloc]
-        initWithSource:kMPSelectionSource
+        initWithSource:MPSelectionWatchScript()
          injectionTime:WKUserScriptInjectionTimeAtDocumentEnd
       forMainFrameOnly:YES];
     [content addUserScript:selection];
@@ -2192,6 +2130,20 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
 
         self.editor.activeSourceRange = NSMakeRange(begin, end - begin);
 
+        // Text selected in the preview, once the gesture is over: the same
+        // words are selected in the editor, so pressing delete removes
+        // what the reader was looking at and typing replaces it.
+        NSString *selected = body[@"text"];
+        if ([body[@"done"] boolValue]
+                && [selected isKindOfClass:[NSString class]]
+                && selected.length
+                && self.preferences.previewSelectionSelectsSource)
+        {
+            [self selectInEditor:selected fromBlock:NSMakeRange(begin,
+                                                               end - begin)];
+            return;
+        }
+
         // A click in a cell puts the caret in that cell. The block the
         // click landed in is the table row, so its offset and the cell's
         // position in the row are between them enough to find it.
@@ -2208,6 +2160,37 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
         MPGetPreviewLoadingCompletionHandler(self)();
         return;
     }
+}
+
+
+/** Selects, in the editor, the text somebody selected in the preview.
+ *
+ * The block it came from is the search window; MPPreviewSelection decides
+ * what the rendered text corresponds to in the source, and says so or says
+ * nothing. Nothing is what happens when it cannot tell: a selection placed
+ * nearly right would have the next keystroke delete the wrong words.
+ *
+ * The focus follows the selection. That is the point of the whole thing —
+ * the reader picked the words out of the preview in order to change them —
+ * and it is why this waits for the end of the gesture.
+ */
+- (void)selectInEditor:(NSString *)selected fromBlock:(NSRange)block
+{
+    NSString *text = self.editor.string ?: @"";
+    NSRange range = MPSourceRangeForPreviewText(text, selected, block);
+    if (range.location == NSNotFound
+            || NSMaxRange(range) > self.editor.textStorage.length)
+    {
+        MPNote(@"  selection not placed: %lu characters",
+               (unsigned long)selected.length);
+        return;
+    }
+
+    self.editor.selectedRange = range;
+    [self.editor scrollRangeToVisible:range];
+    [self.editor.window makeFirstResponder:self.editor];
+    MPNote(@"selected from the preview: %lu characters at %lu",
+           (unsigned long)range.length, (unsigned long)range.location);
 }
 
 

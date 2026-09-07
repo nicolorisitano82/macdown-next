@@ -191,6 +191,15 @@ for them. Click a cell in the preview and the caret goes to that cell.
 - **The two panes point at the same place.** Put the caret in a paragraph
   and a rule marks it in the preview; select in the preview and a rule marks
   it in the editor's margin. Scrolling is synchronised.
+- **Text selected in the preview is selected in the editor.** Pick the words
+  out of the rendered page, and when you let go of the mouse the same words
+  are selected in the source with the focus there: delete removes them,
+  typing replaces them. The words are looked for inside the block they came
+  from, so the third "test" of a document is the third one; a selection that
+  crosses an emphasis takes the asterisks with it, since that is what the
+  source says; and a selection that cannot be placed with certainty leaves
+  the editor alone rather than selecting nearly the right thing. Switch it
+  off in *Rendering* if the preview should stay a page to read.
 - **A sidebar with the document outline** (⌥⌘S), for moving around a long
   file.
 - **Seven styles** for the rendered page and **fifteen editor themes**, all

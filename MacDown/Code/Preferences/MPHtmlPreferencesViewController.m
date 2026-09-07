@@ -465,6 +465,9 @@ static const CGFloat kMPNoteWidth = 400.0;
             @"Ask a web page what it is when the pointer rests on its link",
             @"Preference") key:@"previewFetchesLinkPages"],
         [self checkboxWithTitle:NSLocalizedString(
+            @"Selecting text in the preview selects it in the editor",
+            @"Preference") key:@"previewSelectionSelectsSource"],
+        [self checkboxWithTitle:NSLocalizedString(
             @"Offer the writing commands, using a local model",
             @"Preference") key:@"editorWritingHelp"],
         [self noteWithText:NSLocalizedString(

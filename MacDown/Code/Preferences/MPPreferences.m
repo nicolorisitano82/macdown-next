@@ -64,6 +64,7 @@ static NSString * const kMPDefaultHtmlStyleName = @"GitHub2";
         // under the pointer, and the switch is in the same panel as the
         // rest of what reaches the network.
         @"previewFetchesLinkPages": @YES,
+        @"previewSelectionSelectsSource": @YES,
     }];
 
     [self cleanupObsoleteAutosaveValues];
@@ -159,6 +160,7 @@ static NSString * const kMPDefaultHtmlStyleName = @"GitHub2";
 @dynamic editorPasteAsMarkdown;
 @dynamic disabledPlugIns;
 @dynamic previewFetchesLinkPages;
+@dynamic previewSelectionSelectsSource;
 @dynamic updatesCheckAutomatically;
 @dynamic updatesLastCheck;
 @dynamic htmlCodeBlockAccessory;
