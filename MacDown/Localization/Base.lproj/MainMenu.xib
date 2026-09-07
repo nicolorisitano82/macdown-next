@@ -158,6 +158,18 @@
                                                 <action selector="exportDocx:" target="-1" id="mD2-Ex-Dcx"/>
                                             </connections>
                                         </menuItem>
+                                        <menuItem title="Textbundle…" id="tbd-Ex-Itm">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="exportTextBundle:" target="-1" id="tbd-Ex-Act"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Textpack…" id="tpk-Ex-Itm">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="exportTextPack:" target="-1" id="tpk-Ex-Act"/>
+                                            </connections>
+                                        </menuItem>
                                     </items>
                                 </menu>
                             </menuItem>

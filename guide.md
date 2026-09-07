@@ -338,6 +338,8 @@ clipboard, if there is one — and writes the page as a Markdown file.
 | **OpenDocument (.odt)** | Tables and styling survive AppKit's writer; the pictures it drops are put back |
 | **Rich Text (.rtf)** | One file, pictures included — Cocoa only writes them into RTFD, so they are planted as `\pict` |
 | **EPUB 3.3** | Images copied into the package, table of contents from the headings |
+| **Textbundle** | The Markdown as written, with its pictures — a folder Finder shows as one item |
+| **Textpack** | The same, zipped: what travels through mail |
 | **Copy HTML** (⌥⌘C) | The rendered page on the clipboard |
 
 - **Word that survives the trip.** AppKit's own writer drops pictures,
@@ -345,6 +347,17 @@ clipboard, if there is one — and writes the page as a Markdown file.
   code block shading, and names a Mac-only font with nothing to substitute
   it. Each of those is repaired in the file afterwards, so tables arrive as
   tables and code arrives monospaced on Windows too.
+- **Textbundle and Textpack keep the Markdown Markdown.** Every other
+  export here goes through the rendered page; these two carry the source as
+  written, with the links to local pictures pointed at `assets/`. It is
+  [somebody else's format](http://textbundle.org) on purpose — Bear,
+  Ulysses, iA Writer and Marked read it — and what comes out still works
+  taken apart by hand: the Markdown is Markdown, the pictures are files, the
+  links between them are relative, and nothing has to read `info.json` to
+  make sense of it. A picture used from two folders keeps both, numbered; a
+  picture kept on the web stays an address, and the export says which ones.
+  A textbundle holds one text, so links to neighbouring documents are left
+  as they are written.
 - **Pictures kept on the web travel too.** A .docx and an EPUB are packages,
   so a picture they do not carry is a picture nobody sees. Both exports
   fetch the remote ones first, with a sheet while they wait and a count of

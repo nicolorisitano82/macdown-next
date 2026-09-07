@@ -14,6 +14,8 @@
 		D2C000000000000000000034 /* MPSendToTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C000000000000000000033 /* MPSendToTests.m */; };
 		D2C000000000000000000022 /* MPExporterPlugInTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C000000000000000000021 /* MPExporterPlugInTests.m */; };
 		D2C000000000000000000012 /* MPRichExport.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C000000000000000000011 /* MPRichExport.m */; };
+		1F0D9E0100000000000000A1 /* MPTextBundle.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000000A3 /* MPTextBundle.m */; };
+		1F0D9E0100000000000000A2 /* MPTextBundleTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000000A5 /* MPTextBundleTests.m */; };
 		D2C000000000000000000014 /* MPRichExportTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C000000000000000000013 /* MPRichExportTests.m */; };
 		D2C000000000000000000004 /* MPHeadingFixTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C000000000000000000003 /* MPHeadingFixTests.m */; };
 		D2C000000000000000000002 /* MPHeadingSpaceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C000000000000000000001 /* MPHeadingSpaceTests.m */; };
@@ -297,6 +299,9 @@
 		D2C000000000000000000021 /* MPExporterPlugInTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPExporterPlugInTests.m; sourceTree = "<group>"; };
 		D2C000000000000000000010 /* MPRichExport.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPRichExport.h; sourceTree = "<group>"; };
 		D2C000000000000000000011 /* MPRichExport.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPRichExport.m; sourceTree = "<group>"; };
+		1F0D9E0100000000000000A3 /* MPTextBundle.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPTextBundle.m; sourceTree = "<group>"; };
+		1F0D9E0100000000000000A4 /* MPTextBundle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPTextBundle.h; sourceTree = "<group>"; };
+		1F0D9E0100000000000000A5 /* MPTextBundleTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPTextBundleTests.m; sourceTree = "<group>"; };
 		D2C000000000000000000013 /* MPRichExportTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPRichExportTests.m; sourceTree = "<group>"; };
 		D2C000000000000000000003 /* MPHeadingFixTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPHeadingFixTests.m; sourceTree = "<group>"; };
 		D2C000000000000000000001 /* MPHeadingSpaceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPHeadingSpaceTests.m; sourceTree = "<group>"; };
@@ -995,6 +1000,8 @@
 				D2C000000000000000000031 /* MPSendTo.m */,
 				D2C000000000000000000020 /* MPExporterPlugIn.h */,
 				D2C000000000000000000010 /* MPRichExport.h */,
+				1F0D9E0100000000000000A4 /* MPTextBundle.h */,
+				1F0D9E0100000000000000A3 /* MPTextBundle.m */,
 				D2C000000000000000000011 /* MPRichExport.m */,
 				D2B0000000000000000000F3 /* MPUpdate.h */,
 				D2B0000000000000000000F4 /* MPUpdate.m */,
@@ -1295,6 +1302,7 @@
 				D2C000000000000000000033 /* MPSendToTests.m */,
 				D2C000000000000000000021 /* MPExporterPlugInTests.m */,
 				D2C000000000000000000013 /* MPRichExportTests.m */,
+				1F0D9E0100000000000000A5 /* MPTextBundleTests.m */,
 				D2C000000000000000000003 /* MPHeadingFixTests.m */,
 				D2C000000000000000000001 /* MPHeadingSpaceTests.m */,
 				D2B0000000000000000000FD /* MPUpdateTests.m */,
@@ -1840,6 +1848,7 @@
 				D2C000000000000000000042 /* MPInstructionFiles.m in Sources */,
 				D2C000000000000000000032 /* MPSendTo.m in Sources */,
 				D2C000000000000000000012 /* MPRichExport.m in Sources */,
+				1F0D9E0100000000000000A1 /* MPTextBundle.m in Sources */,
 				D2B0000000000000000000F8 /* MPUpdate.m in Sources */,
 				D2B0000000000000000000F9 /* MPUpdateController.m in Sources */,
 				D2B0000000000000000000FC /* MPUpdatePreferencesViewController.m in Sources */,
@@ -1890,6 +1899,7 @@
 				D2C000000000000000000034 /* MPSendToTests.m in Sources */,
 				D2C000000000000000000022 /* MPExporterPlugInTests.m in Sources */,
 				D2C000000000000000000014 /* MPRichExportTests.m in Sources */,
+				1F0D9E0100000000000000A2 /* MPTextBundleTests.m in Sources */,
 				D2C000000000000000000004 /* MPHeadingFixTests.m in Sources */,
 				D2C000000000000000000002 /* MPHeadingSpaceTests.m in Sources */,
 				D2B0000000000000000000FE /* MPUpdateTests.m in Sources */,

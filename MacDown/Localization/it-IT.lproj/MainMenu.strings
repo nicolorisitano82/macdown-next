@@ -453,3 +453,9 @@
 
 /* Class = "NSMenuItem"; title = "Clear Menu"; ObjectID = "vNY-rz-j42"; */
 "vNY-rz-j42.title" = "Svuota il menù";
+
+/* Class = "NSMenuItem"; title = "Textbundle…"; ObjectID = "tbd-Ex-Itm"; */
+"tbd-Ex-Itm.title" = "Textbundle…";
+
+/* Class = "NSMenuItem"; title = "Textpack…"; ObjectID = "tpk-Ex-Itm"; */
+"tpk-Ex-Itm.title" = "Textpack…";

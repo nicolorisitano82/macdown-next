@@ -486,3 +486,8 @@
 /* Righe di elenco composte a mano */
 "%@ · %lu lines" = "%@ · %lu righe";
 "%@ · line %lu" = "%@ · riga %lu";
+
+/* Textbundle e Textpack */
+"The package could not be written" = "Il pacchetto non si è potuto scrivere";
+"The pictures on the web stayed as addresses" = "Le immagini sul web sono restate indirizzi";
+"A package carries the pictures kept beside the document. These are addresses, and they are still addresses inside it:\n\n%@" = "Un pacchetto porta con sé le immagini tenute accanto al documento. Queste sono indirizzi, e dentro restano indirizzi:\n\n%@";

@@ -50,6 +50,7 @@
 #import "MPLinkPreviewViewController.h"
 #import "MPWebClipper.h"
 #import "MPRichExport.h"
+#import "MPTextBundle.h"
 #import "MPSendTo.h"
 #import "MPInstructionFiles.h"
 #import "MPInstructionsViewController.h"
@@ -3864,6 +3865,109 @@ static NSString * const kMPDocxHeadingToken = @"MPHDGPLACEHOLDER";
 {
     [self exportRichTextOfKind:MPRichExportRTF];
 }
+
+- (IBAction)exportTextBundle:(id)sender
+{
+    [self exportTextBundleZipped:NO];
+}
+
+
+- (IBAction)exportTextPack:(id)sender
+{
+    [self exportTextBundleZipped:YES];
+}
+
+
+/** The document and its pictures, in somebody else's container on purpose.
+ *
+ * A `.textbundle` is a folder Finder shows as one item; a `.textpack` is
+ * that folder zipped, which is what travels through mail. Bear, Ulysses, iA
+ * Writer and Marked read both.
+ *
+ * Unlike every other export here this one does not go through the rendered
+ * HTML: what a textbundle holds is the Markdown as written, with the links
+ * to its pictures pointed at `assets/`. Taken apart by hand it still works,
+ * which is the whole reason to use the format.
+ */
+- (void)exportTextBundleZipped:(BOOL)zipped
+{
+    NSString *extension = zipped ? @"textpack" : @"textbundle";
+    NSSavePanel *panel = [NSSavePanel savePanel];
+    panel.allowedFileTypes = @[extension];
+    if (self.presumedFileName)
+    {
+        panel.nameFieldStringValue = [self.presumedFileName
+            .stringByDeletingPathExtension
+            stringByAppendingPathExtension:extension];
+    }
+
+    [panel beginSheetModalForWindow:self.windowForSheet
+                  completionHandler:^(NSInteger result) {
+        if (result != NSFileHandlingPanelOKButton)
+            return;
+        [self writeTextBundleTo:panel.URL zipped:zipped];
+    }];
+}
+
+
+- (void)writeTextBundleTo:(NSURL *)url zipped:(BOOL)zipped
+{
+    NSString *markdown = self.markdown ?: @"";
+    NSArray<MPTextBundleAsset *> *assets = nil;
+    // The pictures are resolved against the document's own folder, so a
+    // document that has never been saved has none to bring: its links are
+    // relative to nothing.
+    NSString *text = MPTextBundleMarkdown(markdown, self.fileURL, &assets);
+    NSData *info = MPTextBundleInfo(
+        [NSBundle mainBundle].bundleIdentifier,
+        @"https://nicolorisitano82.github.io/macdown-next/");
+
+    NSError *error = nil;
+    BOOL written = NO;
+    if (zipped)
+    {
+        // The folder's name inside the archive, extension and all: a
+        // textpack that unzips to a bare assets/ is not a textbundle.
+        NSString *inside = [url.lastPathComponent.stringByDeletingPathExtension
+            stringByAppendingPathExtension:@"textbundle"];
+        NSData *pack = MPTextPackData(inside, text, info, assets);
+        written = pack
+            && [pack writeToURL:url options:NSDataWritingAtomic error:&error];
+    }
+    else
+    {
+        written = MPWriteTextBundle(url, text, info, assets, &error);
+    }
+
+    MPNote(@"%@: %lu pictures, %@", zipped ? @"textpack" : @"textbundle",
+           (unsigned long)assets.count,
+           written ? url.lastPathComponent : @"not written");
+
+    if (!written)
+    {
+        [self say:NSLocalizedString(@"The package could not be written",
+                                    @"Textbundle or Textpack export failed")
+             text:error.localizedDescription];
+        return;
+    }
+
+    // What could not be brought along, said once and by name: a reader can
+    // do something about an address, and nothing about a number.
+    NSArray<NSString *> *remote = MPTextBundleRemoteImages(markdown);
+    if (remote.count)
+    {
+        [self say:NSLocalizedString(
+            @"The pictures on the web stayed as addresses",
+            @"Some images could not be put in the package")
+             text:[NSString stringWithFormat:NSLocalizedString(
+            @"A package carries the pictures kept beside the document. "
+            @"These are addresses, and they are still addresses inside "
+            @"it:\n\n%@",
+            @"Which images stayed as links, and why"),
+            [remote componentsJoinedByString:@"\n"]]];
+    }
+}
+
 
 - (void)exportRichTextOfKind:(MPRichExportKind)kind
 {
