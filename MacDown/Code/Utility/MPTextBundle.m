@@ -324,3 +324,172 @@ BOOL MPWriteTextBundle(NSURL *bundleURL, NSString *markdown, NSData *info,
     }
     return YES;
 }
+
+
+#pragma mark - Reading one
+
+BOOL MPIsTextBundle(NSURL *url)
+{
+    if (![url.pathExtension.lowercaseString isEqualToString:@"textbundle"])
+        return NO;
+    NSNumber *directory = nil;
+    return [url getResourceValue:&directory forKey:NSURLIsDirectoryKey
+                           error:NULL] && directory.boolValue;
+}
+
+
+BOOL MPIsTextPack(NSURL *url)
+{
+    return [url.pathExtension.lowercaseString isEqualToString:@"textpack"];
+}
+
+
+NSURL *MPTextBundleTextURL(NSURL *bundleURL)
+{
+    if (!bundleURL.isFileURL)
+        return nil;
+
+    NSFileManager *manager = [NSFileManager defaultManager];
+    // The two names the format is written with, first, so a bundle holding
+    // both opens the one its own specification names.
+    for (NSString *name in @[kMPTextBundleTextName, @"text.md"])
+    {
+        NSURL *file = [bundleURL URLByAppendingPathComponent:name];
+        if ([manager fileExistsAtPath:file.path])
+            return file;
+    }
+
+    NSArray<NSURL *> *inside = [manager
+        contentsOfDirectoryAtURL:bundleURL
+      includingPropertiesForKeys:nil options:0 error:NULL];
+    for (NSURL *file in [inside sortedArrayUsingComparator:
+             ^NSComparisonResult (NSURL *a, NSURL *b) {
+        return [a.lastPathComponent compare:b.lastPathComponent];
+    }])
+    {
+        if ([file.lastPathComponent.lowercaseString hasPrefix:@"text."])
+            return file;
+    }
+    return nil;
+}
+
+
+/// Whether every name in the archive stays inside the folder it is given.
+static BOOL MPNamesAreSafe(NSArray<MPZipEntry *> *entries)
+{
+    for (MPZipEntry *entry in entries)
+    {
+        NSString *name = entry.name;
+        if (!name.length || [name hasPrefix:@"/"] || [name hasPrefix:@"~"])
+            return NO;
+        for (NSString *component in name.pathComponents)
+        {
+            if ([component isEqualToString:@".."])
+                return NO;
+        }
+    }
+    return YES;
+}
+
+
+/// The archive's root folder — the name every entry begins with.
+static NSString *MPPackRootName(NSArray<MPZipEntry *> *entries)
+{
+    NSString *root = nil;
+    for (MPZipEntry *entry in entries)
+    {
+        NSArray<NSString *> *components = entry.name.pathComponents;
+        if (components.count < 2)
+            continue;           // a file at the top: no root of its own
+        if (!root)
+            root = components.firstObject;
+        else if (![root isEqualToString:components.firstObject])
+            return nil;         // more than one root: not a textpack
+    }
+    return root;
+}
+
+
+static NSError *MPTextPackError(NSString *reason)
+{
+    return [NSError errorWithDomain:NSCocoaErrorDomain
+                               code:NSFileReadCorruptFileError
+                           userInfo:@{NSLocalizedDescriptionKey: reason}];
+}
+
+
+NSURL *MPUnpackTextPack(NSURL *packURL, NSURL *folder, NSError **error)
+{
+    NSData *zip = [NSData dataWithContentsOfURL:packURL options:0
+                                          error:error];
+    if (!zip)
+        return nil;
+
+    NSArray<MPZipEntry *> *entries = MPZipRead(zip);
+    if (!entries.count || !MPNamesAreSafe(entries))
+    {
+        if (error)
+        {
+            *error = MPTextPackError(NSLocalizedString(
+                @"This is not a Textpack: the archive cannot be read",
+                @"Opening a .textpack that is not one"));
+        }
+        return nil;
+    }
+
+    NSString *root = MPPackRootName(entries);
+    NSString *wanted = root.length ? root.lastPathComponent
+        : [packURL.lastPathComponent.stringByDeletingPathExtension
+               stringByAppendingPathExtension:@"textbundle"];
+    if (![wanted.pathExtension.lowercaseString isEqualToString:@"textbundle"])
+        wanted = [wanted stringByAppendingPathExtension:@"textbundle"];
+
+    // Unpacking twice must not overwrite the first time.
+    NSFileManager *manager = [NSFileManager defaultManager];
+    NSURL *bundle = [folder URLByAppendingPathComponent:wanted];
+    NSUInteger attempt = 2;
+    while ([manager fileExistsAtPath:bundle.path])
+    {
+        NSString *stem = wanted.stringByDeletingPathExtension;
+        bundle = [folder URLByAppendingPathComponent:[NSString
+            stringWithFormat:@"%@-%lu.textbundle", stem,
+            (unsigned long)attempt++]];
+    }
+    if (![manager createDirectoryAtURL:bundle
+           withIntermediateDirectories:YES attributes:nil error:error])
+        return nil;
+
+    for (MPZipEntry *entry in entries)
+    {
+        // Inside the archive everything hangs off the root folder; on disk
+        // it hangs off the bundle just created.
+        NSString *relative = entry.name;
+        if (root.length && [relative hasPrefix:
+                [root stringByAppendingString:@"/"]])
+            relative = [relative substringFromIndex:root.length + 1];
+        if (!relative.length || [relative hasSuffix:@"/"])
+            continue;           // the folder entries themselves
+
+        NSURL *file = [bundle URLByAppendingPathComponent:relative];
+        [manager createDirectoryAtURL:file.URLByDeletingLastPathComponent
+          withIntermediateDirectories:YES attributes:nil error:NULL];
+
+        NSData *payload = MPDataFromEntry(entry);
+        if (!payload)
+            continue;
+        [payload writeToURL:file options:NSDataWritingAtomic error:NULL];
+    }
+
+    if (!MPTextBundleTextURL(bundle))
+    {
+        [manager removeItemAtURL:bundle error:NULL];
+        if (error)
+        {
+            *error = MPTextPackError(NSLocalizedString(
+                @"This Textpack holds no text",
+                @"A .textpack with no text.markdown in it"));
+        }
+        return nil;
+    }
+    return bundle;
+}

@@ -308,4 +308,161 @@
                                 MPTextBundleInfo(@"a", nil), @[]));
 }
 
+#pragma mark - Reading one
+
+- (void)testWhatIsABundleAndWhatIsNot
+{
+    NSURL *bundle = [self.folder
+        URLByAppendingPathComponent:@"verbale.textbundle"];
+    [[NSFileManager defaultManager] createDirectoryAtURL:bundle
+        withIntermediateDirectories:YES attributes:nil error:NULL];
+    XCTAssertTrue(MPIsTextBundle(bundle));
+
+    // A *file* with that extension is not a bundle, whatever it is called.
+    NSURL *impostor = [self.folder
+        URLByAppendingPathComponent:@"finto.textbundle"];
+    [@"testo" writeToURL:impostor atomically:YES
+                encoding:NSUTF8StringEncoding error:NULL];
+    XCTAssertFalse(MPIsTextBundle(impostor));
+    XCTAssertFalse(MPIsTextBundle(self.document));
+    XCTAssertTrue(MPIsTextPack([self.folder
+        URLByAppendingPathComponent:@"verbale.textpack"]));
+}
+
+- (void)testTheTextInsideIsFoundByName
+{
+    NSURL *bundle = [self.folder
+        URLByAppendingPathComponent:@"a.textbundle"];
+    [[NSFileManager defaultManager] createDirectoryAtURL:bundle
+        withIntermediateDirectories:YES attributes:nil error:NULL];
+    XCTAssertNil(MPTextBundleTextURL(bundle));
+
+    // Somebody else's bundle may use .md, or something else again.
+    [@"x" writeToURL:[bundle URLByAppendingPathComponent:@"text.txt"]
+          atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+    XCTAssertEqualObjects(MPTextBundleTextURL(bundle).lastPathComponent,
+                          @"text.txt");
+    [@"x" writeToURL:[bundle URLByAppendingPathComponent:@"text.md"]
+          atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+    XCTAssertEqualObjects(MPTextBundleTextURL(bundle).lastPathComponent,
+                          @"text.md");
+    // The name the specification itself uses wins over the others.
+    [@"x" writeToURL:[bundle URLByAppendingPathComponent:@"text.markdown"]
+          atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+    XCTAssertEqualObjects(MPTextBundleTextURL(bundle).lastPathComponent,
+                          @"text.markdown");
+}
+
+- (void)testAPackComesBackOutTheWayItWentIn
+{
+    NSURL *picture = [self writePicture:@"rete.png"];
+    NSArray<MPTextBundleAsset *> *assets = nil;
+    NSString *text = MPTextBundleMarkdown(@"![r](rete.png)", self.document,
+                                          &assets);
+    NSURL *pack = [self.folder
+        URLByAppendingPathComponent:@"verbale.textpack"];
+    [MPTextPackData(@"verbale.textbundle", text,
+        MPTextBundleInfo(@"com.esempio.app", nil), assets)
+        writeToURL:pack atomically:YES];
+
+    NSError *error = nil;
+    NSURL *bundle = MPUnpackTextPack(pack, self.folder, &error);
+    XCTAssertNotNil(bundle, @"%@", error);
+    XCTAssertEqualObjects(bundle.lastPathComponent, @"verbale.textbundle");
+    XCTAssertEqualObjects([NSString stringWithContentsOfURL:
+        MPTextBundleTextURL(bundle) encoding:NSUTF8StringEncoding
+        error:NULL], @"![r](assets/rete.png)");
+    XCTAssertEqualObjects([NSData dataWithContentsOfURL:
+        [bundle URLByAppendingPathComponent:@"assets/rete.png"]],
+        [NSData dataWithContentsOfURL:picture]);
+}
+
+- (void)testUnpackingTwiceKeepsBoth
+{
+    NSURL *pack = [self.folder
+        URLByAppendingPathComponent:@"verbale.textpack"];
+    [MPTextPackData(@"verbale.textbundle", @"testo",
+        MPTextBundleInfo(@"a", nil), @[]) writeToURL:pack atomically:YES];
+
+    XCTAssertEqualObjects(MPUnpackTextPack(pack, self.folder, NULL)
+        .lastPathComponent, @"verbale.textbundle");
+    XCTAssertEqualObjects(MPUnpackTextPack(pack, self.folder, NULL)
+        .lastPathComponent, @"verbale-2.textbundle");
+}
+
+- (void)testAnArchiveThatWritesOutsideItsFolderIsRefused
+{
+    // Nothing in a textpack has any business naming a path of its own.
+    NSData *hostile = MPZipWrite(@[
+        MPStoredEntry(@"verbale.textbundle/text.markdown",
+            [@"innocuo" dataUsingEncoding:NSUTF8StringEncoding]),
+        MPStoredEntry(@"../rubato.md",
+            [@"fuori" dataUsingEncoding:NSUTF8StringEncoding]),
+    ]);
+    NSURL *pack = [self.folder URLByAppendingPathComponent:@"male.textpack"];
+    [hostile writeToURL:pack atomically:YES];
+
+    NSError *error = nil;
+    XCTAssertNil(MPUnpackTextPack(pack, self.folder, &error));
+    XCTAssertNotNil(error);
+    // Refused whole: not one entry of it is written.
+    XCTAssertFalse([[NSFileManager defaultManager] fileExistsAtPath:
+        [self.folder URLByAppendingPathComponent:@"verbale.textbundle"].path]);
+}
+
+- (void)testAPackWithNoTextIsNotAPack
+{
+    NSData *empty = MPZipWrite(@[MPStoredEntry(
+        @"verbale.textbundle/info.json",
+        MPTextBundleInfo(@"a", nil))]);
+    NSURL *pack = [self.folder URLByAppendingPathComponent:@"vuoto.textpack"];
+    [empty writeToURL:pack atomically:YES];
+
+    NSError *error = nil;
+    XCTAssertNil(MPUnpackTextPack(pack, self.folder, &error));
+    XCTAssertNotNil(error);
+    // And it cleans up after itself rather than leaving half a bundle.
+    XCTAssertFalse([[NSFileManager defaultManager] fileExistsAtPath:
+        [self.folder URLByAppendingPathComponent:@"verbale.textbundle"].path]);
+}
+
+- (void)testAPackSomebodyElseWroteIsRead
+{
+    // Our own writer stores everything; /usr/bin/zip deflates, which is
+    // what a textpack from another application looks like.
+    NSURL *bundle = [self.folder
+        URLByAppendingPathComponent:@"altrui.textbundle"];
+    NSArray<MPTextBundleAsset *> *assets = nil;
+    [self writePicture:@"rete.png"];
+    NSString *text = MPTextBundleMarkdown(@"![r](rete.png)\n\nE del testo "
+        @"lungo abbastanza da comprimersi davvero, ripetuto: "
+        @"testo testo testo testo testo testo testo testo.",
+        self.document, &assets);
+    XCTAssertTrue(MPWriteTextBundle(bundle, text,
+        MPTextBundleInfo(@"com.esempio.app", nil), assets, NULL));
+
+    NSTask *zip = [[NSTask alloc] init];
+    zip.executableURL = [NSURL fileURLWithPath:@"/usr/bin/zip"];
+    zip.currentDirectoryURL = self.folder;
+    zip.arguments = @[@"-r", @"-q", @"altrui.textpack",
+                      @"altrui.textbundle"];
+    NSError *error = nil;
+    XCTAssertTrue([zip launchAndReturnError:&error], @"%@", error);
+    [zip waitUntilExit];
+    XCTAssertEqual(zip.terminationStatus, 0);
+
+    // Out of the way, so what is read comes from the archive.
+    [[NSFileManager defaultManager] removeItemAtURL:bundle error:NULL];
+
+    NSURL *read = MPUnpackTextPack([self.folder
+        URLByAppendingPathComponent:@"altrui.textpack"], self.folder,
+        &error);
+    XCTAssertNotNil(read, @"%@", error);
+    XCTAssertEqualObjects([NSString stringWithContentsOfURL:
+        MPTextBundleTextURL(read) encoding:NSUTF8StringEncoding error:NULL],
+        text);
+    XCTAssertTrue([[NSFileManager defaultManager] fileExistsAtPath:
+        [read URLByAppendingPathComponent:@"assets/rete.png"].path]);
+}
+
 @end

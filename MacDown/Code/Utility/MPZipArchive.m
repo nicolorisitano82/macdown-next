@@ -196,6 +196,15 @@ NSData *MPZipWrite(NSArray<MPZipEntry *> *entries)
     return out;
 }
 
+NSData *MPDataFromEntry(MPZipEntry *entry)
+{
+    if (!entry)
+        return nil;
+    return entry.method == 8
+        ? MPInflate(entry.payload, entry.uncompressedSize)
+        : entry.payload;
+}
+
 NSString *MPStringFromEntry(NSArray<MPZipEntry *> *entries,
                                    NSString *name)
 {
@@ -203,9 +212,7 @@ NSString *MPStringFromEntry(NSArray<MPZipEntry *> *entries,
     {
         if (![e.name isEqualToString:name])
             continue;
-        NSData *raw = e.method == 8
-            ? MPInflate(e.payload, e.uncompressedSize)
-            : e.payload;
+        NSData *raw = MPDataFromEntry(e);
         if (!raw)
             return nil;
         return [[NSString alloc] initWithData:raw

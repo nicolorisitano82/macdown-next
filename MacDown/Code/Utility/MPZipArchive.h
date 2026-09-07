@@ -29,5 +29,12 @@ NSData *MPZipWrite(NSArray<MPZipEntry *> *entries);
 /// An entry holding `data` uncompressed.
 MPZipEntry *MPStoredEntry(NSString *name, NSData *data);
 
+/// The bytes of that entry, inflated if it was deflated.
+///
+/// An archive this application wrote stores everything; one written by
+/// somebody else deflates it, and reading theirs is the point of having
+/// this separately from -MPStringFromEntry.
+NSData *MPDataFromEntry(MPZipEntry *entry);
+
 /// The named entry decoded as UTF-8, or nil if it is not in the archive.
 NSString *MPStringFromEntry(NSArray<MPZipEntry *> *entries, NSString *name);

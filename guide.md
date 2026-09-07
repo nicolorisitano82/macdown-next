@@ -347,8 +347,8 @@ clipboard, if there is one — and writes the page as a Markdown file.
 | **OpenDocument (.odt)** | Tables and styling survive AppKit's writer; the pictures it drops are put back |
 | **Rich Text (.rtf)** | One file, pictures included — Cocoa only writes them into RTFD, so they are planted as `\pict` |
 | **EPUB 3.3** | Images copied into the package, table of contents from the headings |
-| **Textbundle** | The Markdown as written, with its pictures — a folder Finder shows as one item |
-| **Textpack** | The same, zipped: what travels through mail |
+| **Textbundle** | The Markdown as written, with its pictures — a folder Finder shows as one item; **read as well as written** |
+| **Textpack** | The same, zipped: what travels through mail; opening one unpacks it |
 | **Copy HTML** (⌥⌘C) | The rendered page on the clipboard |
 
 - **Word that survives the trip.** AppKit's own writer drops pictures,
@@ -367,6 +367,15 @@ clipboard, if there is one — and writes the page as a Markdown file.
   picture kept on the web stays an address, and the export says which ones.
   A textbundle holds one text, so links to neighbouring documents are left
   as they are written.
+- **Both open, too.** Double-click a `.textbundle` and the text inside it
+  opens, named after the bundle rather than after `text.markdown`: the
+  pictures under `assets/` resolve, saving writes back into the bundle, and
+  the rest of the application never has to know it is looking at a
+  container. A `.textpack` is unpacked next to itself first — into
+  `<name>.textbundle`, numbered if that name is taken — because a document
+  opened out of a temporary folder is a document whose next save goes
+  somewhere nobody will look again. An archive naming a path of its own
+  (`../somewhere`) is refused whole rather than partly unpacked.
 - **Pictures kept on the web travel too.** A .docx and an EPUB are packages,
   so a picture they do not carry is a picture nobody sees. Both exports
   fetch the remote ones first, with a sheet while they wait and a count of

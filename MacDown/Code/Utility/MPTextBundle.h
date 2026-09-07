@@ -76,3 +76,35 @@ extern BOOL MPWriteTextBundle(NSURL *bundleURL, NSString *markdown,
                               NSData *info,
                               NSArray<MPTextBundleAsset *> *assets,
                               NSError **error);
+
+
+#pragma mark - Reading one
+
+/// Whether that URL is a textbundle: the extension, and a folder under it.
+extern BOOL MPIsTextBundle(NSURL *url);
+
+/// Whether that URL is a textpack, which is a textbundle in a zip.
+extern BOOL MPIsTextPack(NSURL *url);
+
+/** The text file inside a textbundle, or nil if there is none.
+ *
+ * The specification says `text.` and an extension that matches the type,
+ * and the extension in the wild is `.markdown` or `.md`; anything called
+ * `text.something` is taken rather than refused, since the type is in
+ * `info.json` and one text file is all a bundle has.
+ */
+extern NSURL *MPTextBundleTextURL(NSURL *bundleURL);
+
+/** Unpacks a textpack into `folder`, and answers the bundle it made.
+ *
+ * The name comes from the archive's own root folder, which is what a
+ * textpack is: one `.textbundle` and everything under it. A name already
+ * taken gets a number, because unpacking twice must not overwrite what was
+ * unpacked the first time.
+ *
+ * Entry names are checked before anything is written: an absolute path or a
+ * `..` in an archive is somebody trying to write outside the folder they
+ * were given, and the whole archive is refused rather than partly unpacked.
+ */
+extern NSURL *MPUnpackTextPack(NSURL *packURL, NSURL *folder,
+                               NSError **error);

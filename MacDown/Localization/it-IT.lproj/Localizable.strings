@@ -494,3 +494,9 @@
 
 /* Selezione nell'anteprima */
 "Selecting text in the preview selects it in the editor" = "Selezionare del testo nell'anteprima lo seleziona nell'editor";
+
+/* Aprire un Textbundle o un Textpack */
+"This Textbundle holds no text" = "Questo Textbundle non contiene testo";
+"This Textpack holds no text" = "Questo Textpack non contiene testo";
+"This is not a Textpack: the archive cannot be read" = "Questo non è un Textpack: l'archivio non si riesce a leggere";
+"“%@” could not be opened" = "«%@» non si è potuto aprire";

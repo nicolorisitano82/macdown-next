@@ -16,6 +16,7 @@
 		D2C000000000000000000012 /* MPRichExport.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C000000000000000000011 /* MPRichExport.m */; };
 		1F0D9E0100000000000000A1 /* MPTextBundle.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000000A3 /* MPTextBundle.m */; };
 		1F0D9E0100000000000000B1 /* MPPreviewSelection.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000000B3 /* MPPreviewSelection.m */; };
+		1F0D9E0100000000000000C1 /* MPDocumentController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000000C3 /* MPDocumentController.m */; };
 		1F0D9E0100000000000000B2 /* MPPreviewSelectionTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000000B5 /* MPPreviewSelectionTests.m */; };
 		1F0D9E0100000000000000A2 /* MPTextBundleTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000000A5 /* MPTextBundleTests.m */; };
 		D2C000000000000000000014 /* MPRichExportTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C000000000000000000013 /* MPRichExportTests.m */; };
@@ -303,6 +304,8 @@
 		D2C000000000000000000011 /* MPRichExport.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPRichExport.m; sourceTree = "<group>"; };
 		1F0D9E0100000000000000A3 /* MPTextBundle.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPTextBundle.m; sourceTree = "<group>"; };
 		1F0D9E0100000000000000B3 /* MPPreviewSelection.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPPreviewSelection.m; sourceTree = "<group>"; };
+		1F0D9E0100000000000000C2 /* MPDocumentController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MPDocumentController.h; path = Code/Application/MPDocumentController.h; sourceTree = "<group>"; };
+		1F0D9E0100000000000000C3 /* MPDocumentController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MPDocumentController.m; path = Code/Application/MPDocumentController.m; sourceTree = "<group>"; };
 		1F0D9E0100000000000000B4 /* MPPreviewSelection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPPreviewSelection.h; sourceTree = "<group>"; };
 		1F0D9E0100000000000000B5 /* MPPreviewSelectionTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPPreviewSelectionTests.m; sourceTree = "<group>"; };
 		1F0D9E0100000000000000A4 /* MPTextBundle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPTextBundle.h; sourceTree = "<group>"; };
@@ -1189,6 +1192,8 @@
 				1F0D9D81194AC83C008E1856 /* MainMenu.xib */,
 				1F9A14EA194EEE9900D1C6A9 /* MPMainController.h */,
 				1F9A14EB194EEE9900D1C6A9 /* MPMainController.m */,
+				1F0D9E0100000000000000C2 /* MPDocumentController.h */,
+				1F0D9E0100000000000000C3 /* MPDocumentController.m */,
 				1F9A14E8194EEE9900D1C6A9 /* MPExportPanelAccessoryViewController.h */,
 				1F9A14E9194EEE9900D1C6A9 /* MPExportPanelAccessoryViewController.m */,
 				1FB3C0221E5061A2002AEB6A /* MPExportPanelAccessoryViewController.xib */,
@@ -1886,6 +1891,7 @@
 				1F5A37101C868EC0006E63E7 /* MPPlugIn.m in Sources */,
 				1FBDFEA11962A25A00BEEA70 /* MPGeneralPreferencesViewController.m in Sources */,
 				1F9A14ED194EEE9900D1C6A9 /* MPMainController.m in Sources */,
+				1F0D9E0100000000000000C1 /* MPDocumentController.m in Sources */,
 				1F002A23195B3DAE008B8D93 /* MPRenderer.m in Sources */,
 				1FBBD4CB194CA36500BB3C88 /* hoedown_html_patch.c in Sources */,
 				1F8A8364195346B200B6BF69 /* pmh_styleparser.c in Sources */,

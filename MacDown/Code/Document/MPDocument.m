@@ -1553,6 +1553,22 @@ static NSString * const kMPScrollReporterSource =
     return [self.editor.string dataUsingEncoding:NSUTF8StringEncoding];
 }
 
+/** What to call this document.
+ *
+ * A document opened out of a textbundle is a file called `text.markdown`
+ * inside a folder called something the reader chose. Showing the folder's
+ * name is the only honest answer: it is the thing they opened, the thing
+ * they will look for again, and the thing every other application shows.
+ */
+- (NSString *)displayName
+{
+    NSURL *folder = self.fileURL.URLByDeletingLastPathComponent;
+    if (MPIsTextBundle(folder))
+        return folder.lastPathComponent.stringByDeletingPathExtension;
+    return [super displayName];
+}
+
+
 - (BOOL)readFromData:(NSData *)data ofType:(NSString *)typeName
                error:(NSError **)outError
 {

@@ -164,6 +164,16 @@ if [ -d "$APPEX" ]; then
     ok "si offre per net.daringfireball.markdown" \
         grep -q "net.daringfireball.markdown" \
         <(read_plist :NSExtension:NSExtensionAttributes:QLSupportedContentTypes)
+    # I due contenitori che l'applicazione dichiara di aprire. Senza il
+    # tipo, il Finder non le manda il file e nessuno se ne accorge.
+    ok "l'app si offre per Textbundle e Textpack" \
+        grep -q "org.textbundle" \
+        <(/usr/libexec/PlistBuddy -c "Print :CFBundleDocumentTypes" \
+          "$APP/Contents/Info.plist" 2>/dev/null)
+    ok "e dichiara i due tipi, che nessun altro potrebbe dichiarare" \
+        grep -q "org.textbundle.pack" \
+        <(/usr/libexec/PlistBuddy -c "Print :UTImportedTypeDeclarations" \
+          "$APP/Contents/Info.plist" 2>/dev/null)
     ok "lo stile dell'app è dentro l'estensione" \
         test -f "$APPEX/Contents/Resources/GitHub2.css"
     ok "e lo stile dei WikiLink con esso" \
