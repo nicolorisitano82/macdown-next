@@ -365,7 +365,7 @@ NSString *MDBodyWithWikiLinks(NSString *bodyHTML, NSURL *documentURL)
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         tasks = [NSRegularExpression regularExpressionWithPattern:
-            @"<li>(<p>)?\\[([ xX])\\]\\s" options:0 error:NULL];
+            @"<li[^>]*>(<p>)?\\[([ xX])\\]\\s" options:0 error:NULL];
     });
 
     NSMutableString *marked = [body mutableCopy];

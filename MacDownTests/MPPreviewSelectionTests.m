@@ -19,8 +19,12 @@ static const NSTimeInterval kMPPatience = 5.0;
 /// offset the renderer would have given it.
 static NSString * const kMPPage =
     @"<html><body>"
-    @"<p data-src='0'>Questo è un test da cancellare.</p>"
+    @"<p data-src='0'>Questo è un test da cancellare, e un altro test.</p>"
     @"<p data-src='33'>E un secondo paragrafo.</p>"
+    @"<ul data-src='60'>"
+    @"<li data-src='60'>Primo punto</li>"
+    @"<li data-src='74'>Secondo punto</li>"
+    @"</ul>"
     @"</body></html>";
 
 
@@ -110,15 +114,26 @@ static NSString * const kMPPage =
 /// then lets go of the mouse.
 - (void)selectWordAndRelease:(BOOL)release
 {
-    NSString *script =
+    [self selectOccurrence:1 release:release];
+}
+
+/// Selects the first or the second "test" of the first paragraph, the way a
+/// reader would, and then lets go of the mouse.
+- (void)selectOccurrence:(NSUInteger)which release:(BOOL)release
+{
+    NSString *script = [NSString stringWithFormat:
         @"var p = document.querySelector('p[data-src=\"0\"]');"
         @"var text = p.firstChild;"
         @"var start = text.data.indexOf('test');"
+        @"for (var n = 1; n < %lu; n++)"
+        @"start = text.data.indexOf('test', start + 1);",
+        (unsigned long)which];
+    script = [script stringByAppendingString:
         @"var range = document.createRange();"
         @"range.setStart(text, start);"
         @"range.setEnd(text, start + 4);"
         @"var sel = document.getSelection();"
-        @"sel.removeAllRanges(); sel.addRange(range);";
+        @"sel.removeAllRanges(); sel.addRange(range);"];
     if (release)
     {
         script = [script stringByAppendingString:
@@ -185,8 +200,36 @@ static NSString * const kMPPage =
     NSString *source = @"Questo è un test da cancellare.\n\nE un secondo.";
     NSRange block = NSMakeRange(0, 31);
     NSRange range = MPSourceRangeForPreviewText(source, body[@"text"],
-                                                block);
+                                                block, NSNotFound);
     XCTAssertEqualObjects([source substringWithRange:range], @"test");
+}
+
+- (void)testThePageSaysWhichOccurrenceWasSelected
+{
+    [self loadPageWithScript];
+    [self selectOccurrence:2 release:YES];
+
+    NSDictionary *body = [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    XCTAssertEqualObjects(body[@"text"], @"test");
+
+    // The rendered offset of the *second* "test", counted in the page's own
+    // text — which is what tells it from the first.
+    NSString *rendered = @"Questo è un test da cancellare, e un altro test.";
+    NSUInteger second = [rendered rangeOfString:@"test"
+        options:NSBackwardsSearch].location;
+    XCTAssertEqual((NSUInteger)[body[@"offset"] integerValue], second);
+
+    // And with that offset the right one is placed in a source that says
+    // "test" twice.
+    NSString *source = @"Questo è un **test** da cancellare, e un altro "
+        @"*test*.";
+    NSRange range = MPSourceRangeForPreviewText(source, body[@"text"],
+        NSMakeRange(0, source.length),
+        (NSUInteger)[body[@"offset"] integerValue]);
+    XCTAssertEqual(range.location, [source rangeOfString:@"test"
+        options:NSBackwardsSearch].location);
 }
 
 /// The whole source as the search window, for the cases where the block
@@ -194,7 +237,8 @@ static NSString * const kMPPage =
 - (NSRange)rangeOf:(NSString *)selected in:(NSString *)source
 {
     return MPSourceRangeForPreviewText(source, selected,
-                                       NSMakeRange(0, source.length));
+                                       NSMakeRange(0, source.length),
+                                       NSNotFound);
 }
 
 
@@ -267,7 +311,8 @@ static NSString * const kMPPage =
     NSString *source = @"test in cima.\n\nAltro.\n\ntest in fondo.\n";
     NSRange block = [source rangeOfString:@"test in fondo"];
     block.length = source.length - block.location;
-    NSRange range = MPSourceRangeForPreviewText(source, @"test", block);
+    NSRange range = MPSourceRangeForPreviewText(source, @"test", block,
+                                                NSNotFound);
     XCTAssertEqual(range.location,
                    [source rangeOfString:@"test in fondo"].location);
 }
@@ -278,7 +323,8 @@ static NSString * const kMPPage =
     // offsets are stale, and the text is still in the document.
     NSString *source = @"Aggiunto dopo.\n\nQuesto è il testo.\n";
     NSRange stale = NSMakeRange(source.length - 3, 3);
-    NSRange range = MPSourceRangeForPreviewText(source, @"il testo", stale);
+    NSRange range = MPSourceRangeForPreviewText(source, @"il testo", stale,
+                                                NSNotFound);
     XCTAssertEqualObjects([source substringWithRange:range], @"il testo");
 }
 
@@ -286,8 +332,501 @@ static NSString * const kMPPage =
 {
     NSString *source = @"Poche parole.";
     NSRange range = MPSourceRangeForPreviewText(source, @"parole",
-                                                NSMakeRange(9000, 40));
+                                                NSMakeRange(9000, 40),
+                                                NSNotFound);
     XCTAssertEqualObjects([source substringWithRange:range], @"parole");
+}
+
+
+- (void)testASelectionThatStopsChangingIsReportedWithoutTheFocus
+{
+    // The keyboard, or a drag released outside the page: no mouseup of ours
+    // ever arrives, and the selection simply stops changing.
+    [self loadPageWithScript];
+    [self selectOccurrence:1 release:NO];
+
+    NSDictionary *body = [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    XCTAssertEqualObjects(body[@"text"], @"test");
+    // Followed, not taken over: somebody holding shift and an arrow key is
+    // not finished.
+    XCTAssertFalse([body[@"focus"] boolValue]);
+    XCTAssertEqualObjects(body[@"action"], @"");
+    // And what they picked is marked, as it is after a mouse gesture.
+    XCTAssertTrue([self highlightIsPainted]);
+}
+
+- (void)testAMouseGestureAsksForTheFocus
+{
+    [self loadPageWithScript];
+    [self selectWordAndRelease:YES];
+
+    NSDictionary *body = [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue] && [b[@"focus"] boolValue];
+    }];
+    XCTAssertEqualObjects(body[@"text"], @"test");
+}
+
+- (void)testDeletePressedOnASelectionSaysSo
+{
+    [self loadPageWithScript];
+    [self selectOccurrence:1 release:NO];
+
+    XCTestExpectation *pressed = [self expectationWithDescription:@"canc"];
+    [self.webView evaluateJavaScript:
+        @"document.dispatchEvent(new KeyboardEvent('keydown',"
+        @"{key:'Backspace',bubbles:true,cancelable:true}))"
+                   completionHandler:^(id result, NSError *error) {
+        [pressed fulfill];
+    }];
+    [self waitForExpectations:@[pressed] timeout:kMPPatience];
+
+    NSDictionary *body = [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"action"] isEqualToString:@"delete"];
+    }];
+    XCTAssertEqualObjects(body[@"text"], @"test");
+    // Deleting is the end of it, and what comes next is typing.
+    XCTAssertTrue([body[@"focus"] boolValue]);
+}
+
+
+- (void)testAWordInAListIsReportedWithItsOwnItem
+{
+    // A list used to report nothing at all: neither the <ul> nor the <li>
+    // said where it came from, so the search walked up to the body and
+    // gave up.
+    [self loadPageWithScript];
+
+    XCTestExpectation *done = [self expectationWithDescription:@"selezione"];
+    [self.webView evaluateJavaScript:
+        @"var li = document.querySelectorAll('li')[1];"
+        @"var text = li.firstChild;"
+        @"var range = document.createRange();"
+        @"range.setStart(text, 0);"
+        @"range.setEnd(text, 7);"
+        @"var sel = document.getSelection();"
+        @"sel.removeAllRanges(); sel.addRange(range);"
+        @"li.dispatchEvent(new MouseEvent('mouseup', {bubbles: true}));"
+                   completionHandler:^(id result, NSError *error) {
+        XCTAssertNil(error);
+        [done fulfill];
+    }];
+    [self waitForExpectations:@[done] timeout:kMPPatience];
+
+    NSDictionary *body = [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    XCTAssertEqualObjects(body[@"text"], @"Secondo");
+    // The item's own offset, not the list's, and not nothing.
+    XCTAssertEqualObjects(body[@"begin"], @74);
+    XCTAssertEqualObjects(body[@"offset"], @0);
+}
+
+- (void)testTheWindowSkipsABlockThatStartsWhereThisOneDoes
+{
+    // A list and its first item begin at the same character; the window to
+    // search has to end at the *next* one that starts somewhere else.
+    [self loadPageWithScript];
+
+    XCTestExpectation *done = [self expectationWithDescription:@"selezione"];
+    [self.webView evaluateJavaScript:
+        @"var li = document.querySelectorAll('li')[0];"
+        @"var text = li.firstChild;"
+        @"var range = document.createRange();"
+        @"range.setStart(text, 0);"
+        @"range.setEnd(text, 5);"
+        @"var sel = document.getSelection();"
+        @"sel.removeAllRanges(); sel.addRange(range);"
+        @"li.dispatchEvent(new MouseEvent('mouseup', {bubbles: true}));"
+                   completionHandler:^(id result, NSError *error) {
+        [done fulfill];
+    }];
+    [self waitForExpectations:@[done] timeout:kMPPatience];
+
+    NSDictionary *body = [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    XCTAssertEqualObjects(body[@"begin"], @60);
+    XCTAssertEqualObjects(body[@"end"], @74);
+    XCTAssertEqualObjects(body[@"text"], @"Primo");
+}
+
+
+- (void)testASelectionOverTwoBlocksAsksForBoth
+{
+    [self loadPageWithScript];
+
+    XCTestExpectation *done = [self expectationWithDescription:@"selezione"];
+    [self.webView evaluateJavaScript:
+        @"var ps = document.querySelectorAll('p');"
+        @"var range = document.createRange();"
+        @"range.setStart(ps[0].firstChild, 0);"
+        @"range.setEnd(ps[1].firstChild, 8);"
+        @"var sel = document.getSelection();"
+        @"sel.removeAllRanges(); sel.addRange(range);"
+        @"ps[1].dispatchEvent(new MouseEvent('mouseup', {bubbles: true}));"
+                   completionHandler:^(id result, NSError *error) {
+        XCTAssertNil(error);
+        [done fulfill];
+    }];
+    [self waitForExpectations:@[done] timeout:kMPPatience];
+
+    NSDictionary *body = [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    // The window covers both paragraphs: it ends where the block *after
+    // the last one touched* begins, not where the second one does.
+    XCTAssertEqualObjects(body[@"begin"], @0);
+    XCTAssertEqualObjects(body[@"end"], @60);
+}
+
+- (void)testWordsTheEditorCannotFindAreMarkedDifferently
+{
+    [self loadPageWithScript];
+    [self selectWordAndRelease:YES];
+    [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    XCTAssertTrue([self isPainted:@"macdown-picked"]);
+    XCTAssertFalse([self isPainted:@"macdown-lost"]);
+
+    // What the document says when it looked and found nothing.
+    XCTestExpectation *told = [self expectationWithDescription:@"detto"];
+    [self.webView evaluateJavaScript:@"MacDownPickedLost()"
+                   completionHandler:^(id result, NSError *error) {
+        XCTAssertNil(error);
+        [told fulfill];
+    }];
+    [self waitForExpectations:@[told] timeout:kMPPatience];
+
+    XCTAssertFalse([self isPainted:@"macdown-picked"]);
+    XCTAssertTrue([self isPainted:@"macdown-lost"]);
+}
+
+- (void)testTheNextGestureTakesBothMarksAway
+{
+    [self loadPageWithScript];
+    [self selectWordAndRelease:YES];
+    [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    XCTestExpectation *told = [self expectationWithDescription:@"detto"];
+    [self.webView evaluateJavaScript:@"MacDownPickedLost()"
+                   completionHandler:^(id r, NSError *e) { [told fulfill]; }];
+    [self waitForExpectations:@[told] timeout:kMPPatience];
+
+    XCTestExpectation *pressed = [self expectationWithDescription:@"premuto"];
+    [self.webView evaluateJavaScript:
+        @"document.querySelector('p').dispatchEvent("
+        @"new MouseEvent('mousedown',{bubbles:true}))"
+                   completionHandler:^(id r, NSError *e) { [pressed fulfill]; }];
+    [self waitForExpectations:@[pressed] timeout:kMPPatience];
+
+    XCTAssertFalse([self isPainted:@"macdown-lost"]);
+    XCTAssertFalse([self isPainted:@"macdown-picked"]);
+}
+
+
+/// What the page is painting, if anything.
+- (BOOL)highlightIsPainted
+{
+    return [self isPainted:@"macdown-picked"];
+}
+
+- (BOOL)isPainted:(NSString *)name
+{
+    XCTestExpectation *asked = [self expectationWithDescription:@"chiesto"];
+    __block BOOL painted = NO;
+    [self.webView evaluateJavaScript:[NSString stringWithFormat:
+        @"(typeof CSS!=='undefined'&&CSS.highlights"
+        @"&&CSS.highlights.has('%@'))?1:0", name]
+                   completionHandler:^(id result, NSError *error) {
+        painted = [result boolValue];
+        [asked fulfill];
+    }];
+    [self waitForExpectations:@[asked] timeout:kMPPatience];
+    return painted;
+}
+
+- (void)testWhatWasSelectedStaysPaintedWhenTheFocusLeaves
+{
+    [self loadPageWithScript];
+    XCTAssertFalse([self highlightIsPainted]);
+
+    [self selectWordAndRelease:YES];
+    [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    // The editor is about to take the focus, and the native selection with
+    // it: this is what is left behind for the reader to see.
+    XCTAssertTrue([self highlightIsPainted]);
+}
+
+- (void)testTheNextGestureTakesTheMarkAway
+{
+    [self loadPageWithScript];
+    [self selectWordAndRelease:YES];
+    [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    XCTAssertTrue([self highlightIsPainted]);
+
+    XCTestExpectation *pressed = [self expectationWithDescription:@"premuto"];
+    [self.webView evaluateJavaScript:
+        @"document.querySelector('p').dispatchEvent("
+        @"new MouseEvent('mousedown',{bubbles:true}))"
+                   completionHandler:^(id result, NSError *error) {
+        [pressed fulfill];
+    }];
+    [self waitForExpectations:@[pressed] timeout:kMPPatience];
+    XCTAssertFalse([self highlightIsPainted]);
+}
+
+
+#pragma mark - Which occurrence of the same words
+
+/// Where the reader was, counted in the *rendered* text of the block.
+- (NSRange)rangeOf:(NSString *)selected in:(NSString *)source
+             after:(NSUInteger)renderedOffset
+{
+    return MPSourceRangeForPreviewText(source, selected,
+                                       NSMakeRange(0, source.length),
+                                       renderedOffset);
+}
+
+- (void)testTheSecondTestIsTheSecondTest
+{
+    NSString *source = @"Un test qui, e un altro test più in là, e basta.";
+    NSUInteger first = [source rangeOfString:@"test"].location;
+    NSUInteger second = [source rangeOfString:@"test"
+        options:NSBackwardsSearch].location;
+    XCTAssertNotEqual(first, second);
+
+    // Senza sapere dove fosse il lettore, la prima.
+    XCTAssertEqual([self rangeOf:@"test" in:source].location, first);
+    // Sapendolo, quella vicina.
+    XCTAssertEqual([self rangeOf:@"test" in:source after:3].location, first);
+    XCTAssertEqual([self rangeOf:@"test" in:source
+                           after:second].location, second);
+}
+
+- (void)testThePointerIsAFloorAndNotAnAnswer
+{
+    // The source has markup the page does not show, so the same words sit
+    // further along in the source than the page counted. The nearest match
+    // is still the right one.
+    NSString *source = @"**test** in cima, e poi *test* in fondo.";
+    NSUInteger second = [source rangeOfString:@"test"
+        options:NSBackwardsSearch].location;
+    XCTAssertEqual([self rangeOf:@"test" in:source after:20].location,
+                   second);
+}
+
+- (void)testTheOffsetCountsInsideTheBlockAndNotTheDocument
+{
+    NSString *source = @"Prima riga.\n\ntest qui e test là.\n";
+    NSRange block = [source rangeOfString:@"test qui e test là."];
+    block.length = source.length - block.location;
+    NSUInteger inBlock = [@"test qui e " length];
+    NSRange range = MPSourceRangeForPreviewText(source, @"test", block,
+                                                inBlock);
+    XCTAssertEqual(range.location,
+                   [source rangeOfString:@"test là"].location);
+}
+
+
+#pragma mark - The other direction
+
+- (void)testWhatThePageWouldShowForAPieceOfSource
+{
+    // The markers that became formatting come out.
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"questo è **grassetto** qui"),
+                          @"questo è grassetto qui");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"del *corsivo* e `codice`"),
+                          @"del corsivo e codice");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"~~cancellato~~"),
+                          @"cancellato");
+    // A link shows its text, not its address.
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"vedi [la nota](nota.md) qui"),
+                          @"vedi la nota qui");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"vedi [[Verbale|il verbale]]"),
+                          @"vedi il verbale");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"vedi [[Verbale]]"),
+                          @"vedi Verbale");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"![la rete](rete.png)"),
+                          @"la rete");
+    // And what a line begins with.
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"## Un titolo"),
+                          @"Un titolo");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"- primo\n- secondo"),
+                          @"primo\nsecondo");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"1. primo\n2. secondo"),
+                          @"primo\nsecondo");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"> citato"), @"citato");
+}
+
+- (void)testTheUnderscoreIsLeftAlone
+{
+    // file_name is a name, not an emphasis, and the page shows it whole.
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"apri file_name.txt"),
+                          @"apri file_name.txt");
+}
+
+- (void)testAnEscapeShowsWhatItWasProtecting
+{
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"due asterischi \\*qui\\*"),
+                          @"due asterischi *qui*");
+}
+
+- (void)testNothingIsNothing
+{
+    XCTAssertEqualObjects(MPPreviewTextForSource(@""), @"");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"   \n  "), @"");
+}
+
+- (void)testThePageMarksWhatTheEditorSelected
+{
+    [self loadPageWithScript];
+    XCTAssertFalse([self isPainted:@"macdown-picked"]);
+
+    XCTestExpectation *asked = [self expectationWithDescription:@"chiesto"];
+    __block BOOL found = NO;
+    [self.webView evaluateJavaScript:
+        @"MacDownShowPicked('secondo paragrafo', 33)"
+                   completionHandler:^(id result, NSError *error) {
+        found = [result boolValue];
+        [asked fulfill];
+    }];
+    [self waitForExpectations:@[asked] timeout:kMPPatience];
+    XCTAssertTrue(found);
+    XCTAssertTrue([self isPainted:@"macdown-picked"]);
+}
+
+- (void)testWordsThePageDoesNotShowAreNotMarked
+{
+    [self loadPageWithScript];
+
+    XCTestExpectation *asked = [self expectationWithDescription:@"chiesto"];
+    __block BOOL found = YES;
+    [self.webView evaluateJavaScript:
+        @"MacDownShowPicked('parole che non ci sono', 0)"
+                   completionHandler:^(id result, NSError *error) {
+        found = [result boolValue];
+        [asked fulfill];
+    }];
+    [self waitForExpectations:@[asked] timeout:kMPPatience];
+    XCTAssertFalse(found);
+    XCTAssertFalse([self isPainted:@"macdown-picked"]);
+}
+
+- (void)testTheEditorsSideAlsoMarksTheRightOneOfTwo
+{
+    [self loadPageWithScript];
+
+    // "test" twice in the first paragraph, and an offset near the second:
+    // the mark has to land on that one, not on the first.
+    XCTestExpectation *asked = [self expectationWithDescription:@"chiesto"];
+    __block NSString *answer = nil;
+    [self.webView evaluateJavaScript:
+        @"(function(){"
+        @"if(!MacDownShowPicked('test', 30)) return 'non trovato';"
+        @"var r = CSS.highlights.get('macdown-picked').values().next().value;"
+        @"var shown = document.querySelector('p').firstChild.data;"
+        @"return r.toString() + ' @' + (r.startOffset ==="
+        @" shown.lastIndexOf('test') ? 'seconda' : 'prima');})()"
+                   completionHandler:^(id result, NSError *error) {
+        answer = result;
+        [asked fulfill];
+    }];
+    [self waitForExpectations:@[asked] timeout:kMPPatience];
+    XCTAssertEqualObjects(answer, @"test @seconda");
+}
+
+
+#pragma mark - Across more than one block
+
+- (void)testASelectionOverTwoParagraphsIsFoundWhole
+{
+    // What the browser hands over between two blocks is a newline; the
+    // source has a blank line, and any whitespace matches any other.
+    NSString *source = @"Primo paragrafo.\n\nSecondo paragrafo.\n";
+    NSRange both = NSMakeRange(0, source.length);
+    NSRange range = MPSourceRangeForPreviewText(source,
+        @"paragrafo.\nSecondo", both, 6);
+    XCTAssertEqualObjects([source substringWithRange:range],
+                          @"paragrafo.\n\nSecondo");
+}
+
+- (void)testAcrossTwoBlocksTheRightPairIsTaken
+{
+    // The same two words twice over: the window and the offset are what
+    // tell the second pair from the first.
+    NSString *source = @"uno.\n\ndue.\n\nuno.\n\ndue.\n";
+    NSUInteger secondPair = [source rangeOfString:@"uno.\n\ndue."
+        options:NSBackwardsSearch].location;
+    NSRange window = NSMakeRange(secondPair, source.length - secondPair);
+    NSRange range = MPSourceRangeForPreviewText(source, @"uno.\ndue.",
+                                                window, 0);
+    XCTAssertEqual(range.location, secondPair);
+}
+
+
+#pragma mark - What the renderer changed on the way out
+
+- (void)testCurlyQuotesFindTheStraightOnes
+{
+    // Smartypants shows “così”; the writer typed "così".
+    NSString *source = @"Dice \"così\" e poi basta.";
+    NSRange range = [self rangeOf:@"“così” e poi" in:source];
+    XCTAssertEqualObjects([source substringWithRange:range],
+                          @"\"così\" e poi");
+}
+
+- (void)testACurlyApostropheFindsTheTypedOne
+{
+    NSString *source = @"Con l'editor aperto.";
+    NSRange range = [self rangeOf:@"l’editor" in:source];
+    XCTAssertEqualObjects([source substringWithRange:range], @"l'editor");
+}
+
+- (void)testADashFindsTheHyphens
+{
+    NSString *source = @"Le pagine 10--12 sono da rifare.";
+    NSRange range = [self rangeOf:@"10–12 sono" in:source];
+    XCTAssertEqualObjects([source substringWithRange:range],
+                          @"10--12 sono");
+
+    NSString *lungo = @"Un inciso --- messo lì --- che rompe.";
+    XCTAssertEqualObjects([lungo substringWithRange:
+        [self rangeOf:@"inciso — messo" in:lungo]], @"inciso --- messo");
+}
+
+- (void)testAnEllipsisFindsTheThreeDots
+{
+    NSString *source = @"Aspetta... e poi vai.";
+    NSRange range = [self rangeOf:@"Aspetta… e poi" in:source];
+    XCTAssertEqualObjects([source substringWithRange:range],
+                          @"Aspetta... e poi");
+}
+
+- (void)testAnEntityFindsWhatItStandsFor
+{
+    NSString *source = @"Tizio &amp; Caio, soci.";
+    NSRange range = [self rangeOf:@"Tizio & Caio" in:source];
+    XCTAssertEqualObjects([source substringWithRange:range],
+                          @"Tizio &amp; Caio");
+}
+
+- (void)testWhatIsAlreadyStraightStillMatches
+{
+    // The reader may have Smartypants off, and then the page shows exactly
+    // what the source says.
+    NSString *source = @"Dice \"così\" e l'altro \"cosà\".";
+    XCTAssertEqualObjects([source substringWithRange:
+        [self rangeOf:@"\"cosà\"" in:source]], @"\"cosà\"");
+    XCTAssertEqualObjects([source substringWithRange:
+        [self rangeOf:@"l'altro" in:source]], @"l'altro");
 }
 
 

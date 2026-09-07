@@ -18,8 +18,41 @@ static const NSUInteger kMPSpanSlack = 40;
 static const NSUInteger kMPSelectionAtLeast = 2;
 
 
+/** What a character in the rendered page can have been in the source.
+ *
+ * The page is not what was typed. Smartypants turns a straight quote into a
+ * curly one and two hyphens into a dash, and the renderer writes `&amp;`
+ * for an ampersand; a reader selecting `l’editor` has `l\'editor` in front
+ * of them in the editor. Each of those is one character in the page and
+ * something else in the source, so the pattern accepts both.
+ */
+static NSString *MPPatternForCharacter(NSString *character)
+{
+    static NSDictionary<NSString *, NSString *> *alternatives;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        alternatives = @{
+            @"\u201c": @"[\"\u201c\u201d]", @"\u201d": @"[\"\u201c\u201d]",
+            @"\"": @"[\"\u201c\u201d]",
+            @"\u2018": @"['\u2018\u2019]", @"\u2019": @"['\u2018\u2019]",
+            @"'": @"['\u2018\u2019]",
+            @"\u2013": @"(?:\u2013|--)",
+            @"\u2014": @"(?:\u2014|---|--)",
+            @"\u2026": @"(?:\u2026|\\.\\.\\.)",
+            @"&": @"(?:&|&amp;)",
+            @"<": @"(?:<|&lt;)",
+            @">": @"(?:>|&gt;)",
+        };
+    });
+    NSString *alternative = alternatives[character];
+    return alternative ?: [NSRegularExpression
+        escapedPatternForString:character];
+}
+
+
 /// The selection as a pattern: every run of whitespace matches any other,
-/// everything else matches itself.
+/// everything else matches itself or whatever it was before the renderer
+/// got to it.
 static NSRegularExpression *MPPatternForText(NSString *text)
 {
     NSMutableString *pattern = [NSMutableString string];
@@ -35,9 +68,14 @@ static NSRegularExpression *MPPatternForText(NSString *text)
             [pattern appendString:@"\\s+"];
             continue;
         }
-        if ([scanner scanUpToCharactersFromSet:spaces intoString:&run])
-            [pattern appendString:
-                [NSRegularExpression escapedPatternForString:run]];
+        if (![scanner scanUpToCharactersFromSet:spaces intoString:&run])
+            continue;
+        [run enumerateSubstringsInRange:NSMakeRange(0, run.length)
+                                options:NSStringEnumerationByComposedCharacterSequences
+                             usingBlock:^(NSString *character, NSRange r,
+                                          NSRange e, BOOL *stop) {
+            [pattern appendString:MPPatternForCharacter(character)];
+        }];
     }
     if (!pattern.length)
         return nil;
@@ -46,16 +84,49 @@ static NSRegularExpression *MPPatternForText(NSString *text)
 }
 
 
-/// The first match of that pattern inside `range`, or a not-found range.
-static NSRange MPFirstMatch(NSRegularExpression *regex, NSString *source,
-                            NSRange range)
+/** The match of that pattern inside `range` that the reader meant.
+ *
+ * With no idea where they were, the first one; with an idea, the one
+ * nearest it. A paragraph that says "test" three times is the reason this
+ * takes an argument at all.
+ */
+static NSRange MPMatchNear(NSRegularExpression *regex, NSString *source,
+                           NSRange range, NSUInteger wanted)
 {
     if (!regex || range.location == NSNotFound
             || NSMaxRange(range) > source.length)
         return NSMakeRange(NSNotFound, 0);
-    NSTextCheckingResult *match = [regex firstMatchInString:source options:0
-                                                      range:range];
-    return match ? match.range : NSMakeRange(NSNotFound, 0);
+
+    __block NSRange best = NSMakeRange(NSNotFound, 0);
+    __block NSUInteger closest = NSUIntegerMax;
+    [regex enumerateMatchesInString:source options:0 range:range
+                         usingBlock:^(NSTextCheckingResult *match,
+                                      NSMatchingFlags flags, BOOL *stop) {
+        if (!match)
+            return;
+        if (wanted == NSNotFound)
+        {
+            best = match.range;
+            *stop = YES;
+            return;
+        }
+        NSUInteger distance = match.range.location > wanted
+            ? match.range.location - wanted : wanted - match.range.location;
+        if (distance < closest)
+        {
+            closest = distance;
+            best = match.range;
+        }
+    }];
+    return best;
+}
+
+
+/// The first match of that pattern inside `range`, or a not-found range.
+static NSRange MPFirstMatch(NSRegularExpression *regex, NSString *source,
+                            NSRange range)
+{
+    return MPMatchNear(regex, source, range, NSNotFound);
 }
 
 
@@ -78,7 +149,7 @@ static NSArray<NSString *> *MPEdgeWords(NSString *text)
 
 
 NSRange MPSourceRangeForPreviewText(NSString *source, NSString *selected,
-                                    NSRange block)
+                                    NSRange block, NSUInteger renderedOffset)
 {
     NSRange nowhere = NSMakeRange(NSNotFound, 0);
     if (!source.length || !selected.length)
@@ -97,15 +168,22 @@ NSRange MPSourceRangeForPreviewText(NSString *source, NSString *selected,
     else if (NSMaxRange(within) > source.length)
         within.length = source.length - within.location;
 
+    // Where in the source the reader probably was: the block's own start
+    // plus what the page counted before the selection. The source has more
+    // characters than the page shows — markup — never fewer, so this is a
+    // floor to measure distance from, not a guess at the answer.
+    NSUInteger wanted = renderedOffset == NSNotFound
+        ? NSNotFound : within.location + renderedOffset;
+
     NSRegularExpression *regex = MPPatternForText(text);
 
-    // 1. Inside the block it came from.
-    NSRange found = MPFirstMatch(regex, source, within);
+    // 1. Inside the block it came from, nearest to where they were.
+    NSRange found = MPMatchNear(regex, source, within, wanted);
     if (found.location != NSNotFound)
         return found;
 
     // 2. Anywhere, for a block whose offset has moved.
-    found = MPFirstMatch(regex, source, NSMakeRange(0, source.length));
+    found = MPMatchNear(regex, source, NSMakeRange(0, source.length), wanted);
     if (found.location != NSNotFound)
         return found;
 
@@ -130,6 +208,48 @@ NSRange MPSourceRangeForPreviewText(NSString *source, NSString *selected,
     if (span.length > text.length * 3 + kMPSpanSlack)
         return nowhere;         // that is no longer the selection
     return span;
+}
+
+
+#pragma mark - The other direction
+
+NSString *MPPreviewTextForSource(NSString *sourceSelection)
+{
+    if (!sourceSelection.length)
+        return @"";
+
+    static NSArray<NSArray<NSString *> *> *rules;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        rules = @[
+            // An image or a link shows its text, not its address.
+            @[@"!?\\[\\[([^\\]|]*)\\|([^\\]]*)\\]\\]", @"$2"],
+            @[@"!?\\[\\[([^\\]]*)\\]\\]", @"$1"],
+            @[@"!?\\[([^\\]]*)\\]\\([^)]*\\)", @"$1"],
+            @[@"!?\\[([^\\]]*)\\]\\[[^\\]]*\\]", @"$1"],
+            // What a line begins with and the page does not show.
+            @[@"(?m)^\\s{0,3}#{1,6}\\s+", @""],
+            @[@"(?m)^\\s{0,3}>\\s?", @""],
+            @[@"(?m)^\\s*(?:[-+*]|\\d{1,9}[.)])\\s+", @""],
+            // The markers that became formatting. The underscore is left
+            // alone: file_name is a name, not an emphasis.
+            @[@"(?<!\\\\)[*~`]", @""],
+            // An escape shows the character it was protecting.
+            @[@"\\\\([\\\\`*_{}\\[\\]()#+.!~-])", @"$1"],
+        ];
+    });
+
+    NSMutableString *text = [sourceSelection mutableCopy];
+    for (NSArray<NSString *> *rule in rules)
+    {
+        NSRegularExpression *regex = [NSRegularExpression
+            regularExpressionWithPattern:rule[0] options:0 error:NULL];
+        [regex replaceMatchesInString:text options:0
+                                range:NSMakeRange(0, text.length)
+                         withTemplate:rule[1]];
+    }
+    return [text stringByTrimmingCharactersInSet:
+        [NSCharacterSet whitespaceAndNewlineCharacterSet]];
 }
 
 
@@ -161,6 +281,17 @@ NSString *MPSelectionWatchScript(void)
     @"tr.macdown-here>:first-child::before{content:\"\";position:absolute;"
     @"left:-14px;top:0;bottom:0;width:3px;border-radius:2px;"
     @"background:currentColor;opacity:0.35}"
+    // What was selected stays visible after the focus goes to the editor,
+    // where the native selection would be dimmed or gone. Painted through
+    // the highlight API rather than by changing the page: wrapping the
+    // words in a span would move every offset after them.
+    @"::highlight(macdown-picked){"
+    @"background-color:color-mix(in srgb, Highlight 55%, transparent)}"
+    // The same words when the editor could not find them: still marked, so
+    // the reader knows which ones it was, and plainly not the same answer.
+    @"::highlight(macdown-lost){"
+    @"background-color:color-mix(in srgb, Highlight 15%, transparent);"
+    @"text-decoration:underline dotted}"
     @"';"
     @"document.head.appendChild(style);"
     @"function blocks(){"
@@ -174,7 +305,8 @@ NSString *MPSelectionWatchScript(void)
     @"for(var j=0;j<all.length;j++)"
     @"all[j].classList.toggle('macdown-here',all[j]===found);"
     @"};"
-    @"function report(done){"
+    @"var action='';"
+    @"function report(done,focus){"
     @"var sel=document.getSelection();"
     @"if(!sel||!sel.anchorNode)return;"
     @"var node=sel.anchorNode;"
@@ -191,27 +323,161 @@ NSString *MPSelectionWatchScript(void)
     @"if(c&&c.tagName!=='TABLE'&&c.parentElement)"
     @"cell=Array.prototype.indexOf.call(c.parentElement.children,c);}"
     @"while(node&&!node.hasAttribute('data-src'))node=node.parentElement;"
-    @"if(!node)return;"
+    // Nothing above it says where it came from: the words are still worth
+    // reporting, and the editor will look for them in the whole document.
+    @"if(!node){"
+    @"if(done&&!sel.isCollapsed){keep(sel);"
+    @"window.webkit.messageHandlers.macdownSelection.postMessage("
+    @"{begin:0,end:-1,cell:-1,offset:-1,text:sel.toString(),"
+    @"done:true,focus:!!focus,action:action||''});}"
+    @"return;}"
     @"var all=blocks(),i=all.indexOf(node);"
     @"var begin=parseInt(node.getAttribute('data-src'),10);"
-    @"var end=(i>=0&&i+1<all.length)"
-    @"?parseInt(all[i+1].getAttribute('data-src'),10):-1;"
+    // How much of this block's text comes before the selection. It is what
+    // tells the second "test" of a paragraph from the first, and it is
+    // measured on the page because only the page knows what it shows.
+    @"var offset=-1,r=null;"
+    @"try{r=sel.getRangeAt(0);var pre=document.createRange();"
+    @"pre.selectNodeContents(node);"
+    @"pre.setEnd(r.startContainer,r.startOffset);"
+    @"offset=pre.toString().length;}catch(e){offset=-1;}"
+    // Where the selection *ends*, which is not always the block it began
+    // in: three paragraphs dragged over are three blocks, and a window
+    // that stopped at the first would send the search looking for them
+    // somewhere else in the document.
+    @"var last=begin;"
+    @"try{var e=r.endContainer;"
+    @"if(e.nodeType===3)e=e.parentElement;"
+    @"while(e&&!e.hasAttribute('data-src'))e=e.parentElement;"
+    @"if(e)last=parseInt(e.getAttribute('data-src'),10);}catch(x){}"
+    @"if(last<begin)last=begin;"
+    // The next block that starts somewhere *else*. A list and its first
+    // item begin at the same character, and a block that ends where it
+    // begins is no window to search in.
+    @"var end=-1;"
+    @"for(var k=0;k<all.length;k++){"
+    @"var s=parseInt(all[k].getAttribute('data-src'),10);"
+    @"if(s>last){end=s;break;}}"
+    @"if(done&&!sel.isCollapsed)keep(sel);"
     @"window.webkit.messageHandlers.macdownSelection.postMessage("
-    @"{begin:begin,end:end,cell:cell,text:done?sel.toString():'',"
-    @"done:!!done});}"
-    @"var pending=false;"
+    @"{begin:begin,end:end,cell:cell,offset:offset,"
+    @"text:done?sel.toString():'',done:!!done,focus:!!focus,"
+    @"action:action||''});}"
+    // A cloned range, because the live one goes with the selection the
+    // moment the editor takes the focus.
+    @"var picked=null;"
+    @"function keep(sel){"
+    @"if(typeof CSS==='undefined'||!CSS.highlights)return;"
+    @"try{picked=sel.getRangeAt(0).cloneRange();"
+    @"CSS.highlights.delete('macdown-lost');"
+    @"CSS.highlights.set('macdown-picked',new Highlight(picked));}"
+    @"catch(e){}}"
+    @"function forget(){"
+    @"if(typeof CSS==='undefined'||!CSS.highlights)return;"
+    @"CSS.highlights.delete('macdown-picked');"
+    @"CSS.highlights.delete('macdown-lost');"
+    @"picked=null;}"
+    @"window.MacDownForgetPicked=forget;"
+    // The other direction: the editor has a selection and these are the
+    // words it shows. Found in the block it says, marked the same way, and
+    // answered so the editor knows whether it worked.
+    @"window.MacDownShowPicked=function(text,begin){"
+    @"if(typeof CSS==='undefined'||!CSS.highlights||!text)return false;"
+    @"var host=null,all=blocks();"
+    @"for(var i=0;i<all.length;i++){"
+    @"if(parseInt(all[i].getAttribute('data-src'),10)<=begin)host=all[i];"
+    @"else break;}"
+    @"if(!host)host=document.body;"
+    // How far into the block the selection began, counted in the source.
+    // The page has fewer characters than the source, never more, so this
+    // is a ceiling to measure distance from rather than a position.
+    @"var hint=Math.max(0,begin-parseInt("
+    @"host.getAttribute&&host.getAttribute('data-src')||0,10));"
+    // Every character of the block, and which text node each came from, so
+    // a match can be turned back into a range.
+    @"var walker=document.createTreeWalker(host,NodeFilter.SHOW_TEXT);"
+    @"var nodes=[],starts=[],whole='',n;"
+    @"while((n=walker.nextNode())){"
+    @"nodes.push(n);starts.push(whole.length);whole+=n.data;}"
+    @"if(!whole)return false;"
+    @"var m=null,best=null,closest=Infinity;"
+    @"var re=window.MacDownPattern(text);"
+    @"if(!re)return false;"
+    @"while((m=re.exec(whole))!==null){"
+    @"var d=Math.abs(m.index-(hint||0));"
+    @"if(d<closest){closest=d;best=m;}"
+    @"if(m.index===re.lastIndex)re.lastIndex++;}"
+    @"if(!best)return false;"
+    @"function where(at){"
+    @"for(var j=nodes.length-1;j>=0;j--)"
+    @"if(starts[j]<=at)return [nodes[j],at-starts[j]];"
+    @"return [nodes[0],0];}"
+    @"try{var a=where(best.index),b=where(best.index+best[0].length-1);"
+    @"var range=document.createRange();"
+    @"range.setStart(a[0],a[1]);range.setEnd(b[0],b[1]+1);"
+    @"picked=range;CSS.highlights.delete('macdown-lost');"
+    @"CSS.highlights.set('macdown-picked',new Highlight(range));"
+    @"return true;}catch(e){return false;}};"
+    // The same tolerance the editor's side has: any whitespace for any
+    // other, and what Smartypants changed for what was typed.
+    @"window.MacDownPattern=function(text){"
+    @"var map={'\"':'[\"\u201c\u201d]','\u201c':'[\"\u201c\u201d]',"
+    @"'\u201d':'[\"\u201c\u201d]',\"'\":\"['\u2018\u2019]\","
+    @"'\u2018':\"['\u2018\u2019]\",'\u2019':\"['\u2018\u2019]\","
+    @"'\u2013':'(?:\u2013|--)','\u2014':'(?:\u2014|---|--)',"
+    @"'\u2026':'(?:\u2026|\\\\.\\\\.\\\\.)'};"
+    @"var out='';"
+    @"for(var i=0;i<text.length;i++){"
+    @"var c=text[i];"
+    @"if(/\\s/.test(c)){"
+    @"while(i+1<text.length&&/\\s/.test(text[i+1]))i++;"
+    @"out+='\\\\s+';continue;}"
+    @"out+=map[c]||c.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&');}"
+    @"try{return new RegExp(out,'g');}catch(e){return null;}};"
+    // Said by the editor when it could not find those words in the source.
+    @"window.MacDownPickedLost=function(){"
+    @"if(typeof CSS==='undefined'||!CSS.highlights||!picked)return;"
+    @"CSS.highlights.delete('macdown-picked');"
+    @"try{CSS.highlights.set('macdown-lost',new Highlight(picked));}"
+    @"catch(e){}};"
+    @"var pending=false,quiet=null;"
+    // A selection that has stopped changing has been made, however it was
+    // made: with the keyboard, or by a drag that ended outside the page
+    // where no mouseup of ours ever arrives. The editor follows it, but
+    // the focus does not move — somebody holding shift and an arrow key is
+    // not finished, and a reader who paused mid-drag is not either.
+    @"function settle(){"
+    @"clearTimeout(quiet);"
+    @"quiet=setTimeout(function(){report(true,false);},400);}"
     // setTimeout rather than requestAnimationFrame: a frame callback only
     // arrives while the page is being drawn, and a preview whose pane is
     // collapsed is not. Measured — headless, nothing ever reported.
     @"document.addEventListener('selectionchange',function(){"
+    @"settle();"
     @"if(pending)return;pending=true;"
-    @"setTimeout(function(){pending=false;report(false);},0);"
+    @"setTimeout(function(){pending=false;report(false,false);},0);"
     @"});"
-    // The end of the gesture, and the only moment the selected text is
-    // worth sending: reporting it while the pointer is still down would
-    // take the focus away from a reader in the middle of dragging one.
+    // The end of a gesture made with the mouse, and the one moment the
+    // focus follows the selection: reporting it while the pointer is still
+    // down would take the focus away from somebody mid-drag.
     @"document.addEventListener('mouseup',function(){"
-    @"setTimeout(function(){report(true);},0);"
+    @"clearTimeout(quiet);"
+    @"setTimeout(function(){report(true,true);},0);"
+    @"});"
+    // The start of the next gesture is the moment the last one stops being
+    // what the reader means.
+    @"document.addEventListener('mousedown',forget);"
+    // Delete, pressed on a selection made in the preview, means the same
+    // thing it means anywhere: take those words out. The page cannot do
+    // it, so it says so and the editor does it — with the focus, since
+    // what comes next is typing.
+    @"document.addEventListener('keydown',function(e){"
+    @"if(e.key!=='Backspace'&&e.key!=='Delete')return;"
+    @"var sel=document.getSelection();"
+    @"if(!sel||sel.isCollapsed)return;"
+    @"e.preventDefault();"
+    @"clearTimeout(quiet);"
+    @"action='delete';report(true,true);action='';"
     @"});"
     @"})();";
 }

@@ -194,12 +194,32 @@ for them. Click a cell in the preview and the caret goes to that cell.
 - **Text selected in the preview is selected in the editor.** Pick the words
   out of the rendered page, and when you let go of the mouse the same words
   are selected in the source with the focus there: delete removes them,
-  typing replaces them. The words are looked for inside the block they came
-  from, so the third "test" of a document is the third one; a selection that
+  typing replaces them. A selection made **with the keyboard** — ⇧ and the
+  arrows, ⌘A — is followed as soon as it stops changing, and so is a drag
+  that ends outside the page where no mouse release ever reaches it; in
+  neither case does the focus move, since somebody still holding shift is
+  not finished. Pressing delete on a selection made in the preview takes
+  those words out of the source, focus and all. What you picked **stays
+  marked in the preview** —
+  the focus has gone to the editor, where the page's own selection would be
+  dimmed or gone — until the next time you press the mouse in the page. The words are looked for inside the block they came
+  from — and *which* "test" of that paragraph, since the page says how much
+  of its own text came before the selection; a selection that
   crosses an emphasis takes the asterisks with it, since that is what the
-  source says; and a selection that cannot be placed with certainty leaves
-  the editor alone rather than selecting nearly the right thing. Switch it
-  off in *Rendering* if the preview should stay a page to read.
+  source says; and what the renderer changed on the way out is undone on the
+  way back — `“così”` finds `"così"`, `l’editor` finds `l'editor`, `10–12`
+  finds `10--12`, `&` finds `&amp;`. A selection that cannot be placed with
+  certainty leaves the editor alone rather than selecting nearly the right
+  thing — and says so where you are looking, by leaving the words marked in
+  the preview with a dotted line instead of the filled one. A selection over
+  several paragraphs is searched for across all of them, not only the one it
+  began in. Switch it
+  off in *Rendering* if the preview should stay a page to read. It works **both ways**: select a sentence in the editor
+  and the same words are marked in the page, so you can see which paragraph
+  you are about to change. What you wrote is `**grassetto**` and what the
+  page shows is `grassetto`, so what goes across is the text as the page
+  would show it — the markers that became formatting, the address of a
+  link, the bullet of a list, all taken off first.
 - **A sidebar with the document outline** (⌥⌘S), for moving around a long
   file.
 - **Seven styles** for the rendered page and **fifteen editor themes**, all

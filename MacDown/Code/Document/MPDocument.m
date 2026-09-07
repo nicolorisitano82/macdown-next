@@ -204,6 +204,15 @@ NS_INLINE NSString *MPRectStringForAutosaveName(NSString *name)
 /// The list of flagged words, while it is open.
 @property (strong, nonatomic) NSPopover *prosePopover;
 
+/** True while the editor's selection is being set from the preview.
+ *
+ * The two panes follow each other, and without this they would chase: the
+ * page marks what was picked, the editor takes that selection, and the
+ * editor's own change would ask the page to find those words again — which
+ * could land on the other "test" of the paragraph.
+ */
+@property (nonatomic) BOOL selectionCameFromPreview;
+
 /** Whether this document is being read rather than written.
  *
  * Per document and not remembered: a verbale that has been signed is read
@@ -1848,12 +1857,60 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
     // In bytes, because that is what the blocks in the page are labelled
     // with. The caret's own index counts UTF-16 units, and the two are the
     // same number only while the document stays ASCII.
-    NSUInteger offset = MPUTF8ByteOffsetForCharacterIndex(
-        self.editor.string ?: @"", self.editor.selectedRange.location);
-    NSString *js = [NSString stringWithFormat:
+    NSString *text = self.editor.string ?: @"";
+    NSRange selection = self.editor.selectedRange;
+    NSUInteger offset = MPUTF8ByteOffsetForCharacterIndex(text,
+                                                          selection.location);
+    NSMutableString *js = [NSMutableString stringWithFormat:
         @"if (window.MacDownMarkHere) MacDownMarkHere(%lu);",
         (unsigned long)offset];
+    [js appendString:[self scriptMarkingSelection:selection in:text
+                                         atOffset:offset]];
     [self.preview evaluateJavaScript:js completionHandler:nil];
+}
+
+
+/** The page marking the words the editor has selected, or forgetting them.
+ *
+ * The other direction of the same idea: a reader who selects a sentence in
+ * the source should see which sentence it is in the page. What they wrote
+ * is `**grassetto**` and what the page shows is `grassetto`, so what goes
+ * over is the text as the page would show it, and the page looks for it
+ * inside the block the offset lands in.
+ *
+ * Nothing goes over while the editor's own selection came *from* the page:
+ * the page has already marked exactly what was picked, and asking it to
+ * find those words again could land on the wrong one of two.
+ */
+- (NSString *)scriptMarkingSelection:(NSRange)selection
+                                  in:(NSString *)text
+                            atOffset:(NSUInteger)offset
+{
+    static NSString * const forget =
+        @"if (window.MacDownForgetPicked) MacDownForgetPicked();";
+    if (!self.preferences.previewSelectionSelectsSource
+            || self.selectionCameFromPreview)
+        return @"";
+    // A caret is not a selection, and a document-sized selection is not a
+    // sentence somebody wants pointed at.
+    if (selection.length < 2 || selection.length > 4000
+            || NSMaxRange(selection) > text.length)
+        return forget;
+
+    NSString *shown = MPPreviewTextForSource(
+        [text substringWithRange:selection]);
+    if (shown.length < 2)
+        return forget;
+
+    NSData *quoted = [NSJSONSerialization dataWithJSONObject:shown
+        options:NSJSONWritingFragmentsAllowed error:NULL];
+    NSString *literal = [[NSString alloc] initWithData:quoted
+                                             encoding:NSUTF8StringEncoding];
+    if (!literal)
+        return forget;
+    return [NSString stringWithFormat:
+        @"if (window.MacDownShowPicked) MacDownShowPicked(%@, %lu);",
+        literal, (unsigned long)offset];
 }
 
 - (BOOL)textView:(NSTextView *)textView doCommandBySelector:(SEL)commandSelector
@@ -2155,8 +2212,15 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
                 && selected.length
                 && self.preferences.previewSelectionSelectsSource)
         {
-            [self selectInEditor:selected fromBlock:NSMakeRange(begin,
-                                                               end - begin)];
+            NSInteger reported = body[@"offset"]
+                ? [body[@"offset"] integerValue] : -1;
+            [self selectInEditor:selected
+                       fromBlock:NSMakeRange(begin, end - begin)
+                        rendered:reported < 0 ? NSNotFound
+                                              : (NSUInteger)reported
+                           focus:[body[@"focus"] boolValue]
+                          delete:[body[@"action"]
+                                     isEqualToString:@"delete"]];
             return;
         }
 
@@ -2191,22 +2255,48 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
  * and it is why this waits for the end of the gesture.
  */
 - (void)selectInEditor:(NSString *)selected fromBlock:(NSRange)block
+              rendered:(NSUInteger)renderedOffset
+                 focus:(BOOL)takeFocus
+                delete:(BOOL)removeIt
 {
     NSString *text = self.editor.string ?: @"";
-    NSRange range = MPSourceRangeForPreviewText(text, selected, block);
+    NSRange range = MPSourceRangeForPreviewText(text, selected, block,
+                                                renderedOffset);
     if (range.location == NSNotFound
             || NSMaxRange(range) > self.editor.textStorage.length)
     {
         MPNote(@"  selection not placed: %lu characters",
                (unsigned long)selected.length);
+        // Said where the reader is looking: the words stay marked in the
+        // page, in the other colour. Nothing happening and nothing being
+        // said are the same thing from where they are sitting.
+        [self.preview evaluateJavaScript:
+            @"window.MacDownPickedLost&&MacDownPickedLost();"
+               completionHandler:nil];
         return;
     }
 
+    self.selectionCameFromPreview = YES;
     self.editor.selectedRange = range;
+    self.selectionCameFromPreview = NO;
     [self.editor scrollRangeToVisible:range];
-    [self.editor.window makeFirstResponder:self.editor];
-    MPNote(@"selected from the preview: %lu characters at %lu",
-           (unsigned long)range.length, (unsigned long)range.location);
+    // The focus moves only when the gesture is over and the reader is
+    // plainly finished with the page: a mouse released in it, or delete
+    // pressed on what they had chosen. A selection still being extended
+    // with the keyboard is followed, not taken over.
+    if (takeFocus)
+        [self.editor.window makeFirstResponder:self.editor];
+    if (removeIt && [self.editor shouldChangeTextInRange:range
+                                       replacementString:@""])
+    {
+        [self.editor.textStorage replaceCharactersInRange:range
+                                               withString:@""];
+        [self.editor didChangeText];
+    }
+    MPNote(@"selected from the preview: %lu characters at %lu%@%@",
+           (unsigned long)range.length, (unsigned long)range.location,
+           takeFocus ? @", with the focus" : @"",
+           removeIt ? @", deleted" : @"");
 }
 
 
