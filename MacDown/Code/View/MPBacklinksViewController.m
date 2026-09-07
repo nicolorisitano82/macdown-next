@@ -66,11 +66,11 @@ static const CGFloat kMPMaximumHeight = 460.0;
     // and "there was nothing to look at" are different answers.
     NSString *summary = self.backlinks.count
         ? [NSString stringWithFormat:NSLocalizedString(
-              @"%lu collegamenti, in %lu documenti letti",
+              @"%lu links, in %lu documents read",
               @"Backlinks popover header"),
            (unsigned long)self.backlinks.count, (unsigned long)self.counted]
         : [NSString stringWithFormat:NSLocalizedString(
-              @"Nessun documento punta a questo, su %lu letti",
+              @"No document points here, out of %lu read",
               @"Backlinks popover header when there are none"),
            (unsigned long)self.counted];
 
@@ -103,7 +103,8 @@ static const CGFloat kMPMaximumHeight = 460.0;
     NSView *cell = [[NSView alloc] initWithFrame:
         NSMakeRect(0.0, 0.0, column.width, kMPRowHeight)];
 
-    NSString *where = [NSString stringWithFormat:@"%@ · riga %lu",
+    NSString *where = [NSString stringWithFormat:NSLocalizedString(
+        @"%@ · line %lu", @"Which document links here, and from which line"),
         link.title.length ? link.title
                           : link.documentURL.lastPathComponent,
         (unsigned long)link.line];

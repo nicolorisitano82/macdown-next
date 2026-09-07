@@ -44,6 +44,9 @@ static NSArray<NSString *> *LILatinSentences(void)
 
 /// Italian filler that reads like prose rather than like Latin, which is
 /// what you want when you are checking line breaks and hyphenation.
+///
+/// translation-check: content — sample text stays in the language it shows
+/// off, so these sentences are not interface strings and are not localized.
 static NSArray<NSString *> *LIItalianSentences(void)
 {
     return @[
@@ -75,6 +78,9 @@ static NSString *LIParagraph(NSArray<NSString *> *pool, NSUInteger sentences)
 /// A sampler of Markdown rather than flat prose: headings, a list, a quote,
 /// a table, code. Useful for trying a stylesheet or an export without
 /// writing a document first.
+///
+/// translation-check: content — the sample is the thing being inserted, not
+/// something the interface says.
 static NSString *LIMarkdownBlock(NSUInteger index)
 {
     NSArray<NSString *> *blocks = @[
@@ -130,11 +136,20 @@ static NSString *LITextWithFlavour(LIFlavour flavour, NSUInteger paragraphs)
 @end
 
 
+// NSLocalizedString asks the *main* bundle, which is MacDown Next: a plug-in
+// that used it would need the application to carry the plug-in's languages.
+// A plug-in carries its own — Localization/it-IT.lproj is copied into the
+// bundle by build.sh — so ask the bundle this class was loaded from.
+#define LILocalizedString(key, comment) \
+    [[NSBundle bundleForClass:[LoremIpsum class]] \
+        localizedStringForKey:(key) value:@"" table:nil]
+
+
 @implementation LoremIpsum
 
 - (NSString *)name
 {
-    return NSLocalizedString(@"Lorem Ipsum…",
+    return LILocalizedString(@"Lorem Ipsum…",
                              @"Plug-in menu item; the ellipsis promises a "
                              @"dialogue rather than an immediate insertion");
 }
@@ -155,7 +170,7 @@ static NSString *LITextWithFlavour(LIFlavour flavour, NSUInteger paragraphs)
     NSView *box = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 300, 62)];
 
     NSTextField *flavourLabel = [NSTextField labelWithString:
-        NSLocalizedString(@"Tipo:", @"Which kind of filler text")];
+        LILocalizedString(@"Kind:", @"Which kind of filler text")];
     flavourLabel.alignment = NSTextAlignmentRight;
     flavourLabel.frame = NSMakeRect(0, 36, 80, 18);
     [box addSubview:flavourLabel];
@@ -163,15 +178,15 @@ static NSString *LITextWithFlavour(LIFlavour flavour, NSUInteger paragraphs)
     NSPopUpButton *popUp =
         [[NSPopUpButton alloc] initWithFrame:NSMakeRect(88, 32, 200, 26)];
     [popUp addItemsWithTitles:@[
-        NSLocalizedString(@"Lorem ipsum", @"Classic Latin filler"),
-        NSLocalizedString(@"Italiano", @"Italian filler prose"),
-        NSLocalizedString(@"Markdown di prova", @"A sampler of Markdown"),
+        LILocalizedString(@"Lorem ipsum", @"Classic Latin filler"),
+        LILocalizedString(@"Italian", @"Italian filler prose"),
+        LILocalizedString(@"Sample Markdown", @"A sampler of Markdown"),
     ]];
     [box addSubview:popUp];
     self.flavourPopUp = popUp;
 
     NSTextField *countLabel = [NSTextField labelWithString:
-        NSLocalizedString(@"Paragrafi:", @"How many paragraphs to insert")];
+        LILocalizedString(@"Paragraphs:", @"How many paragraphs to insert")];
     countLabel.alignment = NSTextAlignmentRight;
     countLabel.frame = NSMakeRect(0, 6, 80, 18);
     [box addSubview:countLabel];
@@ -210,24 +225,24 @@ static NSString *LITextWithFlavour(LIFlavour flavour, NSUInteger paragraphs)
         // Nothing is focused: say so rather than failing silently, since
         // MacDown only logs a failed run.
         NSAlert *problem = [[NSAlert alloc] init];
-        problem.messageText = NSLocalizedString(
-            @"Nessun punto di inserimento",
+        problem.messageText = LILocalizedString(
+            @"There is no insertion point",
             @"Shown when no editor has focus");
-        problem.informativeText = NSLocalizedString(
-            @"Fai clic nell'editor, nel punto in cui vuoi il testo, e "
-            @"riprova.", @"How to recover from having no focus");
+        problem.informativeText = LILocalizedString(
+            @"Click in the editor where you want the text, and try again.",
+            @"How to recover from having no focus");
         [problem runModal];
         return NO;
     }
 
     NSAlert *alert = [[NSAlert alloc] init];
-    alert.messageText = NSLocalizedString(@"Inserisci testo di prova",
+    alert.messageText = LILocalizedString(@"Insert Sample Text",
                                           @"Dialogue title");
-    alert.informativeText = NSLocalizedString(
-        @"Il testo viene inserito nel punto in cui si trova il cursore.",
+    alert.informativeText = LILocalizedString(
+        @"The text is inserted where the cursor is.",
         @"Explains where the text lands");
-    [alert addButtonWithTitle:NSLocalizedString(@"Inserisci", @"Confirm")];
-    [alert addButtonWithTitle:NSLocalizedString(@"Annulla", @"Cancel")];
+    [alert addButtonWithTitle:LILocalizedString(@"Insert", @"Confirm")];
+    [alert addButtonWithTitle:LILocalizedString(@"Cancel", @"Cancel")];
     alert.accessoryView = [self optionsView];
 
     // So the number can be typed as well as stepped.

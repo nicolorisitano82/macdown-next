@@ -77,10 +77,10 @@ NS_INLINE NSColor *MPStateColour(MPQuickLookExtensionState state)
     headline.alignment = NSLayoutAttributeFirstBaseline;
 
     NSTextField *what = [self labelWithString:NSLocalizedString(
-        @"Premendo la barra spaziatrice su un file Markdown, il Finder mostra "
-        @"il documento come si legge — titoli, tabelle, codice e caselle dei "
-        @"to-do — invece del sorgente. L'anteprima fa parte di questa "
-        @"applicazione: installarla vuol dire dire a macOS che è qui.",
+        @"Press the space bar on a Markdown file and Finder shows the "
+        @"document as it reads — headings, tables, code and to-do boxes — "
+        @"instead of the source. The preview is part of this application: "
+        @"installing it means telling macOS that it is here.",
         @"Explanation of the Quick Look extension")];
     what.textColor = [NSColor secondaryLabelColor];
 
@@ -91,7 +91,7 @@ NS_INLINE NSColor *MPStateColour(MPQuickLookExtensionState state)
         target:self action:@selector(install:)];
     self.installButton.keyEquivalent = @"\r";
     self.removeButton = [NSButton buttonWithTitle:NSLocalizedString(
-        @"Rimuovi", @"Remove the Quick Look extension")
+        @"Remove", @"Remove the Quick Look extension")
         target:self action:@selector(remove:)];
 
     self.spinner = [[NSProgressIndicator alloc] init];
@@ -100,7 +100,7 @@ NS_INLINE NSColor *MPStateColour(MPQuickLookExtensionState state)
     self.spinner.displayedWhenStopped = NO;
 
     NSButton *settings = [NSButton buttonWithTitle:NSLocalizedString(
-        @"Mostra in Impostazioni di Sistema…",
+        @"Show in System Settings…",
         @"Open the Extensions pane of System Settings")
         target:self action:@selector(showInSystemSettings:)];
     settings.bezelStyle = NSBezelStyleInline;
@@ -200,7 +200,7 @@ NS_INLINE NSColor *MPStateColour(MPQuickLookExtensionState state)
     if (extension.registeredURL)
     {
         self.registeredLabel.stringValue = [NSString stringWithFormat:
-            NSLocalizedString(@"Registrata: %@ (%@)",
+            NSLocalizedString(@"Registered: %@ (%@)",
                 @"Where macOS has the Quick Look extension, and its version"),
             extension.registeredURL.path,
             extension.registeredVersion ?: @"?"];
@@ -208,24 +208,24 @@ NS_INLINE NSColor *MPStateColour(MPQuickLookExtensionState state)
     else
     {
         self.registeredLabel.stringValue = NSLocalizedString(
-            @"Registrata: da nessuna parte.",
+            @"Registered: nowhere.",
             @"macOS has no Quick Look extension registered for Markdown");
     }
     self.bundledLabel.stringValue = [NSString stringWithFormat:
-        NSLocalizedString(@"In questa applicazione: %@",
+        NSLocalizedString(@"In this application: %@",
             @"The version of the Quick Look extension inside the app"),
-        extension.bundledVersion ?: NSLocalizedString(@"nessuna",
+        extension.bundledVersion ?: NSLocalizedString(@"none",
             @"No Quick Look extension inside the app")];
 
     switch (extension.state)
     {
         case MPQuickLookExtensionStateOutdated:
         case MPQuickLookExtensionStateElsewhere:
-            self.installButton.title = NSLocalizedString(@"Aggiorna",
+            self.installButton.title = NSLocalizedString(@"Register Again",
                 @"Re-register the Quick Look extension from this app");
             break;
         default:
-            self.installButton.title = NSLocalizedString(@"Installa",
+            self.installButton.title = NSLocalizedString(@"Install",
                 @"Register the Quick Look extension");
             break;
     }

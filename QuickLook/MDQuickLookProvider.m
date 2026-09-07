@@ -8,6 +8,7 @@
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 #import "MDPreviewPage.h"
+#import "MDQuickLookStrings.h"
 
 #include "document.h"
 #include "html.h"
@@ -109,8 +110,10 @@ static NSString *MDBodyForMarkdown(NSString *markdown)
     {
         // A cut in the middle of a line is better admitted than hidden.
         markdown = [markdown stringByAppendingString:
-            @"\n\n---\n\n*Il documento è troppo lungo: qui è mostrato solo "
-            @"l'inizio.*\n"];
+            MDQLLocalizedString(
+                @"\n\n---\n\n*The document is too long: only the beginning "
+                @"is shown here.*\n",
+                @"Admitting that the preview is cut short")];
     }
     return markdown;
 }

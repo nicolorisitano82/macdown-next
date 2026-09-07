@@ -349,7 +349,7 @@ NS_INLINE NSString *MPProsePattern(NSString *entry, BOOL isPhrase)
         issue.range = hashes;
         issue.text = [text substringWithRange:hashes];
         issue.categoryIdentifier = @"heading-space";
-        issue.categoryName = NSLocalizedString(@"titolo senza spazio",
+        issue.categoryName = NSLocalizedString(@"heading without its space",
             @"Prose issue: hashes stuck to the heading text");
         issue.color = [NSColor systemPurpleColor];
         issue.replacement = [issue.text stringByAppendingString:@" "];

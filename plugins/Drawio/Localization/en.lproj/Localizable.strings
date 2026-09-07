@@ -1,0 +1,45 @@
+/* Drawio.plugin — English, which is what the keys say
+ *
+ * A plug-in carries its own languages: MDLocalizedString asks this
+ * bundle, not the application's. */
+
+
+"%@ could not be read." = "%@ could not be read.";
+"The file is not a draw.io diagram: it is neither XML nor a PNG carrying one inside." = "The file is not a draw.io diagram: it is neither XML nor a PNG carrying one inside.";
+"The file could not be read as XML." = "The file could not be read as XML.";
+"There is no readable page in the file." = "There is no readable page in the file.";
+"Import Log" = "Import Log";
+"Copy" = "Copy";
+"Close" = "Close";
+"Size:" = "Size:";
+"Draw:" = "Draw:";
+"On this Mac, with no connection" = "On this Mac, with no connection";
+"On an export server, at this address:" = "On an export server, at this address:";
+"Import a draw.io Diagram…" = "Import a draw.io Diagram…";
+"Open a document" = "Open a document";
+"The diagram goes into a document, so there has to be one in front of you." = "The diagram goes into a document, so there has to be one in front of you.";
+"Save the document first" = "Save the document first";
+"The pictures are written beside the document, and a document that has not been saved has no folder to sit beside." = "The pictures are written beside the document, and a document that has not been saved has no folder to sit beside.";
+"Choose the draw.io diagram to import" = "Choose the draw.io diagram to import";
+"The diagram could not be read" = "The diagram could not be read";
+"Import the Diagram" = "Import the Diagram";
+"Import %lu Pages" = "Import %lu Pages";
+"Every page becomes a PNG beside the document, and is linked where the cursor is. On this Mac the diagram never leaves the machine and no connection is needed: the viewer and the shape libraries are inside the plug-in. On an export server the diagram is sent to the address you name." = "Every page becomes a PNG beside the document, and is linked where the cursor is. On this Mac the diagram never leaves the machine and no connection is needed: the viewer and the shape libraries are inside the plug-in. On an export server the diagram is sent to the address you name.";
+"Import" = "Import";
+"Cancel" = "Cancel";
+"The address is missing" = "The address is missing";
+"Drawing on an export server needs its address." = "Drawing on an export server needs its address.";
+"Importing the diagram" = "Importing the diagram";
+"Not every page arrived" = "Not every page arrived";
+"page %lu" = "page %lu";
+"it did not draw" = "it did not draw";
+"Show the Log…" = "Show the Log…";
+"Drawing page %lu of %lu" = "Drawing page %lu of %lu";
+"Drawing the diagram" = "Drawing the diagram";
+"Stopping…" = "Stopping…";
+"The draw.io viewer is not in the plug-in: viewer.min.js is missing." = "The draw.io viewer is not in the plug-in: viewer.min.js is missing.";
+"The viewer drew nothing within %.0f seconds." = "The viewer drew nothing within %.0f seconds.";
+" The page said: %@" = " The page said: %@";
+" No error from the page: %@ SVG, %@ containers, height %@." = " No error from the page: %@ SVG, %@ containers, height %@.";
+" Not served: %@." = " Not served: %@.";
+"The server answered %ld%@" = "The server answered %ld%@";

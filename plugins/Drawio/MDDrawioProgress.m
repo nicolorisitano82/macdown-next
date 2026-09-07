@@ -4,6 +4,7 @@
 //
 
 #import "MDDrawioProgress.h"
+#import "MDDrawioStrings.h"
 
 
 @interface MDDrawioProgress ()
@@ -48,7 +49,8 @@
     [_bar startAnimation:nil];
     [content addSubview:_bar];
 
-    NSButton *stop = [NSButton buttonWithTitle:@"Annulla" target:self
+    NSButton *stop = [NSButton buttonWithTitle:
+        MDLocalizedString(@"Cancel", @"Stop the import") target:self
                                         action:@selector(cancel:)];
     stop.frame = NSMakeRect(312.0, 12.0, 88.0, 24.0);
     stop.keyEquivalent = @"\033";   // Escape, which is what one presses
@@ -75,12 +77,15 @@
         self.bar.maxValue = (double)count;
         self.bar.doubleValue = (double)(index - 1);
         self.label.stringValue = [NSString stringWithFormat:
-            @"Disegno la pagina %lu di %lu", (unsigned long)index,
+            MDLocalizedString(@"Drawing page %lu of %lu",
+                              @"Which page of how many is being drawn"),
+            (unsigned long)index,
             (unsigned long)count];
     }
     else
     {
-        self.label.stringValue = @"Disegno il diagramma";
+        self.label.stringValue = MDLocalizedString(
+            @"Drawing the diagram", @"One page, so no page number");
     }
     self.detail.stringValue = name.length ? name : @"";
 
@@ -94,7 +99,8 @@
 - (void)cancel:(id)sender
 {
     self.isCancelled = YES;
-    self.detail.stringValue = @"Sto fermando…";
+    self.detail.stringValue = MDLocalizedString(
+        @"Stopping…", @"The import was asked to stop");
 }
 
 - (void)finish

@@ -9,6 +9,7 @@
 #import "MDDrawioResources.h"
 #import "MDDrawioProgress.h"
 #import "MDDrawioLog.h"
+#import "MDDrawioStrings.h"
 
 /// What was asked for last time, remembered in the application's defaults.
 static NSString * const kMDScaleKey = @"MDDrawioScale";
@@ -109,7 +110,8 @@ static NSTextView *MDEditorOfDocument(NSDocument *document)
     if (!self)
         return nil;
 
-    NSTextField *sizeLabel = [NSTextField labelWithString:@"Dimensione:"];
+    NSTextField *sizeLabel = [NSTextField labelWithString:
+        MDLocalizedString(@"Size:", @"How big the picture is drawn")];
     sizeLabel.alignment = NSTextAlignmentRight;
     sizeLabel.frame = NSMakeRect(0.0, 94.0, 92.0, 18.0);
     [self addSubview:sizeLabel];
@@ -121,20 +123,23 @@ static NSTextView *MDEditorOfDocument(NSDocument *document)
     [_scaleButton selectItemAtIndex:(scale >= 3.0 ? 2 : (scale <= 1.0 ? 0 : 1))];
     [self addSubview:_scaleButton];
 
-    NSTextField *whereLabel = [NSTextField labelWithString:@"Disegna:"];
+    NSTextField *whereLabel = [NSTextField labelWithString:
+        MDLocalizedString(@"Draw:", @"Where the drawing happens")];
     whereLabel.alignment = NSTextAlignmentRight;
     whereLabel.frame = NSMakeRect(0.0, 64.0, 92.0, 18.0);
     [self addSubview:whereLabel];
 
     _hereRadio = [NSButton radioButtonWithTitle:
-        @"Su questo Mac, senza connessione"
+        MDLocalizedString(@"On this Mac, with no connection",
+                          @"Draw with the viewer inside the plug-in")
                                          target:self
                                          action:@selector(whereChanged:)];
     _hereRadio.frame = NSMakeRect(96.0, 62.0, 300.0, 20.0);
     [self addSubview:_hereRadio];
 
     _serviceRadio = [NSButton radioButtonWithTitle:
-        @"Su un export server, a questo indirizzo:"
+        MDLocalizedString(@"On an export server, at this address:",
+                          @"Draw by sending the diagram somewhere")
                                             target:self
                                             action:@selector(whereChanged:)];
     _serviceRadio.frame = NSMakeRect(96.0, 40.0, 300.0, 20.0);
@@ -197,11 +202,20 @@ static NSTextView *MDEditorOfDocument(NSDocument *document)
 @end
 
 
+NSBundle *MDDrawioBundle(void)
+{
+    // The principal class is in the plug-in, so the bundle it came from is
+    // the plug-in — wherever it was installed.
+    return [NSBundle bundleForClass:[MDDrawioPlugIn class]];
+}
+
+
 @implementation MDDrawioPlugIn
 
 - (NSString *)name
 {
-    return @"Importa un diagramma draw.io…";
+    return MDLocalizedString(@"Import a draw.io Diagram…",
+                             @"Plug-in menu item");
 }
 
 - (BOOL)run:(id)sender
@@ -211,26 +225,31 @@ static NSTextView *MDEditorOfDocument(NSDocument *document)
     NSTextView *editor = document ? MDEditorOfDocument(document) : nil;
     if (!document || !editor)
     {
-        [self say:@"Apri un documento" text:
-            @"Il diagramma viene messo in un documento, quindi ce ne vuole "
-            @"uno davanti."];
+        [self say:MDLocalizedString(@"Open a document",
+                                    @"There is no document to import into")
+              text:MDLocalizedString(
+            @"The diagram goes into a document, so there has to be one in "
+            @"front of you.", @"Why a document is needed")];
         return NO;
     }
     // The picture goes beside the document, and a link to it is relative to
     // the document's folder. Without a folder there is neither.
     if (!document.fileURL)
     {
-        [self say:@"Salva prima il documento" text:
-            @"Le immagini vengono scritte accanto al documento, e un "
-            @"documento non salvato non ha una cartella accanto a cui "
-            @"stare."];
+        [self say:MDLocalizedString(@"Save the document first",
+                                    @"The document has no folder yet")
+              text:MDLocalizedString(
+            @"The pictures are written beside the document, and a document "
+            @"that has not been saved has no folder to sit beside.",
+            @"Why the document has to be saved first")];
         return NO;
     }
 
     NSOpenPanel *panel = [NSOpenPanel openPanel];
     panel.allowedFileTypes = @[@"drawio", @"xml", @"png", @"svg"];
     panel.allowsMultipleSelection = NO;
-    panel.message = @"Scegli il diagramma draw.io da importare";
+    panel.message = MDLocalizedString(
+        @"Choose the draw.io diagram to import", @"Open panel message");
     if ([panel runModal] != NSModalResponseOK || !panel.URL)
         return YES;   // asked and answered: nothing went wrong
 
@@ -245,7 +264,8 @@ static NSTextView *MDEditorOfDocument(NSDocument *document)
     {
         [self.log noteFormat:@"non letto: %@ (%@ %ld)",
             error.localizedDescription, error.domain, (long)error.code];
-        [self say:@"Il diagramma non si è potuto leggere"
+        [self say:MDLocalizedString(@"The diagram could not be read",
+                                    @"The file did not parse")
              text:error.localizedDescription];
         return NO;
     }
@@ -263,18 +283,22 @@ static NSTextView *MDEditorOfDocument(NSDocument *document)
 
     NSAlert *alert = [[NSAlert alloc] init];
     alert.messageText = file.pages.count == 1
-        ? @"Importa il diagramma"
-        : [NSString stringWithFormat:@"Importa %lu pagine",
+        ? MDLocalizedString(@"Import the Diagram", @"One page to import")
+        : [NSString stringWithFormat:MDLocalizedString(@"Import %lu Pages",
+              @"Several pages to import"),
            (unsigned long)file.pages.count];
     alert.informativeText =
-        @"Ogni pagina diventa un PNG accanto al documento, e viene "
-        @"collegata nel punto dove sta il cursore. Su questo Mac il "
-        @"diagramma non esce dalla macchina e non serve connessione: il "
-        @"visualizzatore e le librerie di forme sono dentro il plug-in. Su "
-        @"un export server il diagramma viene mandato all'indirizzo che "
-        @"indichi.";
-    [alert addButtonWithTitle:@"Importa"];
-    [alert addButtonWithTitle:@"Annulla"];
+        MDLocalizedString(
+        @"Every page becomes a PNG beside the document, and is linked where "
+        @"the cursor is. On this Mac the diagram never leaves the machine "
+        @"and no connection is needed: the viewer and the shape libraries "
+        @"are inside the plug-in. On an export server the diagram is sent "
+        @"to the address you name.", @"What importing does, and what goes "
+        @"out of the Mac");
+    [alert addButtonWithTitle:MDLocalizedString(@"Import",
+        @"Go ahead with the import")];
+    [alert addButtonWithTitle:MDLocalizedString(@"Cancel",
+        @"Do not import")];
     alert.accessoryView = options;
 
     if ([alert runModal] != NSAlertFirstButtonReturn)
@@ -287,8 +311,11 @@ static NSTextView *MDEditorOfDocument(NSDocument *document)
 
     if (options.usesService && !options.service)
     {
-        [self say:@"Indirizzo mancante"
-             text:@"Per disegnare su un export server serve il suo indirizzo."];
+        [self say:MDLocalizedString(@"The address is missing",
+                                    @"No export server was given")
+              text:MDLocalizedString(
+            @"Drawing on an export server needs its address.",
+            @"Why the address is needed")];
         return NO;
     }
 
@@ -325,7 +352,9 @@ static NSTextView *MDEditorOfDocument(NSDocument *document)
     NSWindow *window = document.windowControllers.firstObject.window;
 
     self.progress = [[MDDrawioProgress alloc] init];
-    [self.progress showOnWindow:window title:@"Importo il diagramma"];
+    [self.progress showOnWindow:window
+                          title:MDLocalizedString(@"Importing the diagram",
+                                    @"Title of the progress panel")];
 
     __block NSUInteger index = 0;
     __block void (^next)(void) = nil;
@@ -347,7 +376,8 @@ static NSTextView *MDEditorOfDocument(NSDocument *document)
             {
                 [self.log noteFormat:@"finito con %lu problemi",
                     (unsigned long)problems.count];
-                [self say:@"Non tutte le pagine sono arrivate"
+                [self say:MDLocalizedString(
+                    @"Not every page arrived", @"Some pages failed")
                      text:[problems componentsJoinedByString:@"\n"]
                   offerLog:YES];
             }
@@ -364,7 +394,9 @@ static NSTextView *MDEditorOfDocument(NSDocument *document)
 
         NSString *label = page.name.length ? page.name
             : (total > 1
-               ? [NSString stringWithFormat:@"pagina %lu", (unsigned long)index]
+               ? [NSString stringWithFormat:MDLocalizedString(@"page %lu",
+                     @"A page with no name of its own"),
+                  (unsigned long)index]
                : stem);
 
         [self.progress showPage:index of:total named:label];
@@ -389,7 +421,9 @@ static NSTextView *MDEditorOfDocument(NSDocument *document)
                     error.localizedDescription, error.domain,
                     (long)error.code];
                 [problems addObject:[NSString stringWithFormat:@"%@: %@",
-                    label, error.localizedDescription ?: @"non si è disegnata"]];
+                    label, error.localizedDescription
+                        ?: MDLocalizedString(@"it did not draw",
+                               @"A page failed and said nothing")]];
             }
             else
             {
@@ -493,7 +527,8 @@ static NSTextView *MDEditorOfDocument(NSDocument *document)
     alert.informativeText = text ?: @"";
     [alert addButtonWithTitle:@"OK"];
     if (offerLog && self.log)
-        [alert addButtonWithTitle:@"Mostra il log…"];
+        [alert addButtonWithTitle:MDLocalizedString(@"Show the Log…",
+            @"Open the import log")];
 
     if ([alert runModal] == NSAlertSecondButtonReturn && offerLog)
         [self.log showOnWindow:nil];

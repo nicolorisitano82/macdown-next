@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
 """Tools/check_translations.py — what is translated, and what is not.
 
-Reads every NSLocalizedString in the sources and every .strings file in the
-localizations, and says three things:
+Reads every localized string the sources ask for and every .strings file in
+the localizations, per bundle — the application has its own, and so does
+each plug-in, because a plug-in's strings are answered by the plug-in's own
+bundle and not by the application's.
+
+It says four things:
 
   * which keys the code asks for and no language file answers — those show
     the reader the key itself;
-  * which of those keys are written in Italian rather than English, which is
-    why they *look* fine in Italian and appear as Italian in every other
-    language;
+  * which keys are written in Italian rather than English, which is why they
+    *look* fine in Italian and appear as Italian in every other language;
+  * which strings are not asked for through a localized call at all, and so
+    cannot be translated in any language;
   * which nib objects the base nib has and a translation does not.
 
-Exit status is the number of strings a reader would see untranslated in the
-interface's own language, so it is usable from a script.
+Which language a key is written in is asked of NaturalLanguage rather than
+guessed from a word list, because a word list cannot tell "Aggiorna" from
+"Update": Tools/language_of_strings.m is the twenty lines that ask.
+
+Exit status is the number of strings that are missing a translation or
+cannot be translated at all, so it is usable from a script.
 
     Tools/check_translations.py            # the summary
     Tools/check_translations.py --list     # and every string, by category
@@ -27,41 +36,80 @@ import tempfile
 from collections import defaultdict
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOCALIZATIONS = os.path.join(ROOT, "MacDown", "Localization")
-SOURCES = [
-    os.path.join(ROOT, "MacDown", "Code"),
-    os.path.join(ROOT, "QuickLook"),
-    os.path.join(ROOT, "plugins"),
-]
 
-# The language the sources are written in, and the one this fork writes its
-# newer strings in.
 BASE = "Base"
 ENGLISH = "en"
 ITALIAN = "it-IT"
 
-# NSLocalizedString(@"…", @"…") over several lines, with the escapes and the
-# adjacent-literal concatenation Objective-C allows.
-CALL = re.compile(
-    r'NSLocalizedString\s*\(\s*((?:@"(?:[^"\\]|\\.)*"\s*)+)', re.S)
+
+class Bundle:
+    """A bundle: sources that ask for strings, and the files that answer.
+
+    The application's plug-ins are bundles of their own. NSLocalizedString
+    asks the main bundle, so a plug-in uses its own macro and ships its own
+    .lproj folders; keeping them apart here is what lets the count be true.
+    """
+
+    def __init__(self, name, sources, localizations, call):
+        self.name = name
+        self.sources = [os.path.join(ROOT, s) for s in sources]
+        self.localizations = os.path.join(ROOT, localizations)
+        self.call = re.compile(
+            r'%s\s*\(\s*((?:@"(?:[^"\\]|\\.)*"\s*)+)' % call, re.S)
+
+
+BUNDLES = [
+    Bundle("l'applicazione", ["MacDown/Code"],
+           "MacDown/Localization", "NSLocalizedString"),
+    Bundle("MacDownQuickLook.appex", ["QuickLook"],
+           "QuickLook/Localization", "MDQLLocalizedString"),
+    Bundle("Drawio.plugin", ["plugins/Drawio"],
+           "plugins/Drawio/Localization", "MDLocalizedString"),
+    Bundle("LoremIpsum.plugin", ["plugins/LoremIpsum"],
+           "plugins/LoremIpsum/Localization", "LILocalizedString"),
+]
+
 LITERAL = re.compile(r'@"((?:[^"\\]|\\.)*)"')
+
+# Any localized call at all, for finding the strings that are in none.
+ANY_CALL = re.compile(
+    r'\w*LocalizedString\w*\s*\(\s*(?:@"(?:[^"\\]|\\.)*"\s*)+', re.S)
+
+# A line written to a diary rather than shown in the interface. The action
+# log and the plug-in's log are diagnostics, in one language on purpose:
+# they are read next to a stack trace, not in a menu.
+LOG_CALL = re.compile(
+    r'(?:MPNote|MDNote)\s*\(\s*(?:@"(?:[^"\\]|\\.)*"\s*)+'
+    r'|(?:note|noteFormat):\s*(?:@"(?:[^"\\]|\\.)*"\s*)+', re.S)
+
+# What a source says about itself: the literals that follow are content in
+# the language they demonstrate, not interface text.
+CONTENT_DIRECTIVE = "translation-check: content"
 
 # A line of a .strings file: "key" = "value";
 ENTRY = re.compile(r'^\s*"((?:[^"\\]|\\.)*)"\s*=\s*"((?:[^"\\]|\\.)*)"\s*;',
                    re.M)
 
-# Words that only an Italian string would have. A heuristic, and it only
-# decides which list a string is printed in — nothing is rewritten by it.
+# Words that only an Italian string would have. Used for what
+# NaturalLanguage will not commit to — three letters say little.
 ITALIAN_WORDS = {
-    "il", "lo", "la", "i", "gli", "le", "un", "una", "uno", "che", "non",
+    "il", "lo", "la", "gli", "le", "un", "una", "uno", "che", "non",
     "per", "con", "del", "della", "dei", "delle", "nel", "nella", "sul",
     "sulla", "come", "quando", "dove", "questo", "questa", "sono", "essere",
     "viene", "ancora", "solo", "anche", "già", "più", "meno", "senza",
     "dentro", "accanto", "prima", "dopo", "adesso", "niente", "nessun",
-    "tutto", "cosa", "documento", "file", "pagina", "riga", "righe",
+    "tutto", "cosa", "documento", "pagina", "riga", "righe",
     "versione", "aggiornamento", "anteprima", "impostazioni", "titolo",
-    "codice", "linguaggio", "parole", "cartella", "istruzioni", "plug-in",
+    "codice", "linguaggio", "parole", "cartella", "istruzioni",
     "di", "da", "tuo", "tua", "mio", "questi", "quelle", "sopra", "sotto",
+}
+
+# Words that are the same in both languages, or are nobody's language.
+TECHNICAL = {
+    "blockquote", "markdown", "tex", "mermaid", "graphviz", "smartypants",
+    "html", "css", "epub", "pdf", "odt", "rtf", "json", "yaml", "xml",
+    "lorem", "ipsum", "claude", "chatgpt", "github", "jekyll", "quicklook",
+    "macdown", "next", "plug-in", "url",
 }
 
 
@@ -70,30 +118,92 @@ def unescape(text):
             .replace("\\t", "\t").replace("\\\\", "\\"))
 
 
-def keys_in_sources():
-    """Every key the code asks for, and where it asks for it."""
-    where = defaultdict(list)
-    for folder in SOURCES:
+def sources_of(bundle):
+    for folder in bundle.sources:
         for base, _, names in os.walk(folder):
-            for name in names:
-                if not name.endswith((".m", ".mm")):
-                    continue
-                path = os.path.join(base, name)
-                with open(path, encoding="utf-8", errors="ignore") as handle:
-                    text = handle.read()
-                for match in CALL.finditer(text):
-                    key = "".join(unescape(piece) for piece
-                                  in LITERAL.findall(match.group(1)))
-                    if not key:
-                        continue
-                    line = text.count("\n", 0, match.start()) + 1
-                    where[key].append(
-                        "%s:%d" % (os.path.relpath(path, ROOT), line))
+            for name in sorted(names):
+                if name.endswith((".m", ".mm")):
+                    yield os.path.join(base, name)
+
+
+def keys_in_sources(bundle):
+    """Every key that bundle's code asks for, and where it asks for it."""
+    where = defaultdict(list)
+    for path in sources_of(bundle):
+        with open(path, encoding="utf-8", errors="ignore") as handle:
+            text = handle.read()
+        for match in bundle.call.finditer(text):
+            key = "".join(unescape(piece) for piece
+                          in LITERAL.findall(match.group(1)))
+            if not key:
+                continue
+            line = text.count("\n", 0, match.start()) + 1
+            where[key].append("%s:%d" % (os.path.relpath(path, ROOT), line))
     return where
 
 
-def strings_files(language):
-    folder = os.path.join(LOCALIZATIONS, language + ".lproj")
+def unreachable_strings(bundle):
+    """Text that looks like Italian prose and is in no localized call.
+
+    A string nobody asks for through a localized call cannot be translated
+    in any language, however complete the files are — it is the one kind of
+    gap a .strings file cannot close.
+    """
+    found = defaultdict(list)
+    for path in sources_of(bundle):
+        with open(path, encoding="utf-8", errors="ignore") as handle:
+            text = handle.read()
+        covered = [m.span() for m in ANY_CALL.finditer(text)]
+        covered += [m.span() for m in LOG_CALL.finditer(text)]
+        covered += content_regions(text)
+        for match in LITERAL.finditer(text):
+            if any(a <= match.start() < b for a, b in covered):
+                continue
+            value = unescape(match.group(1))
+            if not looks_like_prose(value):
+                continue
+            line = text.count("\n", 0, match.start()) + 1
+            found[value].append(
+                "%s:%d" % (os.path.relpath(path, ROOT), line))
+    return found
+
+
+def content_regions(text):
+    """The spans a source has marked as content rather than interface.
+
+    Sample text has to be in the language it shows off — a plug-in that
+    demonstrates Italian typography cannot demonstrate it in English — so a
+    source says so, and this believes it as far as the end of the function.
+    """
+    spans = []
+    for match in re.finditer(re.escape(CONTENT_DIRECTIVE), text):
+        end = text.find("\n}", match.end())
+        spans.append((match.start(), len(text) if end < 0 else end))
+    return spans
+
+
+def looks_like_prose(value):
+    """Whether that literal is a sentence somebody reads, in Italian.
+
+    Scripts, selectors and character sets are literals too, and the ones
+    this file is full of contain Italian-looking fragments — "var i" has an
+    "i" in it. Prose has words and no punctuation of code.
+    """
+    if re.search(r"[<>{}=;|]|\bvar\b|function|document\.|\.get", value):
+        return False
+    # Two words that are words, so that a set of characters to keep in a
+    # file name is not read as a sentence.
+    words = [word for word in re.findall(r"[a-z'àèéìòù]{2,}", value.lower())]
+    if len(words) < 2:
+        return False
+    if re.search(r"[àèéìòù]", value.lower()):
+        return True
+    italian = sum(1 for word in words if word in ITALIAN_WORDS)
+    return italian >= 2 or (italian == 1 and len(words) <= 4)
+
+
+def strings_files(bundle, language):
+    folder = os.path.join(bundle.localizations, language + ".lproj")
     if not os.path.isdir(folder):
         return []
     return [os.path.join(folder, name) for name in sorted(os.listdir(folder))
@@ -113,24 +223,35 @@ def entries(path):
     return {unescape(k): unescape(v) for k, v in ENTRY.findall(text)}
 
 
-def translated_keys(language):
+def translated_keys(bundle, language):
     """Every key any .strings file of that language answers."""
     found = {}
-    for path in strings_files(language):
-        if os.path.basename(path) in ("InfoPlist.strings",):
+    for path in strings_files(bundle, language):
+        if os.path.basename(path) == "InfoPlist.strings":
             continue
         found.update(entries(path))
     return found
 
 
-def classify_languages(keys):
-    """Which language each key is written in, asked of NaturalLanguage.
+def languages_of(bundle):
+    if not os.path.isdir(bundle.localizations):
+        return []
+    return sorted(name[: -len(".lproj")]
+                  for name in os.listdir(bundle.localizations)
+                  if name.endswith(".lproj") and name != BASE + ".lproj")
 
-    A word list gets single words wrong — "Aggiorna" and "Update" are both
-    one word — and the answer decides which list a string is reported in, so
-    it is worth asking something that knows. Falls back to the word list
-    when the helper cannot be built.
-    """
+
+def guess_italian(key):
+    """The word list, for what NaturalLanguage will not commit to."""
+    words = re.findall(r"[\w']+", key.lower())
+    if words and all(word in TECHNICAL for word in words):
+        return False
+    return (any(word in ITALIAN_WORDS for word in words)
+            or bool(re.search(r"[àèéìòù]", key.lower())))
+
+
+def classify_languages(keys):
+    """Which language each key is written in, asked of NaturalLanguage."""
     keys = list(keys)
     helper = os.path.join(ROOT, "Tools", "language_of_strings.m")
     binary = os.path.join(tempfile.mkdtemp(), "language_of_strings")
@@ -146,40 +267,23 @@ def classify_languages(keys):
         if len([a for a in answer if a]) == len(keys):
             decided = {}
             for i, key in enumerate(keys):
-                # "und" means too short to tell — a word list is as good as
-                # anything on three letters.
-                decided[key] = (answer[i] if answer[i] in ("en", "it")
-                                else ("it" if guess_italian(key) else "en"))
+                words = re.findall(r"[\w']+", key.lower())
+                if words and all(word in TECHNICAL for word in words):
+                    decided[key] = "en"
+                elif answer[i] in ("en", "it"):
+                    decided[key] = answer[i]
+                else:
+                    # "und" means too short to tell.
+                    decided[key] = "it" if guess_italian(key) else "en"
             return decided
 
     return {key: ("it" if guess_italian(key) else "en") for key in keys}
 
 
-def guess_italian(key):
-    """The word list, for what NaturalLanguage will not commit to."""
-    words = re.findall(r"[\w']+", key.lower())
-    return (any(word in ITALIAN_WORDS for word in words)
-            or bool(re.search(r"[àèéìòù]", key.lower())))
-
-
-def bundle_of(place):
-    """Which bundle a string lives in, since each looks up its own.
-
-    A plug-in's NSLocalizedString is answered by the plug-in's own bundle,
-    so the application's Italian file cannot translate it however complete
-    that file is.
-    """
-    if place.startswith("plugins" + os.sep) or place.startswith("plugins/"):
-        return "plug-in " + place.replace(os.sep, "/").split("/")[1]
-    if place.startswith("QuickLook"):
-        return "Anteprima Finder"
-    return None
-
-
-def nib_objects(language):
+def nib_objects(bundle, language):
     """The nib objects a language translates, per nib."""
     found = defaultdict(set)
-    for path in strings_files(language):
+    for path in strings_files(bundle, language):
         name = os.path.basename(path)
         if name == "InfoPlist.strings":
             continue
@@ -189,10 +293,12 @@ def nib_objects(language):
     return found
 
 
-def base_nib_objects():
+def base_nib_objects(bundle):
     """The objects in each base nib that carry a title or a label."""
     found = defaultdict(set)
-    folder = os.path.join(LOCALIZATIONS, BASE + ".lproj")
+    folder = os.path.join(bundle.localizations, BASE + ".lproj")
+    if not os.path.isdir(folder):
+        return found
     for name in sorted(os.listdir(folder)):
         if not name.endswith(".xib"):
             continue
@@ -215,102 +321,78 @@ def main():
     if "--lang" in wanted:
         only = wanted[wanted.index("--lang") + 1]
 
-    used = keys_in_sources()
-    languages = sorted(
-        name[:-len(".lproj")] for name in os.listdir(LOCALIZATIONS)
-        if name.endswith(".lproj") and name[:-len(".lproj")] != BASE)
+    failures = 0
+    for bundle in BUNDLES:
+        used = keys_in_sources(bundle)
+        italian = translated_keys(bundle, ITALIAN)
+        english = translated_keys(bundle, ENGLISH)
+        language_of = classify_languages(used)
+        english_keys = sorted(k for k in used if language_of[k] != "it")
+        italian_keys = sorted(k for k in used if language_of[k] == "it")
+        missing_it = [k for k in english_keys if k not in italian]
+        missing_en = [k for k in italian_keys if k not in english]
+        stranded = unreachable_strings(bundle)
 
-    outside = {k: bundle_of(v[0]) for k, v in used.items()}
-    in_plugins = {k for k, b in outside.items() if b}
-    used_by_app = {k: v for k, v in used.items() if k not in in_plugins}
+        print("\033[1m%s\033[0m" % bundle.name)
+        print("  %d stringhe chieste: %d in inglese, %d in italiano"
+              % (len(used), len(english_keys), len(italian_keys)))
+        print("  %d chiavi inglesi senza italiano%s"
+              % (len(missing_it), " ✓" if not missing_it else ""))
+        print("  %d chiavi italiane senza inglese%s"
+              % (len(missing_en), " ✓" if not missing_en else ""))
+        print("  %d stringhe fuori da ogni chiamata, non traducibili%s"
+              % (len(stranded), " ✓" if not stranded else ""))
+        failures += len(missing_it) + len(missing_en) + len(stranded)
 
-    italian = translated_keys(ITALIAN)
-    language_of = classify_languages(used)
-    english_keys = {k for k in used_by_app if language_of.get(k) != "it"}
-    italian_keys = {k for k in used_by_app if language_of.get(k) == "it"}
+        base = base_nib_objects(bundle)
+        if base:
+            gaps = {nib: objects - nib_objects(bundle, ITALIAN).get(nib, set())
+                    for nib, objects in base.items()}
+            gaps = {nib: missing for nib, missing in gaps.items() if missing}
+            if gaps:
+                for nib, missing in sorted(gaps.items()):
+                    print("  %-44s %d oggetti nei nib non tradotti"
+                          % (nib, len(missing)))
+                    if show_all:
+                        for one in sorted(missing):
+                            print("      %s" % one)
+                failures += sum(len(m) for m in gaps.values())
+            else:
+                print("  nei nib: tutti tradotti ✓")
 
-    print("\033[1mStringhe chieste dal codice\033[0m")
-    print("  %d nell'applicazione: %d scritte in inglese, %d scritte in"
-          " italiano" % (len(used_by_app), len(english_keys),
-                         len(italian_keys)))
-    by_bundle = defaultdict(list)
-    for key in in_plugins:
-        by_bundle[outside[key]].append(key)
-    for bundle, keys in sorted(by_bundle.items()):
-        print("  %d in %s: nessun file di lingua, si leggono come sono"
-              " scritte" % (len(keys), bundle))
+        others = [language for language in languages_of(bundle)
+                  if language not in (ITALIAN, ENGLISH)]
+        if others:
+            rows = sorted((len([k for k in used if k not in
+                                translated_keys(bundle, language)]),
+                           language) for language in others)
+            print("  altre lingue: %s" % ", ".join(
+                "%s %d mancanti" % (language, missing)
+                for missing, language in rows[:3]))
+            print("                … fino a %s con %d mancanti"
+                  % (rows[-1][1], rows[-1][0]))
 
-    missing_it = sorted(k for k in english_keys if k not in italian)
-    untranslated_italian = sorted(k for k in italian_keys if k not in italian)
-    print()
-    print("\033[1mIn italiano\033[0m")
-    print("  %d chiavi inglesi senza traduzione italiana%s"
-          % (len(missing_it), " ✓" if not missing_it else ""))
-    print("  %d chiavi già scritte in italiano: si leggono in italiano, e"
-          " restano italiane in ogni altra lingua" % len(italian_keys))
-    print("     (di cui %d senza una voce nel file italiano, cioè scritte"
-          " solo nel codice)" % len(untranslated_italian))
-
-    english = translated_keys(ENGLISH)
-    italian_without_english = sorted(k for k in italian_keys
-                                     if k not in english)
-    print()
-    print("\033[1mIn inglese\033[0m")
-    print("  %d chiavi italiane senza traduzione inglese: un lettore inglese"
-          " le vede in italiano%s"
-          % (len(italian_without_english),
-             " ✓" if not italian_without_english else ""))
-
-    print()
-    print("\033[1mNelle altre lingue\033[0m")
-    rows = []
-    for language in languages:
-        if language in (BASE, ITALIAN):
-            continue
-        known = translated_keys(language)
-        missing = [k for k in used_by_app if k not in known]
-        rows.append((len(missing), language, len(known)))
-    for missing, language, known in sorted(rows):
-        print("  %-8s %4d tradotte, %4d mancanti" % (language, known, missing))
-
-    print()
-    print("\033[1mNei nib\033[0m")
-    base = base_nib_objects()
-    for nib, objects in sorted(base.items()):
-        it_objects = nib_objects(ITALIAN).get(nib, set())
-        missing = objects - it_objects
-        if missing:
-            print("  %-44s %d oggetti non tradotti" % (nib, len(missing)))
-            if show_all:
-                for one in sorted(missing):
-                    print("      %s" % one)
-    if not any(objects - nib_objects(ITALIAN).get(nib, set())
-               for nib, objects in base.items()):
-        print("  tutti tradotti ✓")
-
-    if show_all or only:
+        if show_all or only:
+            for title, keys in (("Chiavi inglesi senza italiano", missing_it),
+                                ("Chiavi italiane senza inglese", missing_en),
+                                ("Fuori da ogni chiamata", sorted(stranded))):
+                if not keys:
+                    continue
+                print("  \033[1m%s\033[0m" % title)
+                for key in keys:
+                    place = (used.get(key) or stranded.get(key))[0]
+                    print("    %s\n        %s"
+                          % (key.replace("\n", "⏎")[:96], place))
+        if only:
+            known = translated_keys(bundle, only)
+            missing = sorted(k for k in used if k not in known)
+            print("  \033[1m%s: %d chiavi mancanti\033[0m"
+                  % (only, len(missing)))
+            for key in missing:
+                print("    %s" % key.replace("\n", "⏎")[:96])
         print()
-        print("\033[1mChiavi inglesi senza italiano\033[0m")
-        for key in missing_it:
-            print("  %s\n      %s" % (key.replace("\n", "⏎"),
-                                      used_by_app[key][0]))
-        print()
-        print("\033[1mChiavi scritte in italiano, senza inglese\033[0m")
-        for key in italian_without_english:
-            print("  %s\n      %s" % (key.replace("\n", "⏎")[:100],
-                                      used_by_app[key][0]))
 
-    if only:
-        known = translated_keys(only)
-        print()
-        print("\033[1m%s: chiavi mancanti\033[0m" % only)
-        for key in sorted(k for k in used_by_app if k not in known):
-            print("  %s" % key.replace("\n", "⏎")[:100])
-
-    # What a reader in the interface's own language would see untranslated:
-    # an English key with no Italian, or an Italian key in an English
-    # interface. Both are the same defect from opposite ends.
-    return len(missing_it)
+    return failures
 
 
 if __name__ == "__main__":

@@ -96,7 +96,7 @@ static NSString * const kMPPlugInNameColumn = @"name";
     // Shown over the empty table, since an empty list otherwise looks like a
     // fault rather than like having no plug-ins.
     NSTextField *empty = [NSTextField wrappingLabelWithString:
-        NSLocalizedString(@"Nessun plug-in installato.",
+        NSLocalizedString(@"No plug-in is installed.",
                           @"Shown when the list is empty")];
     empty.alignment = NSTextAlignmentCenter;
     empty.textColor = [NSColor secondaryLabelColor];
@@ -106,15 +106,15 @@ static NSString * const kMPPlugInNameColumn = @"name";
     self.emptyLabel = empty;
 
     NSButton *add = [NSButton buttonWithTitle:
-        NSLocalizedString(@"Aggiungi…", @"Install a plug-in")
+        NSLocalizedString(@"Add…", @"Install a plug-in")
                                        target:self
                                        action:@selector(addPlugIn:)];
     NSButton *remove = [NSButton buttonWithTitle:
-        NSLocalizedString(@"Rimuovi", @"Uninstall the selected plug-in")
+        NSLocalizedString(@"Remove", @"Uninstall the selected plug-in")
                                           target:self
                                           action:@selector(removePlugIn:)];
     NSButton *reveal = [NSButton buttonWithTitle:
-        NSLocalizedString(@"Mostra nel Finder", @"Reveal the plug-ins folder")
+        NSLocalizedString(@"Show in Finder", @"Reveal the plug-ins folder")
                                           target:self
                                           action:@selector(revealFolder:)];
     self.removeButton = remove;
@@ -129,8 +129,8 @@ static NSString * const kMPPlugInNameColumn = @"name";
 
     NSTextField *note = [NSTextField wrappingLabelWithString:
         NSLocalizedString(
-            @"Le modifiche hanno effetto al prossimo avvio: i plug-in "
-            @"vengono caricati una volta sola, all'apertura.",
+            @"Changes take effect the next time the application starts: "
+            @"plug-ins are read once, at launch.",
             @"Explains that plug-in changes need a restart")];
     note.font = [NSFont systemFontOfSize:[NSFont smallSystemFontSize]];
     note.textColor = [NSColor secondaryLabelColor];
@@ -255,7 +255,7 @@ static NSString * const kMPPlugInNameColumn = @"name";
     panel.treatsFilePackagesAsDirectories = NO;
     panel.allowsMultipleSelection = YES;
     panel.message = NSLocalizedString(
-        @"Scegli uno o più plug-in da installare.",
+        @"Choose one or more plug-ins to install.",
         @"Open panel prompt");
 
     if ([panel runModal] != NSModalResponseOK)
@@ -292,12 +292,12 @@ static NSString * const kMPPlugInNameColumn = @"name";
 
     NSAlert *alert = [[NSAlert alloc] init];
     alert.messageText = [NSString stringWithFormat:NSLocalizedString(
-        @"Rimuovere “%@”?", @"Confirm removing a plug-in"), plugin.name];
+        @"Remove “%@”?", @"Confirm removing a plug-in"), plugin.name];
     alert.informativeText = NSLocalizedString(
-        @"Il plug-in viene spostato nel Cestino.",
+        @"The plug-in is moved to the Trash.",
         @"Says removal is recoverable");
-    [alert addButtonWithTitle:NSLocalizedString(@"Rimuovi", @"Confirm")];
-    [alert addButtonWithTitle:NSLocalizedString(@"Annulla", @"Cancel")];
+    [alert addButtonWithTitle:NSLocalizedString(@"Remove", @"Confirm")];
+    [alert addButtonWithTitle:NSLocalizedString(@"Cancel", @"Cancel")];
 
     if ([alert runModal] != NSAlertFirstButtonReturn)
         return;
@@ -309,11 +309,11 @@ static NSString * const kMPPlugInNameColumn = @"name";
         // "Rimuovi" and says nothing is the worst of the three outcomes.
         NSAlert *failed = [[NSAlert alloc] init];
         failed.messageText = [NSString stringWithFormat:NSLocalizedString(
-            @"“%@” non si è potuto rimuovere", @"Removal failed"),
+            @"“%@” could not be removed", @"Removal failed"),
             plugin.name];
         failed.informativeText = error.localizedDescription ?: @"";
         [failed addButtonWithTitle:NSLocalizedString(@"OK", @"Confirm")];
-        [failed addButtonWithTitle:NSLocalizedString(@"Mostra nel Finder",
+        [failed addButtonWithTitle:NSLocalizedString(@"Show in Finder",
             @"Reveal the plug-in that could not be removed")];
         if ([failed runModal] == NSAlertSecondButtonReturn)
         {
@@ -342,7 +342,7 @@ static NSString * const kMPPlugInNameColumn = @"name";
             *error = [NSError errorWithDomain:NSCocoaErrorDomain
                 code:NSFileNoSuchFileError userInfo:@{
                 NSLocalizedDescriptionKey: NSLocalizedString(
-                    @"Il plug-in non dice dove si trova.",
+                    @"The plug-in does not say where it is.",
                     @"A plug-in with no bundle URL")}];
         }
         return NO;
@@ -359,7 +359,7 @@ static NSString * const kMPPlugInNameColumn = @"name";
             *error = [NSError errorWithDomain:NSCocoaErrorDomain
                 code:NSFileWriteNoPermissionError userInfo:@{
                 NSLocalizedDescriptionKey: [NSString stringWithFormat:
-                    NSLocalizedString(@"È ancora in %@.",
+                    NSLocalizedString(@"It is still in %@.",
                                       @"The file survived the Trash"),
                     url.URLByDeletingLastPathComponent.path]}];
         }
@@ -409,9 +409,9 @@ static NSString * const kMPPlugInNameColumn = @"name";
     // removing the installed one and seeing the built-in take its place
     // reads as nothing having happened.
     [title appendString:plugin.isBuiltIn
-        ? NSLocalizedString(@"  · incluso nell'app",
+        ? NSLocalizedString(@"  · shipped with the application",
                             @"A plug-in that ships with the application")
-        : NSLocalizedString(@"  · installato da te",
+        : NSLocalizedString(@"  · installed by you",
                             @"A plug-in the user installed")];
 
     NSTextField *label = [NSTextField labelWithString:title];

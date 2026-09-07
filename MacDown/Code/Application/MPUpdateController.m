@@ -98,7 +98,7 @@ static const NSUInteger kMPNotesShown = 400;
 {
     NSAlert *alert = [[NSAlert alloc] init];
     alert.messageText = [NSString stringWithFormat:NSLocalizedString(
-        @"È disponibile MacDown Next %@.",
+        @"MacDown Next %@ is available.",
         @"A newer release exists"), release.version];
 
     NSMutableString *what = [NSMutableString string];
@@ -114,20 +114,20 @@ static const NSUInteger kMPNotesShown = 400;
         [what appendString:@"\n\n"];
     }
     [what appendFormat:NSLocalizedString(
-        @"Hai la %@. Lo scaricamento è di %@ e finisce in Scaricati.",
+        @"You have %@. The download is %@ and lands in Downloads.",
         @"How big the update is and where it goes"),
         self.runningVersion ?: @"?",
         [NSByteCountFormatter stringFromByteCount:release.size
                                        countStyle:NSByteCountFormatterCountStyleFile]];
     alert.informativeText = what;
 
-    [alert addButtonWithTitle:NSLocalizedString(@"Scarica",
+    [alert addButtonWithTitle:NSLocalizedString(@"Download",
         @"Download the update")];
-    [alert addButtonWithTitle:NSLocalizedString(@"Non ora",
+    [alert addButtonWithTitle:NSLocalizedString(@"Not Now",
         @"Do not download the update")];
     if (release.pageURL)
     {
-        [alert addButtonWithTitle:NSLocalizedString(@"Note di rilascio",
+        [alert addButtonWithTitle:NSLocalizedString(@"Release Notes",
             @"Open the release page")];
     }
 
@@ -179,7 +179,7 @@ static const NSUInteger kMPNotesShown = 400;
 - (void)showProgressFor:(MPRelease *)release
 {
     NSTextField *title = [NSTextField labelWithString:[NSString
-        stringWithFormat:NSLocalizedString(@"Scaricamento di MacDown Next %@",
+        stringWithFormat:NSLocalizedString(@"Downloading MacDown Next %@",
             @"Title of the update download panel"), release.version]];
     title.font = [NSFont boldSystemFontOfSize:[NSFont systemFontSize]];
 
@@ -192,12 +192,12 @@ static const NSUInteger kMPNotesShown = 400;
     [self.bar.widthAnchor constraintEqualToConstant:360.0].active = YES;
 
     self.progressLabel = [NSTextField labelWithString:NSLocalizedString(
-        @"In attesa della risposta…", @"The download has not started yet")];
+        @"Waiting for an answer…", @"The download has not started yet")];
     self.progressLabel.textColor = [NSColor secondaryLabelColor];
     self.progressLabel.font =
         [NSFont systemFontOfSize:[NSFont smallSystemFontSize]];
 
-    NSButton *stop = [NSButton buttonWithTitle:NSLocalizedString(@"Interrompi",
+    NSButton *stop = [NSButton buttonWithTitle:NSLocalizedString(@"Stop",
         @"Stop the download") target:self action:@selector(stopDownload:)];
     stop.keyEquivalent = @"\033";       // Escape stops it too.
 
@@ -218,7 +218,7 @@ static const NSUInteger kMPNotesShown = 400;
         NSMakeRect(0.0, 0.0, 400.0, 140.0)
         styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
           backing:NSBackingStoreBuffered defer:NO];
-    panel.title = NSLocalizedString(@"Aggiornamento", @"Update panel title");
+    panel.title = NSLocalizedString(@"Update", @"Update panel title");
     panel.contentView = column;
     panel.hidesOnDeactivate = NO;
     [panel center];
@@ -244,7 +244,7 @@ static const NSUInteger kMPNotesShown = 400;
     NSByteCountFormatter *sizes = [[NSByteCountFormatter alloc] init];
     sizes.countStyle = NSByteCountFormatterCountStyleFile;
     self.progressLabel.stringValue = total > 0
-        ? [NSString stringWithFormat:NSLocalizedString(@"%@ di %@",
+        ? [NSString stringWithFormat:NSLocalizedString(@"%@ of %@",
               @"Downloaded so far, and the whole size"),
            [sizes stringFromByteCount:received],
            [sizes stringFromByteCount:total]]
@@ -271,19 +271,19 @@ static const NSUInteger kMPNotesShown = 400;
 {
     NSAlert *alert = [[NSAlert alloc] init];
     alert.messageText = [NSString stringWithFormat:NSLocalizedString(
-        @"MacDown Next %@ è in Scaricati.",
+        @"MacDown Next %@ is in Downloads.",
         @"The update has been downloaded"), version];
     alert.informativeText = [NSString stringWithFormat:NSLocalizedString(
-        @"Per installarlo, MacDown Next si chiude e si apre «%@»: poi si "
-        @"trascina l'applicazione sulla cartella Applicazioni, come al "
-        @"solito. I documenti non salvati verranno chiesti.",
+        @"To install it, MacDown Next quits and “%@” opens: then you drag the "
+        @"application onto the Applications folder, as usual. You will be "
+        @"asked about the documents that are not saved.",
         @"What happens when the update is opened"), file.lastPathComponent];
 
-    [alert addButtonWithTitle:NSLocalizedString(@"Chiudi e apri",
+    [alert addButtonWithTitle:NSLocalizedString(@"Quit and Open",
         @"Quit and open the downloaded disk image")];
-    [alert addButtonWithTitle:NSLocalizedString(@"Più tardi",
+    [alert addButtonWithTitle:NSLocalizedString(@"Later",
         @"Leave the downloaded disk image alone for now")];
-    [alert addButtonWithTitle:NSLocalizedString(@"Mostra nel Finder",
+    [alert addButtonWithTitle:NSLocalizedString(@"Show in Finder",
         @"Reveal the downloaded disk image")];
 
     NSModalResponse answer = [alert runModal];
@@ -309,10 +309,11 @@ static const NSUInteger kMPNotesShown = 400;
 - (void)sayUpToDate
 {
     NSAlert *alert = [[NSAlert alloc] init];
-    alert.messageText = NSLocalizedString(@"È già l'ultima versione.",
+    alert.messageText = NSLocalizedString(@"This is already the latest "
+                                          @"version.",
         @"There is no newer release");
     alert.informativeText = [NSString stringWithFormat:NSLocalizedString(
-        @"Questa è la %@.", @"Which version is running"),
+        @"This is %@.", @"Which version is running"),
         self.runningVersion ?: @"?"];
     [alert runModal];
 }
@@ -322,7 +323,7 @@ static const NSUInteger kMPNotesShown = 400;
     NSAlert *alert = [[NSAlert alloc] init];
     alert.alertStyle = NSAlertStyleWarning;
     alert.messageText = NSLocalizedString(
-        @"Non si riesce a controllare gli aggiornamenti.",
+        @"The updates could not be checked.",
         @"The update check failed");
     alert.informativeText = error.localizedDescription ?: @"";
     [alert runModal];

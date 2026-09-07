@@ -4,6 +4,7 @@
 //
 
 #import "MDPreviewPage.h"
+#import "MDQuickLookStrings.h"
 
 
 /// The biggest picture worth attaching, and the most to attach in all.
@@ -321,3 +322,18 @@ static NSURL *MDPictureFile(NSString *src, NSURL *folder,
 }
 
 @end
+/// Nothing but a name to ask NSBundle about.
+@interface MDPreviewPageBundleMarker : NSObject
+@end
+
+@implementation MDPreviewPageBundleMarker
+@end
+
+
+NSBundle *MDQuickLookBundle(void)
+{
+    // A class from this file, so the answer is the bundle the code came in
+    // whether that is the extension or the suite's harness.
+    return [NSBundle bundleForClass:[MDPreviewPageBundleMarker class]];
+}
+

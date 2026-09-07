@@ -305,7 +305,7 @@ static NSString *MPOpeningLinesOf(NSString *text, NSString *skipping)
         preview.kind = MPLinkPreviewKindMissingFile;
         preview.title = name;
         preview.body = NSLocalizedString(
-            @"Questo file non c'è ancora.", @"Link preview");
+            @"This file is not there yet.", @"Link preview");
         preview.footnote = file.URLByDeletingLastPathComponent.path;
         return preview;
     }
@@ -344,7 +344,7 @@ static NSString *MPOpeningLinesOf(NSString *text, NSString *skipping)
         preview.kind = MPLinkPreviewKindDocument;
         preview.title = name;
         preview.body = NSLocalizedString(
-            @"Troppo grande per essere sbirciato.", @"Link preview");
+            @"Too big to peek at.", @"Link preview");
         preview.footnote = howBig;
         return preview;
     }
@@ -356,7 +356,7 @@ static NSString *MPOpeningLinesOf(NSString *text, NSString *skipping)
         preview.kind = MPLinkPreviewKindDocument;
         preview.title = file.lastPathComponent;
         preview.body = NSLocalizedString(
-            @"Non è testo che si possa leggere.", @"Link preview");
+            @"Not text that can be read.", @"Link preview");
         preview.footnote = howBig;
         return preview;
     }
@@ -374,7 +374,7 @@ static NSString *MPOpeningLinesOf(NSString *text, NSString *skipping)
             words++;
     }
     preview.footnote = [NSString stringWithFormat:
-        NSLocalizedString(@"%lu parole · %@", @"Link preview"),
+        NSLocalizedString(@"%lu words · %@", @"Link preview"),
         (unsigned long)words, when ?: howBig];
     return preview;
 }

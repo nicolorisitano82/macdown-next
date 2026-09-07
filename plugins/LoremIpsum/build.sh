@@ -17,6 +17,11 @@ rm -rf "$OUT"
 mkdir -p "$OUT/Contents/MacOS"
 cp Info.plist "$OUT/Contents/Info.plist"
 
+# The plug-in's own languages. A plug-in that left its strings to the
+# application would not be installable on its own.
+mkdir -p "$OUT/Contents/Resources"
+cp -R Localization/*.lproj "$OUT/Contents/Resources/"
+
 clang -bundle -fobjc-arc \
     -isysroot "$SDK" \
     -mmacosx-version-min=26.0 \

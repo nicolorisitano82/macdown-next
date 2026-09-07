@@ -50,6 +50,33 @@ Poi riavvia MacDown Next, perché i plug-in vengono letti una volta sola.
 Non serve un target Xcode: un `.plugin` è un Info.plist più un binario
 compilato con `-bundle`, ed è quello che fa lo script.
 
+## Le lingue del plug-in
+
+`NSLocalizedString` chiede al bundle **principale**, che è l'applicazione: un
+plug-in che la usasse avrebbe bisogno che MacDown Next portasse le *sue*
+traduzioni, cioè il contrario di come stanno le cose. Un plug-in porta le
+proprie, e chiede al bundle da cui è stato caricato:
+
+```objc
+#define LILocalizedString(key, comment) \
+    [[NSBundle bundleForClass:[LoremIpsum class]] \
+        localizedStringForKey:(key) value:@"" table:nil]
+```
+
+Le chiavi si scrivono **in inglese** — la chiave è quello che si legge quando
+una lingua non risponde — e le traduzioni stanno in
+`Localization/<lingua>.lproj/Localizable.strings`, che finisce in
+`Contents/Resources/` del bundle: `build.sh` lo copia, e per Drawio lo copia
+il target Xcode. Serve anche `en.lproj`, altrimenti un bundle con una sola
+lingua la usa per tutti.
+
+`Tools/check_translations.py` conta le stringhe di ogni bundle a parte,
+quindi un plug-in senza traduzioni si vede, e `Tools/verify_features.sh`
+chiede al bundle costruito la stessa cosa che gli chiederebbe l'interfaccia.
+Il testo che il plug-in *inserisce* non è interfaccia: se sta nella lingua
+che dimostra, si scrive `translation-check: content` in un commento sopra e
+il conto lo salta.
+
 ## Quello che c'è nel progetto
 
 `Drawio/` — importa un diagramma draw.io e ne fa dei PNG collegati nel

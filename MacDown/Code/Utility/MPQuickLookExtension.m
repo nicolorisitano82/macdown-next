@@ -212,7 +212,8 @@ static NSString *MPRun(NSString *tool, NSArray<NSString *> *arguments,
         {
             *error = [NSError errorWithDomain:kMPErrorDomain code:1 userInfo:@{
                 NSLocalizedDescriptionKey: NSLocalizedString(
-                    @"Questa versione di MacDown Next non contiene l'anteprima per il Finder.",
+                    @"This copy of MacDown Next does not carry the Finder "
+                    @"preview.",
                     @"Quick Look extension missing from the app bundle"),
             }];
         }
@@ -228,7 +229,7 @@ static NSString *MPRun(NSString *tool, NSArray<NSString *> *arguments,
     if (!out)
         return [self failWith:error
                        reason:NSLocalizedString(
-            @"Non si riesce a raggiungere Launch Services per registrare l'estensione.",
+            @"Launch Services could not be reached to register the extension.",
             @"lsregister not found")];
     usleep(kMPSettleTime / 3);
     MPRun(kMPLaunchServices, @[@"-f", @"-R", @"-trusted", app.path], &status);
@@ -243,8 +244,8 @@ static NSString *MPRun(NSString *tool, NSArray<NSString *> *arguments,
         return YES;
 
     return [self failWith:error reason:NSLocalizedString(
-        @"macOS non ha accettato l'estensione. Spostare MacDown Next nella "
-        @"cartella Applicazioni e riprovare di solito basta.",
+        @"macOS did not accept the extension. Moving MacDown Next into the "
+        @"Applications folder and trying again is usually enough.",
         @"Quick Look extension registration refused")];
 }
 
@@ -269,8 +270,8 @@ static NSString *MPRun(NSString *tool, NSArray<NSString *> *arguments,
         return YES;
 
     return [self failWith:error reason:NSLocalizedString(
-        @"macOS continua a offrire l'estensione. Si può spegnere anche da "
-        @"Impostazioni di Sistema, in Generali ▸ Elementi login ed estensioni.",
+        @"macOS still offers the extension. It can also be turned off in "
+        @"System Settings, under General ▸ Login Items & Extensions.",
         @"Quick Look extension removal refused")];
 }
 
@@ -295,28 +296,29 @@ static NSString *MPRun(NSString *tool, NSArray<NSString *> *arguments,
     {
         case MPQuickLookExtensionStateInstalled:
             return NSLocalizedString(
-                @"Il Finder mostra i documenti Markdown come si leggono.",
+                @"Finder shows Markdown documents as they read.",
                 @"Quick Look extension is installed");
         case MPQuickLookExtensionStateOutdated:
             return [NSString stringWithFormat:NSLocalizedString(
-                @"È registrata una versione più vecchia (%@, contro %@ qui).",
+                @"An older version is registered (%@, against %@ here).",
                 @"Quick Look extension is registered from an older build"),
                 self.registeredVersion ?: @"?", self.bundledVersion ?: @"?"];
         case MPQuickLookExtensionStateElsewhere:
             return NSLocalizedString(
-                @"L'anteprima la fornisce un'altra copia di MacDown Next.",
+                @"The preview comes from another copy of MacDown Next.",
                 @"Quick Look extension registered from another app bundle");
         case MPQuickLookExtensionStateDisabled:
             return NSLocalizedString(
-                @"L'anteprima è installata ma spenta.",
+                @"The preview is installed but turned off.",
                 @"Quick Look extension is registered but disabled");
         case MPQuickLookExtensionStateNotInstalled:
             return NSLocalizedString(
-                @"Il Finder mostra il sorgente dei documenti Markdown.",
+                @"Finder shows the source of Markdown documents.",
                 @"Quick Look extension is not installed");
         case MPQuickLookExtensionStateMissing:
             return NSLocalizedString(
-                @"Questa versione dell'app non contiene l'anteprima per il Finder.",
+                @"This copy of the application does not carry the Finder "
+                @"preview.",
                 @"Quick Look extension missing from the app bundle");
     }
 }

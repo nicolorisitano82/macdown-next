@@ -4,6 +4,7 @@
 //
 
 #import "MDDrawioFile.h"
+#import "MDDrawioStrings.h"
 #import <zlib.h>
 
 NSString * const MDDrawioErrorDomain = @"MDDrawioErrorDomain";
@@ -166,7 +167,7 @@ NSString *MDDrawioXMLFromPNG(NSData *png)
             *error = [NSError errorWithDomain:MDDrawioErrorDomain
                 code:MDDrawioErrorNotADiagram userInfo:@{
                 NSLocalizedDescriptionKey: [NSString stringWithFormat:
-                    NSLocalizedString(@"Non si è potuto leggere %@.",
+                    MDLocalizedString(@"%@ could not be read.",
                                       @"Drawio plug-in"),
                     url.lastPathComponent]}];
         }
@@ -189,9 +190,9 @@ NSString *MDDrawioXMLFromPNG(NSData *png)
         {
             *error = [NSError errorWithDomain:MDDrawioErrorDomain
                 code:MDDrawioErrorNotADiagram userInfo:@{
-                NSLocalizedDescriptionKey: NSLocalizedString(
-                    @"Il file non è un diagramma draw.io: non è né XML né "
-                    @"un PNG che ne porta uno dentro.", @"Drawio plug-in")}];
+                NSLocalizedDescriptionKey: MDLocalizedString(
+                    @"The file is not a draw.io diagram: it is neither XML "
+                    @"nor a PNG carrying one inside.", @"Drawio plug-in")}];
         }
         return nil;
     }
@@ -207,8 +208,8 @@ NSString *MDDrawioXMLFromPNG(NSData *png)
         {
             *error = [NSError errorWithDomain:MDDrawioErrorDomain
                 code:MDDrawioErrorNotADiagram userInfo:@{
-                NSLocalizedDescriptionKey: NSLocalizedString(
-                    @"Il file non si è potuto leggere come XML.",
+                NSLocalizedDescriptionKey: MDLocalizedString(
+                    @"The file could not be read as XML.",
                     @"Drawio plug-in"),
                 NSUnderlyingErrorKey: parseError ?: [NSNull null]}];
         }
@@ -265,8 +266,8 @@ NSString *MDDrawioXMLFromPNG(NSData *png)
         {
             *error = [NSError errorWithDomain:MDDrawioErrorDomain
                 code:MDDrawioErrorNoPages userInfo:@{
-                NSLocalizedDescriptionKey: NSLocalizedString(
-                    @"Nel file non c'è nessuna pagina leggibile.",
+                NSLocalizedDescriptionKey: MDLocalizedString(
+                    @"There is no readable page in the file.",
                     @"Drawio plug-in")}];
         }
         return nil;

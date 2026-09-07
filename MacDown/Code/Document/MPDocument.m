@@ -1098,9 +1098,9 @@ static void (^MPGetPreviewLoadingCompletionHandler(MPDocument *doc))()
     NSUInteger minutes = MPReadingMinutesForWords(value);
     self.readingTimeMenuItem.title = minutes
         ? [NSString stringWithFormat:NSLocalizedString(
-              @"%lu min di lettura", @"Reading time in the counter"),
+              @"%lu min read", @"Reading time in the counter"),
            (unsigned long)minutes]
-        : NSLocalizedString(@"niente da leggere",
+        : NSLocalizedString(@"nothing to read",
                             @"Reading time of an empty document");
 }
 
@@ -4026,8 +4026,8 @@ static NSString * const kMPDocxHeadingToken = @"MPHDGPLACEHOLDER";
                 error = [NSError errorWithDomain:@"MPExporterPlugIn" code:1
                     userInfo:@{NSLocalizedDescriptionKey: [NSString
                         stringWithFormat:NSLocalizedString(
-                            @"%@ non ha detto perché l'esportazione non è "
-                            @"riuscita.", @"An exporter plug-in failed"),
+                            @"%@ did not say why the export failed.",
+                            @"An exporter plug-in failed"),
                         exporter.name]}];
             }
             [strong presentError:error];
@@ -5474,8 +5474,8 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
         && !self.preferences.previewFetchesLinkPages)
     {
         [preview setValue:NSLocalizedString(
-            @"Per sapere di cosa parla: Impostazioni ▸ Resa grafica ▸ "
-            @"«Chiedi alla pagina web che cos'è»",
+            @"To learn what it is about: Settings ▸ Rendering ▸ “Ask a web "
+            @"page what it is”",
             @"Hint on the card for a web link when the lookup is off")
                    forKey:@"footnote"];
     }
@@ -5546,22 +5546,22 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
         URLForType:NSPasteboardTypeString].absoluteString;
 
     NSAlert *alert = [[NSAlert alloc] init];
-    alert.messageText = NSLocalizedString(@"Salva una pagina come Markdown",
+    alert.messageText = NSLocalizedString(@"Save a Web Page as Markdown",
                                           @"Web clipping");
     // What happens next depends on whether this document has a folder to put
     // a file in, so the question says which of the two it will be.
     alert.informativeText = self.fileURL
         ? NSLocalizedString(
-            @"Il file finisce accanto al documento, con l'indirizzo e la "
-            @"data in cima, e viene collegato dove sta il cursore. Quello "
-            @"che la conversione non riconosce lascia il suo testo e "
-            @"nient'altro.", @"Web clipping")
+            @"The file lands beside the document, with the address and the "
+            @"date at the top, and a link to it goes where the cursor is. "
+            @"Whatever the conversion does not recognize leaves its text "
+            @"behind and nothing else.", @"Web clipping")
         : NSLocalizedString(
-            @"Questo documento non è ancora salvato, quindi il ritaglio si "
-            @"apre come documento nuovo, da salvare dove vuoi. L'indirizzo "
-            @"e la data stanno in cima.", @"Web clipping");
-    [alert addButtonWithTitle:NSLocalizedString(@"Salva", @"Web clipping")];
-    [alert addButtonWithTitle:NSLocalizedString(@"Annulla", @"Cancel")];
+            @"This document has not been saved yet, so the clipping opens as "
+            @"a new document, to save wherever you like. The address and the "
+            @"date are at the top.", @"Web clipping");
+    [alert addButtonWithTitle:NSLocalizedString(@"Save", @"Web clipping")];
+    [alert addButtonWithTitle:NSLocalizedString(@"Cancel", @"Cancel")];
 
     NSTextField *field = [NSTextField textFieldWithString:pasted ?: @""];
     field.placeholderString = @"https://";
@@ -5577,7 +5577,7 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
         NSURL *url = typed.length ? [NSURL URLWithString:typed] : nil;
         if (!url.scheme.length || !url.host.length)
         {
-            [self say:NSLocalizedString(@"Indirizzo non valido",
+            [self say:NSLocalizedString(@"That address is not valid",
                                         @"Web clipping")
                  text:typed];
             return;
@@ -5608,8 +5608,8 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
         if (!markdown)
         {
             MPNote(@"  non ritagliata: %@", error.localizedDescription);
-            [strong say:NSLocalizedString(@"La pagina non si è potuta "
-                                          @"salvare", @"Web clipping")
+            [strong say:NSLocalizedString(@"The page could not be saved",
+                                          @"Web clipping")
                    text:error.localizedDescription];
             return;
         }
@@ -5642,8 +5642,8 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
                          encoding:NSUTF8StringEncoding error:&writing])
         {
             MPNote(@"  non scritta: %@", writing.localizedDescription);
-            [strong say:NSLocalizedString(@"La pagina non si è potuta "
-                                          @"scrivere", @"Web clipping")
+            [strong say:NSLocalizedString(@"The page could not be written",
+                                          @"Web clipping")
                    text:writing.localizedDescription];
             return;
         }
@@ -5763,7 +5763,7 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
     if (!self.readOnlyBadge)
     {
         NSTextField *label = [NSTextField labelWithString:
-            NSLocalizedString(@"Sola lettura", @"Read-only badge")];
+            NSLocalizedString(@"Read only", @"Read-only badge")];
         label.font = [NSFont systemFontOfSize:[NSFont smallSystemFontSize]];
         label.textColor = [NSColor secondaryLabelColor];
         label.frame = NSMakeRect(6.0, 4.0, 88.0, 16.0);
@@ -5843,7 +5843,7 @@ static BOOL MPActionEditsTheDocument(SEL action)
     if (!fresh)
     {
         MPNote(@"  non aperta: %@", making.localizedDescription);
-        [self say:NSLocalizedString(@"Il ritaglio non si è potuto aprire",
+        [self say:NSLocalizedString(@"The clipping could not be opened",
                                     @"Web clipping")
              text:making.localizedDescription];
         return NO;

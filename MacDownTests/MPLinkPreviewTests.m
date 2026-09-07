@@ -101,7 +101,10 @@
     MPLinkPreview *preview = [self previewOf:@"ancora-niente.md"];
     XCTAssertEqual(preview.kind, MPLinkPreviewKindMissingFile);
     XCTAssertEqualObjects(preview.title, @"ancora-niente");
-    XCTAssertTrue([preview.body containsString:@"non c'è ancora"]);
+    // Whatever language the interface is in: the same string the code asks
+    // for, not the English it is keyed by.
+    XCTAssertEqualObjects(preview.body, NSLocalizedString(
+        @"This file is not there yet.", @"A link to a file that is missing"));
 }
 
 

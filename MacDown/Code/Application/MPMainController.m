@@ -155,7 +155,7 @@ NS_INLINE void treat()
     }
 
     NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:
-        NSLocalizedString(@"Controlla aggiornamenti…",
+        NSLocalizedString(@"Check for Updates…",
             @"Application menu item that looks for a newer release")
         action:@selector(checkForUpdates:) keyEquivalent:@""];
     item.target = [MPUpdateController sharedInstance];
@@ -447,12 +447,12 @@ static const NSInteger kMPPlugInExportItemTag = 9003;
     if (!on)
         return;
     NSAlert *alert = [[NSAlert alloc] init];
-    alert.messageText = NSLocalizedString(@"Sto registrando cosa fai",
+    alert.messageText = NSLocalizedString(@"Recording what you do",
                                           @"Action recording started");
     alert.informativeText = [NSString stringWithFormat:NSLocalizedString(
-        @"Comandi e risposte vengono scritti in %@. Non esce niente dal "
-        @"Mac. Dentro ci finiscono i percorsi dei documenti e i titoli "
-        @"delle sezioni su cui lavori.",
+        @"Commands and answers are written to %@. Nothing leaves the Mac. "
+        @"What lands in there: the paths of the documents and the titles of "
+        @"the sections you work on.",
         @"Explains what the recording holds"),
         [MPActionLog sharedLog].fileURL.path];
     [alert addButtonWithTitle:NSLocalizedString(@"OK", @"Confirm")];
@@ -465,11 +465,11 @@ static const NSInteger kMPPlugInExportItemTag = 9003;
     if (![[NSFileManager defaultManager] fileExistsAtPath:url.path])
     {
         NSAlert *alert = [[NSAlert alloc] init];
-        alert.messageText = NSLocalizedString(@"Non c'è niente registrato",
+        alert.messageText = NSLocalizedString(@"Nothing has been recorded",
                                               @"No recording yet");
         alert.informativeText = NSLocalizedString(
-            @"Accendi «Registra cosa faccio», rifai quello che non "
-            @"funziona, e il diario sarà qui.", @"How to get a recording");
+            @"Turn on “Record What I Do”, do the thing that goes wrong again, "
+            @"and the diary will be here.", @"How to get a recording");
         [alert addButtonWithTitle:NSLocalizedString(@"OK", @"Confirm")];
         [alert runModal];
         return;

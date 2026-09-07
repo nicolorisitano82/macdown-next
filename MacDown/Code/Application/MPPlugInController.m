@@ -47,7 +47,7 @@
     // First, and always present: without it a plug-in folder is something
     // you have to know about to find.
     NSMenuItem *manage = [menu addItemWithTitle:
-        NSLocalizedString(@"Gestisci plug-in…", @"Opens the plug-in manager")
+        NSLocalizedString(@"Manage Plug-ins…", @"Opens the plug-in manager")
                                          action:@selector(showPlugInManager:)
                                   keyEquivalent:@""];
     manage.target = self;
@@ -77,7 +77,7 @@
     if (!shown)
     {
         NSMenuItem *none = [menu addItemWithTitle:
-            NSLocalizedString(@"Nessun plug-in attivo",
+            NSLocalizedString(@"No plug-in is active",
                               @"Shown when every plug-in is off or absent")
                                            action:NULL keyEquivalent:@""];
         none.enabled = NO;

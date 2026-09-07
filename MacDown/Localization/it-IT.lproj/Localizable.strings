@@ -227,7 +227,7 @@
 "Resume" = "Riprendi";
 "Reveal Models Folder" = "Mostra la cartella dei modelli";
 "Reveal Templates Folder" = "Mostra la cartella dei modelli di documento";
-"Stop" = "Ferma";
+"Stop" = "Interrompi";
 "That address cannot be turned into a download." = "Da quell'indirizzo non si ricava uno scaricamento.";
 "That is not an address of a .gguf file. Paste the link to the model file itself." = "Quello non è l'indirizzo di un file .gguf. Incolla il collegamento al file del modello.";
 "The file could not be moved into the Models folder." = "Il file non si è potuto spostare nella cartella dei modelli.";
@@ -341,3 +341,148 @@
 "Fetching %lu images from the network…" = "Scarico %lu immagini dalla rete…";
 "Plug-in" = "Plug-in";
 "OK" = "OK";
+
+/* Le stringhe che stavano in italiano nel codice, ora chiavi inglesi.
+ * Quello che si legge qui è il testo che l'applicazione ha sempre
+ * mostrato; la chiave inglese è quella che ogni altra lingua traduce. */
+
+/* Il registro delle azioni */
+"Check for Updates…" = "Controlla aggiornamenti…";
+"Commands and answers are written to %@. Nothing leaves the Mac. What lands in there: the paths of the documents and the titles of the sections you work on." = "Comandi e risposte vengono scritti in %@. Non esce niente dal Mac. Dentro ci finiscono i percorsi dei documenti e i titoli delle sezioni su cui lavori.";
+"Nothing has been recorded" = "Non c'è niente registrato";
+"Recording what you do" = "Sto registrando cosa fai";
+"Turn on “Record What I Do”, do the thing that goes wrong again, and the diary will be here." = "Accendi «Registra cosa faccio», rifai quello che non funziona, e il diario sarà qui.";
+
+/* Il menù dei plug-in */
+"Manage Plug-ins…" = "Gestisci plug-in…";
+"No plug-in is active" = "Nessun plug-in attivo";
+
+/* La finestra dei plug-in */
+"  · installed by you" = "  · installato da te";
+"  · shipped with the application" = "  · incluso nell'app";
+"Add…" = "Aggiungi…";
+"Changes take effect the next time the application starts: plug-ins are read once, at launch." = "Le modifiche hanno effetto al prossimo avvio: i plug-in vengono caricati una volta sola, all'apertura.";
+"Choose one or more plug-ins to install." = "Scegli uno o più plug-in da installare.";
+"It is still in %@." = "È ancora in %@.";
+"No plug-in is installed." = "Nessun plug-in installato.";
+"Show in Finder" = "Mostra nel Finder";
+"The plug-in does not say where it is." = "Il plug-in non dice dove si trova.";
+"The plug-in is moved to the Trash." = "Il plug-in viene spostato nel Cestino.";
+"“%@” could not be removed" = "“%@” non si è potuto rimuovere";
+
+/* Gli aggiornamenti, quando si chiedono */
+"%@ of %@" = "%@ di %@";
+"Downloading MacDown Next %@" = "Scaricamento di MacDown Next %@";
+"Later" = "Più tardi";
+"MacDown Next %@ is available." = "È disponibile MacDown Next %@.";
+"MacDown Next %@ is in Downloads." = "MacDown Next %@ è in Scaricati.";
+"Not Now" = "Non ora";
+"Quit and Open" = "Chiudi e apri";
+"Release Notes" = "Note di rilascio";
+"The updates could not be checked." = "Non si riesce a controllare gli aggiornamenti.";
+"This is %@." = "Questa è la %@.";
+"This is already the latest version." = "È già l'ultima versione.";
+"To install it, MacDown Next quits and “%@” opens: then you drag the application onto the Applications folder, as usual. You will be asked about the documents that are not saved." = "Per installarlo, MacDown Next si chiude e si apre «%@»: poi si trascina l'applicazione sulla cartella Applicazioni, come al solito. I documenti non salvati verranno chiesti.";
+"Update" = "Aggiornamento";
+"Waiting for an answer…" = "In attesa della risposta…";
+"You have %@. The download is %@ and lands in Downloads." = "Hai la %@. Lo scaricamento è di %@ e finisce in Scaricati.";
+
+/* Gli aggiornamenti, quando qualcosa va storto */
+"The download answered %ld." = "Lo scaricamento ha risposto %ld.";
+"The download was stopped." = "Scaricamento interrotto.";
+"The latest release carries no disk image." = "L'ultimo rilascio non porta un'immagine disco.";
+"The releases feed answered %ld." = "L'elenco dei rilasci ha risposto %ld.";
+"The update's address is not GitHub's." = "L'indirizzo dell'aggiornamento non è di GitHub.";
+
+/* Le impostazioni degli aggiornamenti */
+"Check Now" = "Controlla adesso";
+"It has not checked yet." = "Non ha ancora controllato.";
+"Last checked: %@" = "Ultimo controllo: %@";
+"Look for a new version once a day" = "Controlla se c'è una versione nuova, una volta al giorno";
+"The check is one request to the releases feed on GitHub, and it sends nothing about the open document or about the machine. Downloading and installing stay two separate questions: the disk image lands in Downloads, and the application is dragged into Applications by hand, as always." = "Il controllo è una richiesta all'elenco dei rilasci su GitHub, e non manda niente sul documento aperto né sulla macchina. Scaricare e installare restano due domande separate: l'immagine disco finisce in Scaricati, e l'applicazione si trascina in Applicazioni a mano, come sempre.";
+"This is MacDown Next %@ (%@)." = "Questa è MacDown Next %@ (%@).";
+"This is MacDown Next %@." = "Questa è MacDown Next %@.";
+
+/* Le impostazioni dell'anteprima del Finder */
+"In this application: %@" = "In questa applicazione: %@";
+"Press the space bar on a Markdown file and Finder shows the document as it reads — headings, tables, code and to-do boxes — instead of the source. The preview is part of this application: installing it means telling macOS that it is here." = "Premendo la barra spaziatrice su un file Markdown, il Finder mostra il documento come si legge — titoli, tabelle, codice e caselle dei to-do — invece del sorgente. L'anteprima fa parte di questa applicazione: installarla vuol dire dire a macOS che è qui.";
+"Register Again" = "Aggiorna";
+"Registered: %@ (%@)" = "Registrata: %@ (%@)";
+"Registered: nowhere." = "Registrata: da nessuna parte.";
+"Show in System Settings…" = "Mostra in Impostazioni di Sistema…";
+"none" = "nessuna";
+
+/* L'anteprima del Finder */
+"An older version is registered (%@, against %@ here)." = "È registrata una versione più vecchia (%@, contro %@ qui).";
+"Finder shows Markdown documents as they read." = "Il Finder mostra i documenti Markdown come si leggono.";
+"Finder shows the source of Markdown documents." = "Il Finder mostra il sorgente dei documenti Markdown.";
+"Launch Services could not be reached to register the extension." = "Non si riesce a raggiungere Launch Services per registrare l'estensione.";
+"The preview comes from another copy of MacDown Next." = "L'anteprima la fornisce un'altra copia di MacDown Next.";
+"The preview is installed but turned off." = "L'anteprima è installata ma spenta.";
+"This copy of MacDown Next does not carry the Finder preview." = "Questa versione di MacDown Next non contiene l'anteprima per il Finder.";
+"This copy of the application does not carry the Finder preview." = "Questa versione dell'app non contiene l'anteprima per il Finder.";
+"macOS did not accept the extension. Moving MacDown Next into the Applications folder and trying again is usually enough." = "macOS non ha accettato l'estensione. Spostare MacDown Next nella cartella Applicazioni e riprovare di solito basta.";
+"macOS still offers the extension. It can also be turned off in System Settings, under General ▸ Login Items & Extensions." = "macOS continua a offrire l'estensione. Si può spegnere anche da Impostazioni di Sistema, in Generali ▸ Elementi login ed estensioni.";
+
+/* Il documento */
+"%@ did not say why the export failed." = "%@ non ha detto perché l'esportazione non è riuscita.";
+"%lu min read" = "%lu min di lettura";
+"Read only" = "Sola lettura";
+"Save" = "Salva";
+"Save a Web Page as Markdown" = "Salva una pagina come Markdown";
+"That address is not valid" = "Indirizzo non valido";
+"The clipping could not be opened" = "Il ritaglio non si è potuto aprire";
+"The file lands beside the document, with the address and the date at the top, and a link to it goes where the cursor is. Whatever the conversion does not recognize leaves its text behind and nothing else." = "Il file finisce accanto al documento, con l'indirizzo e la data in cima, e viene collegato dove sta il cursore. Quello che la conversione non riconosce lascia il suo testo e nient'altro.";
+"The page could not be saved" = "La pagina non si è potuta salvare";
+"The page could not be written" = "La pagina non si è potuta scrivere";
+"This document has not been saved yet, so the clipping opens as a new document, to save wherever you like. The address and the date are at the top." = "Questo documento non è ancora salvato, quindi il ritaglio si apre come documento nuovo, da salvare dove vuoi. L'indirizzo e la data stanno in cima.";
+"To learn what it is about: Settings ▸ Rendering ▸ “Ask a web page what it is”" = "Per sapere di cosa parla: Impostazioni ▸ Resa grafica ▸ «Chiedi alla pagina web che cos'è»";
+"nothing to read" = "niente da leggere";
+
+/* I file di istruzioni */
+"%lu lines: above the two hundred recommended" = "%lu righe: sopra le duecento consigliate";
+"@%@ closes a circle: it is not followed" = "@%@ chiude un cerchio: non viene seguito";
+"@%@ leads to no file" = "@%@ non porta a nessun file";
+"@%@ sits past the fourth hop: it is not read" = "@%@ sta oltre il quarto passo: non viene letto";
+"Claude Code does not read AGENTS.md: import it from the CLAUDE.md beside it, with @AGENTS.md" = "Claude Code non legge AGENTS.md: importalo dal CLAUDE.md accanto, con @AGENTS.md";
+"local" = "locale";
+"machine" = "macchina";
+"more than 4 MiB: the loader skips it altogether" = "più di 4 MiB: il caricatore lo salta del tutto";
+"other agents" = "altri agenti";
+"project" = "progetto";
+"yours" = "tuo";
+
+/* Il pannello dei file di istruzioni */
+"%@ · not there" = "%@ · non c'è";
+"And what they pull in" = "E quello che tirano dentro";
+"Read in this order" = "Letti in quest'ordine";
+"Worth a look" = "Da guardare";
+"a circle" = "cerchio";
+"not there" = "non c'è";
+"past the fourth hop" = "oltre il quarto passo";
+
+/* La sbirciata a un collegamento */
+"%lu words · %@" = "%lu parole · %@";
+"Not text that can be read." = "Non è testo che si possa leggere.";
+"This file is not there yet." = "Questo file non c'è ancora.";
+"Too big to peek at." = "Troppo grande per essere sbirciato.";
+
+/* Il controllo della prosa */
+"heading without its space" = "titolo senza spazio";
+
+/* Il pannello della prosa */
+"Fix" = "Correggi";
+
+/* Il ritaglio di una pagina web */
+"The page could not be read as text." = "La pagina non si è potuta leggere come testo.";
+"The page is too big to be an article." = "La pagina è troppo grande per essere un articolo.";
+"The server answered %ld." = "Il server ha risposto %ld.";
+"There was no text in the page worth keeping." = "Nella pagina non c'era testo da tenere.";
+
+/* I collegamenti in entrata */
+"%lu links, in %lu documents read" = "%lu collegamenti, in %lu documenti letti";
+"No document points here, out of %lu read" = "Nessun documento punta a questo, su %lu letti";
+
+/* Righe di elenco composte a mano */
+"%@ · %lu lines" = "%@ · %lu righe";
+"%@ · line %lu" = "%@ · riga %lu";

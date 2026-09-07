@@ -35,15 +35,15 @@ static const unsigned long long kMPFileIgnoredAbove = 4ULL * 1024 * 1024;
     switch (self.scope)
     {
         case MPInstructionScopeManaged:
-            return NSLocalizedString(@"macchina", @"Instruction file scope");
+            return NSLocalizedString(@"machine", @"Instruction file scope");
         case MPInstructionScopeUser:
-            return NSLocalizedString(@"tuo", @"Instruction file scope");
+            return NSLocalizedString(@"yours", @"Instruction file scope");
         case MPInstructionScopeProject:
-            return NSLocalizedString(@"progetto", @"Instruction file scope");
+            return NSLocalizedString(@"project", @"Instruction file scope");
         case MPInstructionScopeLocal:
-            return NSLocalizedString(@"locale", @"Instruction file scope");
+            return NSLocalizedString(@"local", @"Instruction file scope");
         case MPInstructionScopeAgents:
-            return NSLocalizedString(@"altri agenti",
+            return NSLocalizedString(@"other agents",
                                      @"Instruction file scope");
     }
 }
@@ -334,14 +334,14 @@ static void MPCollectIssues(MPInstructionNode *node,
         if (!child.exists)
         {
             [issues addObject:MPIssue([NSString stringWithFormat:
-                NSLocalizedString(@"@%@ non porta a nessun file",
+                NSLocalizedString(@"@%@ leads to no file",
                                   @"Instruction file issue"),
                 child.writtenAs], node.fileURL, 0)];
         }
         else if (child.circular)
         {
             [issues addObject:MPIssue([NSString stringWithFormat:
-                NSLocalizedString(@"@%@ chiude un cerchio: non viene seguito",
+                NSLocalizedString(@"@%@ closes a circle: it is not followed",
                                   @"Instruction file issue"),
                 child.writtenAs], node.fileURL, 0)];
         }
@@ -349,7 +349,7 @@ static void MPCollectIssues(MPInstructionNode *node,
         {
             [issues addObject:MPIssue([NSString stringWithFormat:
                 NSLocalizedString(
-                    @"@%@ sta oltre il quarto passo: non viene letto",
+                    @"@%@ sits past the fourth hop: it is not read",
                     @"Instruction file issue"),
                 child.writtenAs], node.fileURL, 0)];
         }
@@ -374,14 +374,14 @@ NSArray<MPInstructionIssue *> *MPInstructionIssues(
         if (file.size > kMPFileIgnoredAbove)
         {
             [issues addObject:MPIssue(NSLocalizedString(
-                @"più di 4 MiB: il caricatore lo salta del tutto",
+                @"more than 4 MiB: the loader skips it altogether",
                 @"Instruction file issue"), file.fileURL, 0)];
         }
         else if (file.lines > kMPComfortableLines)
         {
             [issues addObject:MPIssue([NSString stringWithFormat:
                 NSLocalizedString(
-                    @"%lu righe: sopra le duecento consigliate",
+                    @"%lu lines: above the two hundred recommended",
                     @"Instruction file issue"),
                 (unsigned long)file.lines], file.fileURL, 0)];
         }
@@ -410,8 +410,8 @@ NSArray<MPInstructionIssue *> *MPInstructionIssues(
         if ([imported containsObject:file.fileURL.path])
             continue;
         [issues addObject:MPIssue(NSLocalizedString(
-            @"Claude Code non legge AGENTS.md: importalo dal CLAUDE.md "
-            @"accanto, con @AGENTS.md",
+            @"Claude Code does not read AGENTS.md: import it from the "
+            @"CLAUDE.md beside it, with @AGENTS.md",
             @"Instruction file issue"), file.fileURL, 0)];
     }
     return issues;

@@ -270,7 +270,7 @@ double MPProgressFraction(long long received, long long total)
             trouble = [NSError errorWithDomain:kMPErrorDomain code:status
                 userInfo:@{NSLocalizedDescriptionKey: [NSString
                     stringWithFormat:NSLocalizedString(
-                        @"L'elenco dei rilasci ha risposto %ld.",
+                        @"The releases feed answered %ld.",
                         @"HTTP status from the releases feed"),
                     (long)status]}];
         }
@@ -281,7 +281,7 @@ double MPProgressFraction(long long received, long long total)
             {
                 trouble = [NSError errorWithDomain:kMPErrorDomain code:-1
                     userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(
-                        @"L'ultimo rilascio non porta un'immagine disco.",
+                        @"The latest release carries no disk image.",
                         @"The latest release has no .dmg asset")}];
             }
         }
@@ -329,7 +329,7 @@ double MPProgressFraction(long long received, long long total)
     {
         [self finishWith:nil error:[NSError errorWithDomain:kMPErrorDomain
             code:-2 userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(
-                @"L'indirizzo dell'aggiornamento non è di GitHub.",
+                @"The update's address is not GitHub's.",
                 @"Refusing to download an update from elsewhere")}]];
         return;
     }
@@ -394,7 +394,7 @@ didFinishDownloadingToURL:(NSURL *)location
         [self finishWith:nil error:[NSError errorWithDomain:kMPErrorDomain
             code:status userInfo:@{NSLocalizedDescriptionKey: [NSString
                 stringWithFormat:NSLocalizedString(
-                    @"Lo scaricamento ha risposto %ld.",
+                    @"The download answered %ld.",
                     @"HTTP status while downloading the update"),
                 (long)status]}]];
         return;
@@ -424,7 +424,7 @@ didCompleteWithError:(NSError *)error
     {
         error = [NSError errorWithDomain:kMPErrorDomain code:NSUserCancelledError
             userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(
-                @"Scaricamento interrotto.",
+                @"The download was stopped.",
                 @"The download was stopped by the user")}];
     }
     [self finishWith:nil error:error];

@@ -4,6 +4,7 @@
 //
 
 #import "MDDrawioRenderer.h"
+#import "MDDrawioStrings.h"
 #import "MDDrawioResources.h"
 #import <WebKit/WebKit.h>
 
@@ -146,9 +147,9 @@ static const NSTimeInterval kMDPollInterval = 0.1;
     {
         handler(nil, [NSError errorWithDomain:MDDrawioErrorDomain
             code:MDDrawioErrorRenderFailed userInfo:@{
-            NSLocalizedDescriptionKey: NSLocalizedString(
-                @"Il visualizzatore draw.io non è nel plug-in: "
-                @"manca viewer.min.js.", @"Drawio plug-in")}]);
+            NSLocalizedDescriptionKey: MDLocalizedString(
+                @"The draw.io viewer is not in the plug-in: viewer.min.js is "
+                @"missing.", @"Drawio plug-in")}]);
         return;
     }
 
@@ -244,14 +245,14 @@ static const NSTimeInterval kMDPollInterval = 0.1;
                    pageError:(NSError *)pageError
 {
     NSMutableString *said = [NSMutableString stringWithFormat:
-        NSLocalizedString(@"Il visualizzatore non ha disegnato niente entro "
-                          @"%.0f secondi.", @"Drawio plug-in"),
+        MDLocalizedString(@"The viewer drew nothing within %.0f seconds.",
+                          @"Drawio plug-in"),
         kMDRenderTimeout];
 
     NSArray *errors = state[@"errors"];
     if ([errors isKindOfClass:[NSArray class]] && errors.count)
     {
-        [said appendFormat:NSLocalizedString(@" La pagina ha detto: %@",
+        [said appendFormat:MDLocalizedString(@" The page said: %@",
                                              @"Drawio plug-in"),
             [errors componentsJoinedByString:@" / "]];
     }
@@ -263,17 +264,17 @@ static const NSTimeInterval kMDPollInterval = 0.1;
     {
         // No complaint at all is itself the finding: the viewer was there
         // and drew nothing, which points at what it could not load.
-        [said appendFormat:NSLocalizedString(
-            @" Nessun errore dalla pagina: %@ SVG, %@ contenitori, "
-            @"altezza %@.", @"Drawio plug-in"),
+        [said appendFormat:MDLocalizedString(
+            @" No error from the page: %@ SVG, %@ containers, height %@.",
+            @"Drawio plug-in"),
             state[@"svgs"] ?: @0, state[@"divs"] ?: @0, state[@"body"] ?: @0];
     }
 
     NSArray *missing = self.resources.failedPaths;
     if (missing.count)
     {
-        [said appendFormat:NSLocalizedString(
-            @" Non serviti: %@.", @"Drawio plug-in"),
+        [said appendFormat:MDLocalizedString(
+            @" Not served: %@.", @"Drawio plug-in"),
             [missing componentsJoinedByString:@", "]];
     }
 
@@ -371,7 +372,7 @@ static const NSTimeInterval kMDPollInterval = 0.1;
                 handler(nil, [NSError errorWithDomain:MDDrawioErrorDomain
                     code:MDDrawioErrorServiceRefused userInfo:@{
                     NSLocalizedDescriptionKey: [NSString stringWithFormat:
-                        NSLocalizedString(@"Il server ha risposto %ld%@",
+                        MDLocalizedString(@"The server answered %ld%@",
                                           @"Drawio plug-in"),
                         (long)status, said.length
                             ? [@": " stringByAppendingString:said] : @"."]}]);

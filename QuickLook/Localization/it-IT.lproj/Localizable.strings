@@ -1,0 +1,6 @@
+/* MacDownQuickLook.appex — italiano
+ *
+ * L'estensione è un bundle a sé: MDQLLocalizedString chiede a lei, non
+ * all'applicazione. */
+
+"\n\n---\n\n*The document is too long: only the beginning is shown here.*\n" = "\n\n---\n\n*Il documento è troppo lungo: qui è mostrato solo l'inizio.*\n";

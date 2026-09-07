@@ -50,7 +50,7 @@ static const CGFloat kMPRowHeight = 26.0;
     NSMutableArray<MPInstructionRow *> *rows = [NSMutableArray array];
 
     [rows addObject:[self headerRow:NSLocalizedString(
-        @"Letti in quest'ordine", @"Instruction panel section")]];
+        @"Read in this order", @"Instruction panel section")]];
     for (MPInstructionFile *file in hierarchy)
     {
         MPInstructionRow *row = [[MPInstructionRow alloc] init];
@@ -58,10 +58,11 @@ static const CGFloat kMPRowHeight = 26.0;
         row.fileURL = file.fileURL;
         row.missing = !file.exists;
         row.detail = file.exists
-            ? [NSString stringWithFormat:@"%@ · %lu righe", file.scopeName,
-               (unsigned long)file.lines]
+            ? [NSString stringWithFormat:NSLocalizedString(
+                @"%@ · %lu lines", @"An instruction file and how long it is"),
+               file.scopeName, (unsigned long)file.lines]
             : [NSString stringWithFormat:NSLocalizedString(
-                @"%@ · non c'è", @"An instruction file that is not there"),
+                @"%@ · not there", @"An instruction file that is not there"),
                file.scopeName];
         [rows addObject:row];
     }
@@ -69,7 +70,7 @@ static const CGFloat kMPRowHeight = 26.0;
     if (tree.imports.count)
     {
         [rows addObject:[self headerRow:NSLocalizedString(
-            @"E quello che tirano dentro",
+            @"And what they pull in",
             @"Instruction panel section")]];
         [self appendImportsOf:tree to:rows];
     }
@@ -77,7 +78,7 @@ static const CGFloat kMPRowHeight = 26.0;
     if (issues.count)
     {
         [rows addObject:[self headerRow:NSLocalizedString(
-            @"Da guardare", @"Instruction panel section")]];
+            @"Worth a look", @"Instruction panel section")]];
         for (MPInstructionIssue *issue in issues)
         {
             MPInstructionRow *row = [[MPInstructionRow alloc] init];
@@ -112,11 +113,11 @@ static const CGFloat kMPRowHeight = 26.0;
         row.indent = child.depth;
         row.missing = !child.exists;
         if (!child.exists)
-            row.detail = NSLocalizedString(@"non c'è", @"Missing import");
+            row.detail = NSLocalizedString(@"not there", @"Missing import");
         else if (child.circular)
-            row.detail = NSLocalizedString(@"cerchio", @"Circular import");
+            row.detail = NSLocalizedString(@"a circle", @"Circular import");
         else if (child.tooDeep)
-            row.detail = NSLocalizedString(@"oltre il quarto passo",
+            row.detail = NSLocalizedString(@"past the fourth hop",
                                            @"Import past the depth limit");
         else
             row.detail = child.fileURL.lastPathComponent;

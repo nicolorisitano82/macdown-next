@@ -1,0 +1,18 @@
+/* LoremIpsum.plugin — italiano
+ *
+ * A plug-in carries its own languages: LILocalizedString asks this
+ * bundle, not the application's. */
+
+
+"Lorem Ipsum…" = "Lorem Ipsum…";
+"Insert Sample Text" = "Inserisci testo di prova";
+"The text is inserted where the cursor is." = "Il testo viene inserito nel punto in cui si trova il cursore.";
+"Kind:" = "Tipo:";
+"Lorem ipsum" = "Lorem ipsum";
+"Italian" = "Italiano";
+"Sample Markdown" = "Markdown di prova";
+"Paragraphs:" = "Paragrafi:";
+"Insert" = "Inserisci";
+"Cancel" = "Annulla";
+"There is no insertion point" = "Nessun punto di inserimento";
+"Click in the editor where you want the text, and try again." = "Fai clic nell'editor, nel punto in cui vuoi il testo, e riprova.";

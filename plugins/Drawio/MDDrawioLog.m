@@ -4,6 +4,7 @@
 //
 
 #import "MDDrawioLog.h"
+#import "MDDrawioStrings.h"
 
 
 @interface MDDrawioLog ()
@@ -58,7 +59,8 @@
         styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
                 | NSWindowStyleMaskResizable
           backing:NSBackingStoreBuffered defer:NO];
-    panel.title = @"Log dell'importazione";
+    panel.title = MDLocalizedString(@"Import Log",
+                                    @"Title of the log window");
     panel.releasedWhenClosed = NO;
 
     NSScrollView *scroll = [[NSScrollView alloc]
@@ -80,13 +82,15 @@
     scroll.documentView = view;
     [panel.contentView addSubview:scroll];
 
-    NSButton *copy = [NSButton buttonWithTitle:@"Copia" target:self
+    NSButton *copy = [NSButton buttonWithTitle:
+        MDLocalizedString(@"Copy", @"Copy the log") target:self
                                         action:@selector(copyLog:)];
     copy.frame = NSMakeRect(frame.size.width - 200.0, 10.0, 88.0, 24.0);
     copy.autoresizingMask = NSViewMinXMargin;
     [panel.contentView addSubview:copy];
 
-    NSButton *close = [NSButton buttonWithTitle:@"Chiudi" target:self
+    NSButton *close = [NSButton buttonWithTitle:
+        MDLocalizedString(@"Close", @"Close the log window") target:self
                                          action:@selector(closeLog:)];
     close.frame = NSMakeRect(frame.size.width - 104.0, 10.0, 88.0, 24.0);
     close.keyEquivalent = @"\r";

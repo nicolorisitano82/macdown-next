@@ -388,6 +388,31 @@ italian_parses() {
 }
 ok "i file italiani si leggono come property list" italian_parses
 
+# A .strings file inside a bundle is not yet a translation the reader gets:
+# the folder has to be an .lproj the loader recognizes, and the key has to
+# match to the last character. This asks the bundles the same question the
+# interface asks them.
+LOCALIZED="$WORK/localized_string"
+if clang -fobjc-arc -framework Foundation -o "$LOCALIZED" \
+        Tools/localized_string.m 2>/dev/null; then
+    ok "l'applicazione risponde in italiano" \
+        "$LOCALIZED" "$APP" it-IT "Check for Updates…"
+    ok "l'estensione dell'anteprima porta le sue traduzioni" \
+        "$LOCALIZED" "$APPEX" it-IT \
+        $'\n\n---\n\n*The document is too long: only the beginning is shown here.*\n'
+    ok "Drawio.plugin porta le sue traduzioni" \
+        "$LOCALIZED" "$APP/Contents/PlugIns/Drawio.plugin" it-IT \
+        "Import a draw.io Diagram…"
+    # Built by its own script, on purpose: a plug-in needs no Xcode target.
+    [ -d plugins/LoremIpsum/LoremIpsum.plugin ] \
+        || bash plugins/LoremIpsum/build.sh >/dev/null 2>&1
+    ok "LoremIpsum.plugin porta le sue traduzioni" \
+        "$LOCALIZED" plugins/LoremIpsum/LoremIpsum.plugin it-IT \
+        "Insert Sample Text"
+else
+    skip "le traduzioni a runtime (clang non ha costruito l'arnese)"
+fi
+
 
 # -------------------------------------------------------------- the verdict
 

@@ -140,7 +140,7 @@ static const CGFloat kMPPopoverMaximumHeight = 420.0;
     if (issue.replacement.length && self.fixed)
     {
         // Only where there is one obvious answer; see the header.
-        NSButton *fix = [NSButton buttonWithTitle:NSLocalizedString(@"Correggi",
+        NSButton *fix = [NSButton buttonWithTitle:NSLocalizedString(@"Fix",
             @"Apply the correction to a prose issue")
             target:self action:@selector(fixClicked:)];
         fix.controlSize = NSControlSizeSmall;

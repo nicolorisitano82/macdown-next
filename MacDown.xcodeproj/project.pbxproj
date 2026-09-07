@@ -37,6 +37,8 @@
 		D2B0000000000000000000B9 /* stack.c in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000AE /* stack.c */; };
 		D2B0000000000000000000BA /* version.c in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000AF /* version.c */; };
 		D2B0000000000000000000BB /* GitHub2.css in Resources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000A5 /* GitHub2.css */; };
+		D2B0000000000000000001A0 /* en.lproj in Resources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000001A2 /* en.lproj */; };
+		D2B0000000000000000001A1 /* it-IT.lproj in Resources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000001A3 /* it-IT.lproj */; };
 		D2B0000000000000000000BC /* MacDownQuickLook.appex in Embed Plug-ins */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000A6 /* MacDownQuickLook.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D2B0000000000000000000C6 /* MDPreviewPageTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000C5 /* MDPreviewPageTests.m */; };
 		D2B0000000000000000000C7 /* MDPreviewPage.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000A3 /* MDPreviewPage.m */; };
@@ -62,6 +64,8 @@
 		D1A0000000000000000000B5 /* MDDrawioResources.m in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000000CB /* MDDrawioResources.m */; };
 		D1A0000000000000000000B6 /* stencils in Resources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000000CC /* stencils */; };
 		D1A0000000000000000000B7 /* shapes in Resources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000000CD /* shapes */; };
+		D1A0000000000000000000F0 /* en.lproj in Resources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000000F3 /* en.lproj */; };
+		D1A0000000000000000000F4 /* it-IT.lproj in Resources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000000F5 /* it-IT.lproj */; };
 		D1A0000000000000000000B8 /* styles in Resources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000000CE /* styles */; };
 		D1A0000000000000000000B1 /* MDDrawioPlugIn.m in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000000C2 /* MDDrawioPlugIn.m */; };
 		D1A0000000000000000000B2 /* MDDrawioFile.m in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000000C4 /* MDDrawioFile.m */; };
@@ -309,6 +313,9 @@
 		D2B0000000000000000000C8 /* MacDownQuickLook.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "MacDownQuickLook.entitlements"; sourceTree = "<group>"; };
 		D2B0000000000000000000A4 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "Info.plist"; sourceTree = "<group>"; };
 		D2B0000000000000000000A5 /* GitHub2.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; name = GitHub2.css; path = "MacDown/Resources/Styles/GitHub2.css"; sourceTree = SOURCE_ROOT; };
+		D2B0000000000000000001A2 /* en.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = en.lproj; path = Localization/en.lproj; sourceTree = "<group>"; };
+		D2B0000000000000000001A3 /* it-IT.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "it-IT.lproj"; path = "Localization/it-IT.lproj"; sourceTree = "<group>"; };
+		D2B0000000000000000001A4 /* MDQuickLookStrings.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MDQuickLookStrings.h; sourceTree = "<group>"; };
 		D2B0000000000000000000A6 /* MacDownQuickLook.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MacDownQuickLook.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2B0000000000000000000A7 /* autolink.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = autolink.c; path = "Dependency/hoedown/src/autolink.c"; sourceTree = SOURCE_ROOT; };
 		D2B0000000000000000000A8 /* buffer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = buffer.c; path = "Dependency/hoedown/src/buffer.c"; sourceTree = SOURCE_ROOT; };
@@ -351,6 +358,9 @@
 		D1A0000000000000000000CB /* MDDrawioResources.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MDDrawioResources.m; sourceTree = "<group>"; };
 		D1A0000000000000000000CC /* stencils */ = {isa = PBXFileReference; lastKnownFileType = folder; name = stencils; path = Resources/stencils; sourceTree = "<group>"; };
 		D1A0000000000000000000CD /* shapes */ = {isa = PBXFileReference; lastKnownFileType = folder; name = shapes; path = Resources/shapes; sourceTree = "<group>"; };
+		D1A0000000000000000000F3 /* en.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = en.lproj; path = Localization/en.lproj; sourceTree = "<group>"; };
+		D1A0000000000000000000F5 /* it-IT.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "it-IT.lproj"; path = "Localization/it-IT.lproj"; sourceTree = "<group>"; };
+		D1A0000000000000000000F6 /* MDDrawioStrings.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MDDrawioStrings.h; sourceTree = "<group>"; };
 		D1A0000000000000000000CE /* styles */ = {isa = PBXFileReference; lastKnownFileType = folder; name = styles; path = Resources/styles; sourceTree = "<group>"; };
 		D1A0000000000000000000C1 /* MDDrawioPlugIn.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "MDDrawioPlugIn.h"; sourceTree = "<group>"; };
 		D1A0000000000000000000C2 /* MDDrawioPlugIn.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "MDDrawioPlugIn.m"; sourceTree = "<group>"; };
@@ -842,7 +852,10 @@
 				D2B0000000000000000000A1 /* MDQuickLookProvider.m */,
 				D2B0000000000000000000A2 /* MDPreviewPage.h */,
 				D2B0000000000000000000A3 /* MDPreviewPage.m */,
+				D2B0000000000000000001A4 /* MDQuickLookStrings.h */,
 				D2B0000000000000000000A5 /* GitHub2.css */,
+				D2B0000000000000000001A2 /* en.lproj */,
+				D2B0000000000000000001A3 /* it-IT.lproj */,
 				D2B0000000000000000000C1 /* hoedown */,
 				D2B0000000000000000000C8 /* MacDownQuickLook.entitlements */,
 				D2B0000000000000000000A4 /* Info.plist */,
@@ -881,10 +894,13 @@
 				D1A0000000000000000000D3 /* MDDrawioProgress.m */,
 				D1A0000000000000000000D4 /* MDDrawioLog.h */,
 				D1A0000000000000000000D5 /* MDDrawioLog.m */,
+				D1A0000000000000000000F6 /* MDDrawioStrings.h */,
 				D1A0000000000000000000C8 /* viewer.min.js */,
 				D1A0000000000000000000CC /* stencils */,
 				D1A0000000000000000000CD /* shapes */,
 				D1A0000000000000000000CE /* styles */,
+				D1A0000000000000000000F3 /* en.lproj */,
+				D1A0000000000000000000F5 /* it-IT.lproj */,
 				D1A0000000000000000000C7 /* Info.plist */,
 			);
 			name = Drawio;
@@ -1525,6 +1541,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				D2B0000000000000000000BB /* GitHub2.css in Resources */,
+				D2B0000000000000000001A0 /* en.lproj in Resources */,
+				D2B0000000000000000001A1 /* it-IT.lproj in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1535,6 +1553,8 @@
 				D1A0000000000000000000B4 /* viewer.min.js in Resources */,
 				D1A0000000000000000000B6 /* stencils in Resources */,
 				D1A0000000000000000000B7 /* shapes in Resources */,
+				D1A0000000000000000000F0 /* en.lproj in Resources */,
+				D1A0000000000000000000F4 /* it-IT.lproj in Resources */,
 				D1A0000000000000000000B8 /* styles in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

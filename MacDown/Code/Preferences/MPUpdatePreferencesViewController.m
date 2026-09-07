@@ -40,16 +40,16 @@ static const CGFloat kMPPanelPadding = 20.0;
         [NSFont boldSystemFontOfSize:[NSFont systemFontSize]];
 
     self.automatically = [NSButton checkboxWithTitle:NSLocalizedString(
-        @"Controlla se c'è una versione nuova, una volta al giorno",
+        @"Look for a new version once a day",
         @"Whether to look for updates automatically")
         target:self action:@selector(toggleAutomatically:)];
 
     NSTextField *what = [self labelWithString:NSLocalizedString(
-        @"Il controllo è una richiesta all'elenco dei rilasci su GitHub, e "
-        @"non manda niente sul documento aperto né sulla macchina. Scaricare "
-        @"e installare restano due domande separate: l'immagine disco finisce "
-        @"in Scaricati, e l'applicazione si trascina in Applicazioni a mano, "
-        @"come sempre.",
+        @"The check is one request to the releases feed on GitHub, and it "
+        @"sends nothing about the open document or about the machine. "
+        @"Downloading and installing stay two separate questions: the disk "
+        @"image lands in Downloads, and the application is dragged into "
+        @"Applications by hand, as always.",
         @"What checking for updates does and does not do")];
     what.textColor = [NSColor secondaryLabelColor];
 
@@ -59,7 +59,7 @@ static const CGFloat kMPPanelPadding = 20.0;
         [NSFont systemFontOfSize:[NSFont smallSystemFontSize]];
 
     NSButton *now = [NSButton buttonWithTitle:NSLocalizedString(
-        @"Controlla adesso", @"Check for updates now")
+        @"Check Now", @"Check for updates now")
         target:[MPUpdateController sharedInstance]
         action:@selector(checkForUpdates:)];
 
@@ -111,10 +111,10 @@ static const CGFloat kMPPanelPadding = 20.0;
     NSString *build = info[@"CFBundleBuildVersion"] ?: info[@"CFBundleVersion"];
     self.versionLabel.stringValue = build.length
         ? [NSString stringWithFormat:NSLocalizedString(
-              @"Questa è MacDown Next %@ (%@).",
+              @"This is MacDown Next %@ (%@).",
               @"The running version and its build"), version, build]
         : [NSString stringWithFormat:NSLocalizedString(
-              @"Questa è MacDown Next %@.",
+              @"This is MacDown Next %@.",
               @"The running version"), version];
 
     self.automatically.state = self.preferences.updatesCheckAutomatically
@@ -127,14 +127,14 @@ static const CGFloat kMPPanelPadding = 20.0;
         when.dateStyle = NSDateFormatterMediumStyle;
         when.timeStyle = NSDateFormatterShortStyle;
         self.lastCheckLabel.stringValue = [NSString stringWithFormat:
-            NSLocalizedString(@"Ultimo controllo: %@",
+            NSLocalizedString(@"Last checked: %@",
                 @"When the app last looked for an update"),
             [when stringFromDate:last]];
     }
     else
     {
         self.lastCheckLabel.stringValue = NSLocalizedString(
-            @"Non ha ancora controllato.",
+            @"It has not checked yet.",
             @"The app has never looked for an update");
     }
 }

@@ -250,7 +250,7 @@ NSString *MPFileNameForClipping(NSString *title, NSURL *url)
             answer(nil, nil, [NSError errorWithDomain:NSURLErrorDomain
                 code:NSURLErrorBadServerResponse userInfo:@{
                 NSLocalizedDescriptionKey: [NSString stringWithFormat:
-                    NSLocalizedString(@"Il server ha risposto %ld.",
+                    NSLocalizedString(@"The server answered %ld.",
                                       @"Web clipping"), (long)status]}]);
             return;
         }
@@ -259,7 +259,7 @@ NSString *MPFileNameForClipping(NSString *title, NSURL *url)
             answer(nil, nil, [NSError errorWithDomain:NSURLErrorDomain
                 code:NSURLErrorDataLengthExceedsMaximum userInfo:@{
                 NSLocalizedDescriptionKey: NSLocalizedString(
-                    @"La pagina è troppo grande per essere un articolo.",
+                    @"The page is too big to be an article.",
                     @"Web clipping")}]);
             return;
         }
@@ -286,7 +286,7 @@ NSString *MPFileNameForClipping(NSString *title, NSURL *url)
             answer(nil, nil, [NSError errorWithDomain:NSURLErrorDomain
                 code:NSURLErrorCannotDecodeContentData userInfo:@{
                 NSLocalizedDescriptionKey: NSLocalizedString(
-                    @"La pagina non si è potuta leggere come testo.",
+                    @"The page could not be read as text.",
                     @"Web clipping")}]);
             return;
         }
@@ -298,7 +298,7 @@ NSString *MPFileNameForClipping(NSString *title, NSURL *url)
             answer(nil, nil, [NSError errorWithDomain:NSURLErrorDomain
                 code:NSURLErrorZeroByteResource userInfo:@{
                 NSLocalizedDescriptionKey: NSLocalizedString(
-                    @"Nella pagina non c'era testo da tenere.",
+                    @"There was no text in the page worth keeping.",
                     @"Web clipping")}]);
             return;
         }

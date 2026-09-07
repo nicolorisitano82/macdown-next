@@ -1,0 +1,45 @@
+/* Drawio.plugin — italiano
+ *
+ * A plug-in carries its own languages: MDLocalizedString asks this
+ * bundle, not the application's. */
+
+
+"%@ could not be read." = "Non si è potuto leggere %@.";
+"The file is not a draw.io diagram: it is neither XML nor a PNG carrying one inside." = "Il file non è un diagramma draw.io: non è né XML né un PNG che ne porta uno dentro.";
+"The file could not be read as XML." = "Il file non si è potuto leggere come XML.";
+"There is no readable page in the file." = "Nel file non c'è nessuna pagina leggibile.";
+"Import Log" = "Log dell'importazione";
+"Copy" = "Copia";
+"Close" = "Chiudi";
+"Size:" = "Dimensione:";
+"Draw:" = "Disegna:";
+"On this Mac, with no connection" = "Su questo Mac, senza connessione";
+"On an export server, at this address:" = "Su un export server, a questo indirizzo:";
+"Import a draw.io Diagram…" = "Importa un diagramma draw.io…";
+"Open a document" = "Apri un documento";
+"The diagram goes into a document, so there has to be one in front of you." = "Il diagramma viene messo in un documento, quindi ce ne vuole uno davanti.";
+"Save the document first" = "Salva prima il documento";
+"The pictures are written beside the document, and a document that has not been saved has no folder to sit beside." = "Le immagini vengono scritte accanto al documento, e un documento non salvato non ha una cartella accanto a cui stare.";
+"Choose the draw.io diagram to import" = "Scegli il diagramma draw.io da importare";
+"The diagram could not be read" = "Il diagramma non si è potuto leggere";
+"Import the Diagram" = "Importa il diagramma";
+"Import %lu Pages" = "Importa %lu pagine";
+"Every page becomes a PNG beside the document, and is linked where the cursor is. On this Mac the diagram never leaves the machine and no connection is needed: the viewer and the shape libraries are inside the plug-in. On an export server the diagram is sent to the address you name." = "Ogni pagina diventa un PNG accanto al documento, e viene collegata nel punto dove sta il cursore. Su questo Mac il diagramma non esce dalla macchina e non serve connessione: il visualizzatore e le librerie di forme sono dentro il plug-in. Su un export server il diagramma viene mandato all'indirizzo che indichi.";
+"Import" = "Importa";
+"Cancel" = "Annulla";
+"The address is missing" = "Indirizzo mancante";
+"Drawing on an export server needs its address." = "Per disegnare su un export server serve il suo indirizzo.";
+"Importing the diagram" = "Importo il diagramma";
+"Not every page arrived" = "Non tutte le pagine sono arrivate";
+"page %lu" = "pagina %lu";
+"it did not draw" = "non si è disegnata";
+"Show the Log…" = "Mostra il log…";
+"Drawing page %lu of %lu" = "Disegno la pagina %lu di %lu";
+"Drawing the diagram" = "Disegno il diagramma";
+"Stopping…" = "Sto fermando…";
+"The draw.io viewer is not in the plug-in: viewer.min.js is missing." = "Il visualizzatore draw.io non è nel plug-in: manca viewer.min.js.";
+"The viewer drew nothing within %.0f seconds." = "Il visualizzatore non ha disegnato niente entro %.0f secondi.";
+" The page said: %@" = " La pagina ha detto: %@";
+" No error from the page: %@ SVG, %@ containers, height %@." = " Nessun errore dalla pagina: %@ SVG, %@ contenitori, altezza %@.";
+" Not served: %@." = " Non serviti: %@.";
+"The server answered %ld%@" = "Il server ha risposto %ld%@";
