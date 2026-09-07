@@ -93,28 +93,61 @@ niente script, niente immagini remote, nessun modo di mandare fuori quello
 che ha letto. E il tempo di lettura ha un tetto: due megabyte di testo, poi
 la pagina dice che il resto non è mostrato.
 
-### I diagrammi mermaid, disegnati prima di consegnare la pagina
+### I diagrammi e le formule, disegnati prima di consegnare la pagina
 
 Un recinto ```` ```mermaid ```` in anteprima era codice: la pagina non ha
 script — `default-src 'none'` e niente da eseguire — quindi il diagramma non
 può disegnarsi lì. Adesso lo disegna **l'estensione**, in una web view sua,
 e quello che arriva nella pagina è SVG finito.
 
-Come funziona, in ordine: si trovano i recinti nell'HTML (`MDDiagramFencesInHTML`),
+Vale per **tutto** quello che nell'applicazione si disegna: i recinti
+```` ```mermaid ````, quelli dei sei motori di **Graphviz** (`dot`, `neato`,
+`fdp`, `circo`, `twopi`, `osage`) e le **formule** TeX, typesettate con
+MathJax.
+
+Come funziona, in ordine: si trovano i lavori nell'HTML (`MDDrawingJobsInHTML`),
 si disfa l'escaping che hoedown ci ha messo — `A --&gt; B` non è un diagramma
-per mermaid —, si carica una pagina con `mermaid.min.js` dentro e si chiede
-un disegno per volta con `callAsyncJavaScript`. Poi ogni recinto viene
-sostituito dal suo SVG, ripulito di tutto quello che potrebbe girare:
+per mermaid —, si carica una pagina con **soltanto le librerie che servono**
+e si chiede un disegno per volta con `callAsyncJavaScript`. Poi ogni recinto
+viene sostituito dal suo SVG, ripulito di tutto quello che potrebbe girare:
 `<script>`, attributi `on*`, `href="javascript:"`. mermaid non ne mette, ma
 il diagramma viene da un documento che arriva da qualunque parte, e quella
 pagina è l'unico posto dell'estensione dove il markup non è scappato.
 
-I numeri, misurati dentro la sandbox: la pagina si carica in **312 ms**, due
-diagrammi si disegnano in **428 ms** in tutto. Il tetto è **2,5 secondi per
-tutti** i diagrammi, al massimo **otto** per documento e 16 KB di sorgente
-ciascuno: un'anteprima che arriva tardi non è arrivata, e quello che non si
-disegna in tempo resta il suo recinto — cioè quello che l'anteprima mostrava
-prima.
+**Solo quelle che servono**: mermaid è 3,4 MB, viz.js 3,6, MathJax 2. Un
+documento con un diagramma di flusso non paga Graphviz né MathJax, e uno
+senza niente da disegnare non apre nemmeno la web view.
+
+I numeri, misurati dentro la sandbox:
+
+| Documento | Pagina caricata | Disegnato |
+|---|---|---|
+| Un `dot` | 267 ms | 1 su 1 in **364 ms** |
+| Tre formule | 260 ms | 3 su 3 in **336 ms** |
+| mermaid + `dot` + formula | 388 ms | 3 su 3 in **528 ms** |
+
+Il tetto è **2,5 secondi per tutti** i disegni, al massimo **quaranta** per
+documento e 16 KB di sorgente ciascuno: un'anteprima che arriva tardi non è
+arrivata, e quello che non si disegna in tempo resta il suo sorgente — cioè
+quello che l'anteprima mostrava prima.
+
+### Che cosa è una formula lo dice l'applicazione
+
+`$$…$$` è inequivocabile e si typesetta sempre. Un dollaro **singolo** no:
+misurato, con `MATH_EXPLICIT` acceso hoedown legge «Il pezzo costa $5 e la
+scatola $7» come `\(5 e la scatola \)7`, cioè come algebra. Ed è per questo
+che nell'applicazione è un interruttore, spento di serie.
+
+Le due viste devono concordare, quindi l'estensione **legge quell'interruttore**:
+`com.apple.security.temporary-exception.shared-preference.read-only` sul solo
+dominio dell'applicazione a cui appartiene, in sola lettura, per due chiavi —
+`htmlMathJax` e `htmlMathJaxInlineDollar`. Se l'applicazione dice di non
+mostrare formule, l'anteprima non ne mostra; se dice che il dollaro singolo
+conta, conta anche qui.
+
+Una cosa che Markdown si mangia: `\(a^2\)` scritto a mano **non** arriva
+all'HTML — la barra rovesciata è un escape, e diventa `(a^2)`. L'unica strada
+per una formula nella riga è il dollaro.
 
 **E qui il pedaggio**: WebKit non chiude un caricamento senza
 `com.apple.security.network.client`, nemmeno per una pagina costruita in
@@ -124,8 +157,8 @@ due. Quindi l'estensione ha il permesso di rete e **non lo usa**: mermaid è
 letto dal bundle, la pagina del disegno è una stringa, e la pagina che il
 Finder riceve continua a portare `default-src 'none'`.
 
-Graphviz (`dot`, `neato`, e gli altri) userebbe la stessa macchina —
-`viz.js` è già fra le estensioni dell'app — e per adesso resta sorgente.
+Restano sorgente, in anteprima, solo i recinti di un linguaggio che
+l'applicazione non disegna nemmeno.
 
 ---
 

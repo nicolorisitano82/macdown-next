@@ -29,6 +29,8 @@
 		D2B0000000000000000000B1 /* MDPreviewPage.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000A3 /* MDPreviewPage.m */; };
 		D2B0000000000000000001B0 /* MDDiagramRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000001B3 /* MDDiagramRenderer.m */; };
 		D2B0000000000000000001B4 /* mermaid.min.js in Resources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000001B5 /* mermaid.min.js */; };
+		D2B0000000000000000001C0 /* viz.js in Resources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000001C2 /* viz.js */; };
+		D2B0000000000000000001C1 /* tex-svg.js in Resources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000001C3 /* tex-svg.js */; };
 		D2B0000000000000000000B2 /* autolink.c in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000A7 /* autolink.c */; };
 		D2B0000000000000000000B3 /* buffer.c in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000A8 /* buffer.c */; };
 		D2B0000000000000000000B4 /* document.c in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000A9 /* document.c */; };
@@ -323,6 +325,8 @@
 		D2B0000000000000000001B2 /* MDDiagramRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MDDiagramRenderer.h; sourceTree = "<group>"; };
 		D2B0000000000000000001B3 /* MDDiagramRenderer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MDDiagramRenderer.m; sourceTree = "<group>"; };
 		D2B0000000000000000001B5 /* mermaid.min.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; name = mermaid.min.js; path = "MacDown/Resources/Extensions/mermaid.min.js"; sourceTree = SOURCE_ROOT; };
+		D2B0000000000000000001C2 /* viz.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; name = viz.js; path = "MacDown/Resources/Extensions/viz.js"; sourceTree = SOURCE_ROOT; };
+		D2B0000000000000000001C3 /* tex-svg.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; name = tex-svg.js; path = "MacDown/Resources/MathJax/tex-svg.js"; sourceTree = SOURCE_ROOT; };
 		D2B0000000000000000000A6 /* MacDownQuickLook.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MacDownQuickLook.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2B0000000000000000000A7 /* autolink.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = autolink.c; path = "Dependency/hoedown/src/autolink.c"; sourceTree = SOURCE_ROOT; };
 		D2B0000000000000000000A8 /* buffer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = buffer.c; path = "Dependency/hoedown/src/buffer.c"; sourceTree = SOURCE_ROOT; };
@@ -864,6 +868,8 @@
 				D2B0000000000000000001B2 /* MDDiagramRenderer.h */,
 				D2B0000000000000000001B3 /* MDDiagramRenderer.m */,
 				D2B0000000000000000001B5 /* mermaid.min.js */,
+				D2B0000000000000000001C2 /* viz.js */,
+				D2B0000000000000000001C3 /* tex-svg.js */,
 				D2B0000000000000000000A5 /* GitHub2.css */,
 				D2B0000000000000000001A2 /* en.lproj */,
 				D2B0000000000000000001A3 /* it-IT.lproj */,
@@ -1556,6 +1562,8 @@
 				D2B0000000000000000001A0 /* en.lproj in Resources */,
 				D2B0000000000000000001A1 /* it-IT.lproj in Resources */,
 				D2B0000000000000000001B4 /* mermaid.min.js in Resources */,
+				D2B0000000000000000001C0 /* viz.js in Resources */,
+				D2B0000000000000000001C1 /* tex-svg.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

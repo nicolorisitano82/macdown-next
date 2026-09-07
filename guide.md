@@ -378,14 +378,20 @@ application opens with, instead of the source.
   something that starts by itself.
 - Front matter is left out, and a document longer than two megabytes is
   shown up to that point, saying so.
-- **mermaid diagrams are drawn**, not shown as source. The page has no
-  scripts in it, so the extension draws each diagram in a web view of its
-  own and puts finished SVG in the page — up to eight diagrams, with two and
-  a half seconds for all of them together. A diagram that does not draw in
-  time, or at all, keeps its fence. The extension carries the network
-  entitlement for this — WebKit will not finish a load without it, even for
-  a page built in memory — and makes no request with it: mermaid is read
-  from the bundle, and the page Finder gets still forbids the network.
+- **Diagrams and formulas are drawn**, not shown as source: mermaid, all
+  six Graphviz engines, and TeX through MathJax. The page has no scripts in
+  it, so the extension draws them in a web view of its own and puts finished
+  SVG in the page — up to forty of them, with two and a half seconds for all
+  together, and only the libraries a document actually needs are loaded.
+  Anything that does not draw in time, or at all, keeps its source. The
+  extension carries the network entitlement for this — WebKit will not
+  finish a load without it, even for a page built in memory — and makes no
+  request with it: the libraries are read from the bundle, and the page
+  Finder gets still forbids the network.
+- What counts as a formula is **the application's own setting**: `$$…$$`
+  always, and a single `$…$` only when *Rendering › TeX-like math syntax* is
+  on, because otherwise "costs $5 and $7" reads as algebra. The extension
+  reads those two preferences, read-only, and nothing else.
 
 **Preferences › Quick Look** says where that preview stands and does
 something about it: whether macOS has it, which copy of the application is

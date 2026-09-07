@@ -396,8 +396,20 @@ else
     # this sandbox draws in under half a second, and without the entitlement
     # it never finishes loading at all.
     DIAGRAM="$HOME_WORK/$(date +%s)-$RANDOM-diagramma.md"
-    printf '# Diagramma\n\n```mermaid\ngraph TD\n  A[Inizio] --> B[Fine]\n```\n' \
-        > "$DIAGRAM"
+    cat > "$DIAGRAM" <<'FINE'
+# Diagrammi e formule
+
+```mermaid
+graph TD
+  A[Inizio] --> B[Fine]
+```
+
+```dot
+digraph { Inizio -> Fine }
+```
+
+$$\int_0^1 x\,dx = \tfrac12$$
+FINE
     SINCE=$(date "+%Y-%m-%d %H:%M:%S")
     (qlmanage -p "$DIAGRAM" >/dev/null 2>&1 &)
     sleep 8
@@ -414,10 +426,19 @@ else
              "$WORK/diagrams.log" | head -1)
     case "$SERVED" in
         "$APP"/*)
-            ok "il diagramma mermaid viene disegnato" \
-                contains "$WORK/diagrams.log" "drawn 1 of 1" ;;
+            ok "legge le preferenze dell'applicazione (le formule sono una)" \
+                grep -q "maths: com\." "$WORK/diagrams.log"
+            # Whether the formula counts depends on that preference, and the
+            # suite does not touch somebody's settings to make a check pass.
+            if grep -q "so flags 0$" "$WORK/diagrams.log"; then
+                ok "mermaid e Graphviz vengono disegnati (formule spente)" \
+                    contains "$WORK/diagrams.log" "drawn 2 of 2"
+            else
+                ok "mermaid, Graphviz e la formula vengono disegnati" \
+                    contains "$WORK/diagrams.log" "drawn 3 of 3"
+            fi ;;
         *)
-            skip "il diagramma disegnato — ha risposto ${SERVED:-una copia sconosciuta}" ;;
+            skip "i disegni — ha risposto ${SERVED:-una copia sconosciuta}" ;;
     esac
 fi
 

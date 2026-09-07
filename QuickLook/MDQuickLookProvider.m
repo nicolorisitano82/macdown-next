@@ -28,10 +28,10 @@ static const CGSize kMDPreviewSize = (CGSize){800.0, 1000.0};
 /// fences that are left stay as source, which is what they were before.
 static const NSTimeInterval kMDDrawingBudget = 2.5;
 
-/// How many diagrams a glance is worth drawing, and how long one may be.
-/// A document with fifty diagrams in it is not a document being glanced at.
-static const NSUInteger kMDDiagramsAtMost = 8;
-static const NSUInteger kMDDiagramSourceAtMost = 16 * 1024;
+/// How many drawings a glance is worth, and how long one may be. A document
+/// with two hundred formulas in it is not a document being glanced at.
+static const NSUInteger kMDDrawingsAtMost = 40;
+static const NSUInteger kMDDrawingSourceAtMost = 16 * 1024;
 
 /// The same reading of Markdown the app's own preview uses, minus the parts
 /// that need something loaded from the network to show at all.
@@ -44,8 +44,27 @@ static const int kMDExtensions =
 static const size_t kMDNestingAtMost = 16;
 
 
+/// Which maths the reader has asked for, as hoedown flags.
+///
+/// `$$…$$` costs nothing when a document has no formulas in it, so maths is
+/// on unless the application says otherwise. A *single* dollar is another
+/// matter: it turns "costa $5 e la scatola $7" into algebra — measured — so
+/// it follows the application's own switch, which is off until turned on.
+/// A pure function, because the two answers come from preferences and the
+/// rule they feed should be readable on its own.
+int MDMathExtensionsFor(NSNumber *maths, NSNumber *inlineDollar)
+{
+    if (maths && !maths.boolValue)
+        return 0;
+    int flags = HOEDOWN_EXT_MATH;
+    if (inlineDollar.boolValue)
+        flags |= HOEDOWN_EXT_MATH_EXPLICIT;
+    return flags;
+}
+
+
 /// Markdown turned into HTML, the body only.
-static NSString *MDBodyForMarkdown(NSString *markdown)
+static NSString *MDBodyForMarkdown(NSString *markdown, int extensions)
 {
     NSData *utf8 = [markdown dataUsingEncoding:NSUTF8StringEncoding];
     if (!utf8.length)
@@ -53,7 +72,7 @@ static NSString *MDBodyForMarkdown(NSString *markdown)
 
     hoedown_renderer *renderer = hoedown_html_renderer_new(0, 0);
     hoedown_document *document = hoedown_document_new(
-        renderer, kMDExtensions, kMDNestingAtMost);
+        renderer, kMDExtensions | extensions, kMDNestingAtMost);
     hoedown_buffer *out = hoedown_buffer_new(64);
     hoedown_document_render(document, out, utf8.bytes, utf8.length);
 
@@ -86,46 +105,89 @@ static NSString *MDBodyForMarkdown(NSString *markdown)
     // The Markdown is turned into HTML here rather than inside the reply's
     // block, because the diagrams in it have to be drawn before there is a
     // page to hand over, and drawing them takes a web view and a moment.
-    NSString *body = MDBodyForMarkdown(MDMarkdownWithoutFrontMatter(markdown));
-    NSArray<MDDiagramFence *> *fences = [self drawableFencesIn:body];
-    if (!fences.count)
+    NSString *body = MDBodyForMarkdown(MDMarkdownWithoutFrontMatter(markdown),
+                                       [self mathExtensions]);
+    NSArray<MDDrawingJob *> *jobs = [self drawableJobsIn:body];
+    if (!jobs.count)
     {
-        handler([self replyForBody:body markdown:markdown documentAt:fileURL],
-                nil);
+        handler([self replyForBody:body markdown:markdown documentAt:fileURL
+                        styleSheet:nil], nil);
         return;
     }
 
-    NSMutableArray<NSString *> *sources =
-        [NSMutableArray arrayWithCapacity:fences.count];
-    for (MDDiagramFence *fence in fences)
-        [sources addObject:fence.source];
-
-    NSURL *mermaid = [[NSBundle bundleForClass:[self class]]
-        URLForResource:@"mermaid.min" withExtension:@"js"];
-    [MDDiagramRenderer drawSources:sources
-                     mermaidScript:mermaid
-                            within:kMDDrawingBudget
-                        completion:^(NSArray *drawings) {
-        NSString *drawn = MDHTMLByDrawingFences(body, fences, drawings);
-        handler([self replyForBody:drawn markdown:markdown documentAt:fileURL],
-                nil);
+    [MDDiagramRenderer drawJobs:jobs
+                      resources:[self drawingLibraries]
+                         within:kMDDrawingBudget
+                     completion:^(NSArray *drawings, NSString *styles) {
+        NSString *drawn = MDHTMLByDrawingJobs(body, jobs, drawings);
+        handler([self replyForBody:drawn markdown:markdown documentAt:fileURL
+                        styleSheet:styles], nil);
     }];
 }
 
 
-/// The fences worth drawing: the first few, and none of them enormous.
-- (NSArray<MDDiagramFence *> *)drawableFencesIn:(NSString *)body
+/// The drawings worth making: the first few, and none of them enormous.
+- (NSArray<MDDrawingJob *> *)drawableJobsIn:(NSString *)body
 {
-    NSMutableArray<MDDiagramFence *> *wanted = [NSMutableArray array];
-    for (MDDiagramFence *fence in MDDiagramFencesInHTML(body))
+    NSMutableArray<MDDrawingJob *> *wanted = [NSMutableArray array];
+    for (MDDrawingJob *job in MDDrawingJobsInHTML(body))
     {
-        if (fence.source.length > kMDDiagramSourceAtMost)
+        if (job.source.length > kMDDrawingSourceAtMost)
             continue;               // left as source, and honestly so
-        [wanted addObject:fence];
-        if (wanted.count >= kMDDiagramsAtMost)
+        [wanted addObject:job];
+        if (wanted.count >= kMDDrawingsAtMost)
             break;
     }
     return wanted;
+}
+
+
+/// The maths the application it belongs to has been told to show.
+///
+/// The extension's own identifier is the application's with `.quicklook`
+/// added, so the domain to read is the identifier without that suffix. The
+/// entitlement names both — release and debug — and allows nothing but
+/// reading them.
+- (int)mathExtensions
+{
+    NSString *identifier =
+        [NSBundle bundleForClass:[self class]].bundleIdentifier ?: @"";
+    NSString *domain = [identifier hasSuffix:@".quicklook"]
+        ? [identifier substringToIndex:identifier.length
+                                       - @".quicklook".length]
+        : identifier;
+    NSNumber *maths = (__bridge_transfer NSNumber *)
+        CFPreferencesCopyAppValue(CFSTR("htmlMathJax"),
+                                  (__bridge CFStringRef)domain);
+    NSNumber *dollars = (__bridge_transfer NSNumber *)
+        CFPreferencesCopyAppValue(CFSTR("htmlMathJaxInlineDollar"),
+                                  (__bridge CFStringRef)domain);
+    int flags = MDMathExtensionsFor(maths, dollars);
+    os_log(OS_LOG_DEFAULT,
+           "maths: %{public}@ says %@ / %@, so flags %d",
+           domain, maths ?: @"(nothing)", dollars ?: @"(nothing)", flags);
+    return flags;
+}
+
+
+/// mermaid, Graphviz and MathJax, as this bundle carries them.
+- (NSDictionary<NSString *, NSURL *> *)drawingLibraries
+{
+    NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+    NSMutableDictionary<NSString *, NSURL *> *libraries =
+        [NSMutableDictionary dictionary];
+    NSDictionary<NSString *, NSString *> *files = @{
+        MDMermaidResource: @"mermaid.min",
+        MDGraphvizResource: @"viz",
+        MDMathResource: @"tex-svg",
+    };
+    for (NSString *name in files)
+    {
+        NSURL *url = [bundle URLForResource:files[name] withExtension:@"js"];
+        if (url)
+            libraries[name] = url;
+    }
+    return libraries;
 }
 
 
@@ -133,6 +195,7 @@ static NSString *MDBodyForMarkdown(NSString *markdown)
 - (QLPreviewReply *)replyForBody:(NSString *)body
                         markdown:(NSString *)markdown
                       documentAt:(NSURL *)fileURL
+                      styleSheet:(NSString *)extra
 {
     return [[QLPreviewReply alloc]
         initWithDataOfContentType:UTTypeHTML
@@ -143,7 +206,7 @@ static NSString *MDBodyForMarkdown(NSString *markdown)
             [MDPreviewPage pageForBody:body
                                  title:MDPreviewTitleForMarkdown(markdown,
                                                                  fileURL)
-                            styleSheet:[self styleSheet]
+                            styleSheet:[self styleSheetWith:extra]
                             documentAt:fileURL];
         reply.attachments = [self attachmentsFor:page.pictures];
         reply.stringEncoding = NSUTF8StringEncoding;
@@ -187,14 +250,20 @@ static NSString *MDBodyForMarkdown(NSString *markdown)
 
 /// The style the app's own preview opens with, so a file looks the same in
 /// Finder as it does once it is open.
-- (NSString *)styleSheet
+- (NSString *)styleSheetWith:(NSString *)extra
 {
     NSURL *css = [[NSBundle bundleForClass:[self class]]
         URLForResource:@"GitHub2" withExtension:@"css"];
-    if (!css)
-        return nil;
-    return [NSString stringWithContentsOfURL:css encoding:NSUTF8StringEncoding
-                                       error:NULL];
+    NSString *sheet = css
+        ? [NSString stringWithContentsOfURL:css
+                                   encoding:NSUTF8StringEncoding error:NULL]
+        : nil;
+    if (!extra.length)
+        return sheet;
+    // MathJax's own rules, which say how a formula sits on the line. They
+    // come from the web view that typeset it, so the page needs no script to
+    // get them right.
+    return [NSString stringWithFormat:@"%@\n%@", sheet ?: @"", extra];
 }
 
 

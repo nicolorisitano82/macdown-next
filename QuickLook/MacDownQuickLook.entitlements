@@ -19,6 +19,16 @@
 	<true/>
 	<key>com.apple.security.files.user-selected.read-only</key>
 	<true/>
+	<!-- The preview and the editor have to agree, and what counts as a
+	     formula is a preference: reading a single dollar as maths turns
+	     "costa $5 e la scatola $7" into algebra, measured. The extension
+	     reads the two maths preferences from the application it belongs to,
+	     and nothing else: read-only, one domain, no writing. -->
+	<key>com.apple.security.temporary-exception.shared-preference.read-only</key>
+	<array>
+		<string>com.nicolorisitano82.macdown</string>
+		<string>com.nicolorisitano82.macdown-debug</string>
+	</array>
 	<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
 	<array>
 		<string>/</string>
