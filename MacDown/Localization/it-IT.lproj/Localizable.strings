@@ -305,3 +305,39 @@
 /* Preference pane titles */
 "Quick Look" = "Anteprima Finder";
 "Updates" = "Aggiornamenti";
+
+/* Toolbar */
+"Shift Left/Right" = "Sposta a sinistra/destra";
+"Shift Left" = "Sposta a sinistra";
+"Shift Right" = "Sposta a destra";
+"Strong" = "Grassetto";
+"Emphasize" = "Corsivo";
+"Headings" = "Titoli";
+"Heading 1" = "Titolo 1";
+"Heading 2" = "Titolo 2";
+"Heading 3" = "Titolo 3";
+
+/* Sidebar */
+"Outline" = "Indice";
+"Files" = "File";
+
+/* Maths editor */
+"Maths" = "Formule";
+"TeX" = "TeX";
+"Inline" = "Nella riga";
+"Display" = "A blocco";
+"The preview appears here" = "L'anteprima appare qui";
+"⌘↩ to insert" = "⌘↩ per inserire";
+
+/* Preferences */
+"Dim everything but the paragraph you are writing" = "Attenua tutto tranne il paragrafo che stai scrivendo";
+"Keep the line you are writing at the same height" = "Tieni la riga che stai scrivendo sempre alla stessa altezza";
+"Ask a web page what it is when the pointer rests on its link" = "Chiedi alla pagina web cosa è, quando il puntatore si ferma sul collegamento";
+"Fetch images from the network when exporting" = "Scarica le immagini dalla rete quando esporti";
+"Mermaid" = "Mermaid";
+"Graphviz" = "Graphviz";
+
+/* Elsewhere */
+"Fetching %lu images from the network…" = "Scarico %lu immagini dalla rete…";
+"Plug-in" = "Plug-in";
+"OK" = "OK";

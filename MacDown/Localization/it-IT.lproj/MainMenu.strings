@@ -396,3 +396,60 @@
 
 /* Class = "NSMenuItem"; title = "Instruction Files…"; ObjectID = "ins-fl-Itm"; */
 "ins-fl-Itm.title" = "File di istruzioni…";
+
+/* Class = "NSMenuItem"; title = "Shift Left"; ObjectID = "Jzs-tR-jkL"; */
+"Jzs-tR-jkL.title" = "Sposta a sinistra";
+
+/* Class = "NSMenuItem"; title = "Shift Right"; ObjectID = "g9Y-GM-gdh"; */
+"g9Y-GM-gdh.title" = "Sposta a destra";
+
+/* Class = "NSMenuItem"; title = "EPUB…"; ObjectID = "epb-Ex-Itm"; */
+"epb-Ex-Itm.title" = "EPUB…";
+
+/* Class = "NSMenuItem"; title = "Word Document…"; ObjectID = "mD1-Ex-Dcx"; */
+"mD1-Ex-Dcx.title" = "Documento Word…";
+
+/* Class = "NSMenuItem"; title = "Writing Help"; ObjectID = "mdw-help-menu"; */
+"mdw-help-menu.title" = "Aiuto alla scrittura";
+
+/* Class = "NSMenu"; title = "Writing Help"; ObjectID = "mdw-help-submenu"; */
+"mdw-help-submenu.title" = "Aiuto alla scrittura";
+
+/* Class = "NSMenuItem"; title = "Models…"; ObjectID = "mdw-models-item"; */
+"mdw-models-item.title" = "Modelli…";
+
+/* Class = "NSMenuItem"; title = "Stop"; ObjectID = "mdw-stop"; */
+"mdw-stop.title" = "Interrompi";
+
+/* Class = "NSMenuItem"; title = "Insert Template"; ObjectID = "mdw-tmpl-menu"; */
+"mdw-tmpl-menu.title" = "Inserisci un modello";
+
+/* Class = "NSMenu"; title = "Insert Template"; ObjectID = "mdw-tmpl-submenu"; */
+"mdw-tmpl-submenu.title" = "Inserisci un modello";
+
+/* Class = "NSMenuItem"; title = "Improve the Writing"; ObjectID = "mdw-w1-aaa"; */
+"mdw-w1-aaa.title" = "Migliora la scrittura";
+
+/* Class = "NSMenuItem"; title = "Correct Mistakes Only"; ObjectID = "mdw-w2-aaa"; */
+"mdw-w2-aaa.title" = "Correggi solo gli errori";
+
+/* Class = "NSMenuItem"; title = "Make It Formal"; ObjectID = "mdw-w3-aaa"; */
+"mdw-w3-aaa.title" = "Rendilo formale";
+
+/* Class = "NSMenuItem"; title = "Make It Plain"; ObjectID = "mdw-w4-aaa"; */
+"mdw-w4-aaa.title" = "Rendilo semplice";
+
+/* Class = "NSMenuItem"; title = "Make It Shorter"; ObjectID = "mdw-w5-aaa"; */
+"mdw-w5-aaa.title" = "Accorcialo";
+
+/* Class = "NSMenuItem"; title = "Make It Longer"; ObjectID = "mdw-w6-aaa"; */
+"mdw-w6-aaa.title" = "Allungalo";
+
+/* Class = "NSMenuItem"; title = "Insert Math…"; ObjectID = "mth-01-itm"; */
+"mth-01-itm.title" = "Inserisci una formula…";
+
+/* Class = "NSMenuItem"; title = "Show Sidebar"; ObjectID = "sbr-01-itm"; */
+"sbr-01-itm.title" = "Mostra la barra laterale";
+
+/* Class = "NSMenuItem"; title = "Clear Menu"; ObjectID = "vNY-rz-j42"; */
+"vNY-rz-j42.title" = "Svuota il menù";

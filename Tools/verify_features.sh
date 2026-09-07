@@ -367,6 +367,28 @@ else
 fi
 
 
+# ------------------------------------------------------------------ Italian
+
+# A string with no translation shows the reader the key, and a nib object
+# with no translation shows the reader English inside an Italian menu. Both
+# are invisible to a build and to XCTest, so they are counted here.
+
+say "Traduzione"
+
+ok "ogni stringa inglese ha la sua traduzione italiana, e i nib pure" \
+    python3 Tools/check_translations.py
+
+italian_parses() {
+    local file
+    for file in MacDown/Localization/it-IT.lproj/*.strings; do
+        [ -s "$file" ] || continue     # MPDocument.strings is empty on purpose
+        plutil -lint "$file" >/dev/null 2>&1 || return 1
+    done
+    return 0
+}
+ok "i file italiani si leggono come property list" italian_parses
+
+
 # -------------------------------------------------------------- the verdict
 
 say "Esito"
