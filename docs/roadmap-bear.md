@@ -134,6 +134,24 @@ Prima tappa utile e piccola: portare `macdownext` da «apre file» a
 
 ---
 
+## Fatte per strada, dopo che la lista era scritta
+
+Non erano in nessuna fase, e sono arrivate perché servivano.
+
+* **Textbundle e Textpack**, scritti *e* letti. È il punto di contatto vero
+  con Bear: il formato è suo quanto nostro — lo leggono anche Ulysses, iA
+  Writer e Marked — e un documento con le sue immagini passa da un'app
+  all'altra senza perdere niente. Che è esattamente la cosa che i tag e il
+  sync di Bear non sanno fare.
+* **L'anteprima del Finder disegna tutto**: mermaid, i sei motori di
+  Graphviz, le formule TeX, e i `[[WikiLink]]` come collegamenti. Un
+  documento si legge chiuso come si legge aperto.
+* **Una selezione sola nei due pannelli**, nei due versi, con canc che
+  cancella dal sorgente quello che hai preso nella pagina. Diario:
+  [la selezione fra i due pannelli](selezione.md).
+
+---
+
 ## Una regola che vale per tutta la lista
 
 > Si porta ciò che vive dentro un documento o dentro una cartella. Non si

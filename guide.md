@@ -518,7 +518,7 @@ the list is read, and again before the download starts.
 | **General** | Untitled document on launch, creating a file for a link target |
 | **Markdown** | The parser's extensions: tables, fenced code, footnotes, autolinking, strikethrough, underline, superscript, highlight, quotes, smart typography, intra-word emphasis, manual rendering |
 | **Editor** | Font, theme, insets, line spacing, width limit, sync scrolling, tab conversion, auto-increment of numbered lists, matching characters, smart home, scrolling past the end, trailing newline, list marker, word count type |
-| **Rendering** | The HTML style, syntax highlighting and its theme, line numbers, task lists, hard wrap, MathJax, Graphviz, Mermaid, front matter, wiki links, table of contents — and the **Writing** switches for everything the editor draws |
+| **Rendering** | The HTML style, syntax highlighting and its theme, line numbers, task lists, hard wrap, MathJax, Graphviz, Mermaid, front matter, wiki links, table of contents, whether selecting in one pane selects in the other — and the **Writing** switches for everything the editor draws |
 | **Terminal** | The `macdownext` command line tool: install, uninstall, where it is |
 | **Quick Look** | The Finder preview: state, version, Install / Update / Remove |
 | **Updates** | Whether to look once a day, when it last looked, and a check now |
@@ -674,6 +674,7 @@ Journals of the work, in Italian, written for whoever picks a piece of this
 up next: [the editor's text rendering](docs/wysiwyg-testo.md),
 [the local writing help](docs/ai-locale.md),
 [the two previews](docs/anteprime.md),
+[the selection the two panes share](docs/selezione.md),
 [the updater](docs/aggiornamenti.md),
 [the draw.io plug-in](docs/drawio.md),
 [code blocks](docs/blocchi-codice.md), and

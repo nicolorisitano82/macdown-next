@@ -166,6 +166,18 @@ incollare).
 
 ---
 
+## Aggiornamento: il ponte c'è
+
+Da quando questo è stato scritto, l'applicazione **scrive e legge Textbundle
+e Textpack**. È il formato che Bear stesso usa per esportare e importare, e
+significa che una nota con le sue immagini passa nei due sensi senza perdere
+niente e senza che nessuna delle due app debba conoscere l'altra.
+
+Vale la pena dirlo qui perché cambia il tono di metà della lista: non serve
+*portare via* niente da Bear, se un documento può andare e tornare.
+
+---
+
 ## Quello che non prenderei
 
 | | Perché no |

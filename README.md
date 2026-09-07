@@ -39,6 +39,16 @@ getting a document out of the app in a shape someone else can open.
 * **OpenDocument and RTF**, with the pictures AppKit's own writers drop put
   back: a `draw:frame` and a `Pictures/` entry for .odt, a `\pict` group for
   .rtf. Tables and character styling those two writers keep by themselves.
+* **Textbundle and Textpack**, written *and* read. A `.textbundle` is a
+  folder Finder shows as one item — `info.json`, `text.markdown`,
+  `assets/` — and a `.textpack` is that folder zipped, which is what
+  travels through mail; Bear, Ulysses, iA Writer and Marked read both. The
+  two exports skip the rendered page, which every other export here goes
+  through: what a textbundle holds is the Markdown *as written*, with the
+  links to local pictures pointed at `assets/`, so what comes out still
+  works taken apart by hand. Opening one opens the text inside it, named
+  after the bundle, with the pictures resolving and saving writing back
+  into it; opening a `.textpack` unpacks it next to itself first.
 * **A plug-in can add a format.** `MPExporterPlugIn` is a name, an extension
   and one method; the format then sits in File ▸ Export with the others.
   Exporters do not appear in the plug-ins menu — that menu is for commands —
@@ -158,6 +168,25 @@ Writing**.
   **Correggi** button, the one finding there that has a single obvious
   answer. The rest are matters of judgement and get no button.
 
+* **One selection, in two panes.** Select words in the preview and, when
+  the gesture ends, the same words are selected in the source with the
+  focus there: delete removes them, typing replaces them. It works the
+  other way round too — select a sentence in the editor and the page marks
+  it, so you can see which paragraph you are about to change.
+* Which words, exactly, is the whole problem: the rendered text is not the
+  source. The search happens inside the block the selection came from, the
+  page says how much of its own text came before it — so the second "test"
+  of a paragraph is the second one — and what the renderer changed on the
+  way out is undone on the way back: `“così”` finds `"così"`, `l’editor`
+  finds `l'editor`, `10–12` finds `10--12`. A selection that cannot be
+  placed with certainty leaves the editor alone rather than selecting
+  nearly the right thing, and says so by leaving the words marked in the
+  page with a dotted line.
+* Any gesture counts: the mouse, ⇧ and the arrows, ⌘A, a drag that ends
+  outside the page. Only a mouse released *in* the page moves the focus —
+  somebody still holding shift is not finished — and delete pressed on a
+  preview selection takes those words out of the source.
+
 ### When something does not work
 
 * **Help › Record What I Do.** Off unless you switch it on, and then every
@@ -201,6 +230,19 @@ Writing**.
   Pictures kept beside the document travel with the preview; the page
   itself cannot reach the network, so a document that asks for a remote
   image does not get one.
+* **Diagrams and formulas are drawn there too**: mermaid, all six Graphviz
+  engines, and TeX through MathJax. The page has no scripts in it, so the
+  extension draws them in a web view of its own and puts finished SVG in
+  the page — only loading the libraries a document actually needs, with two
+  and a half seconds for all the drawings of one document and whatever is
+  not drawn by then left as source. What counts as a formula follows the
+  application's own switch, read from its preferences: `$$…$$` always, a
+  single `$…$` only when *TeX-like math syntax* is on, because otherwise
+  "costs $5 and $7" reads as algebra.
+* **WikiLinks are links there as well.** `[[Verbale]]` resolves against the
+  document's folder — the name as written, then `.md`, `.markdown`, `.txt`
+  — and a target that does not exist yet is marked, as it is in the editor.
+  A document should read the same closed as open.
 * **Preferences › Quick Look** says where that preview stands and does
   something about it: whether macOS has it, which copy of the application
   is providing it, and which version — with **Install**, **Update** when
@@ -306,7 +348,8 @@ The following editor themes and CSS files are extracted from [Mou](http://mouapp
 Journals of the work, in Italian: [the editor's text rendering](docs/wysiwyg-testo.md),
 [the local writing help](docs/ai-locale.md) and
 [the two previews](docs/anteprime.md) — the card under the pointer and the
-one Finder draws — and [the updater](docs/aggiornamenti.md). There is also a
+one Finder draws — [the selection the two panes share](docs/selezione.md)
+and [the updater](docs/aggiornamenti.md). There is also a
 study, not a plan: [what a Claude and GPT integration could
 be](docs/studio-claude-gpt.md), and which parts of it are worth having. They are written for whoever picks a piece of this up
 next — what was measured, and the several times the measuring contradicted

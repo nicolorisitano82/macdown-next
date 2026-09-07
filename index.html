@@ -311,6 +311,11 @@
           Diagrams are drawn into every export, rather than shipping the
           source and hoping the reader runs JavaScript.
         </p>
+        <p>
+          Textbundle and Textpack as well — the Markdown as written with its
+          pictures beside it, in somebody else's format on purpose — written
+          and read alike.
+        </p>
       </div>
 
       <div class="card">
@@ -322,9 +327,31 @@
           with the preview; the page itself cannot reach the network.
         </p>
         <p>
+          Diagrams and formulas are drawn there too — mermaid, all six
+          Graphviz engines, TeX through MathJax — and
+          <code>[[WikiLinks]]</code> are links, marked when the page they
+          point at is not there yet.
+        </p>
+        <p>
           A panel in the preferences says whether macOS has it, which copy is
           providing it and which version — and installs, updates or removes
           it, because that registration goes wrong quietly.
+        </p>
+      </div>
+
+      <div class="card">
+        <p class="tag">The two panes</p>
+        <h3>One selection, in both</h3>
+        <p>
+          Select words in the preview and the same words are selected in the
+          source, with the focus there: delete removes them, typing replaces
+          them. Select a sentence in the editor and the page marks it.
+        </p>
+        <p>
+          Which words, exactly, is the whole problem — the rendered text is
+          not the source. The second <em>test</em> of a paragraph is the
+          second one, and a selection that cannot be placed with certainty
+          leaves the editor alone and says so.
         </p>
       </div>
 
@@ -366,7 +393,7 @@
     <h2>What changed, concretely</h2>
     <p class="section-lede">
       This fork exists because of specific things that did not work. These are
-      four of them.
+      five of them.
     </p>
 
     <div class="ba">
@@ -408,8 +435,25 @@
         </div>
         <div class="ba-cell ba-after">
           <p class="ba-label">Now</p>
-          <p>Space renders the document, and a preferences pane says where the
+          <p>Space renders the document — diagrams and formulas drawn,
+             WikiLinks as links — and a preferences pane says where the
              extension stands and fixes it in one click.</p>
+        </div>
+      </div>
+
+      <div class="ba-row">
+        <div class="ba-cell ba-before">
+          <p class="ba-label">Before</p>
+          <p>The preview was a page you could only read: selecting a sentence
+             in it told the editor nothing, and finding those words in the
+             source was your problem.</p>
+        </div>
+        <div class="ba-cell ba-after">
+          <p class="ba-label">Now</p>
+          <p>The two panes share one selection, either way round. Delete on a
+             selection made in the preview takes those words out of the
+             source; a selection that cannot be placed with certainty leaves
+             the editor alone and says so.</p>
         </div>
       </div>
 
@@ -502,6 +546,7 @@
       <p>Journals of the work, in Italian:<br>
       <a href="docs/wysiwyg-testo">the editor's text rendering</a><br>
       <a href="docs/anteprime">the two previews</a><br>
+      <a href="docs/selezione">the selection the two panes share</a><br>
       <a href="docs/aggiornamenti">the updater</a></p>
     </div>
     <div>
