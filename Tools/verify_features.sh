@@ -475,6 +475,61 @@ fi
 restore_extensions
 
 
+# ------------------------------------------- what the two panes say to each other
+
+# The unit tests drive the page script with hand-written HTML and the
+# mapping with hand-written source. This is the whole path on a real
+# document, rendered by the real renderer, in a real web view: the part
+# nobody can try by reading it.
+
+say "La selezione fra i due pannelli"
+
+DOC_SEL="$WORK/selezione.md"
+cat > "$DOC_SEL" <<'FINE'
+# Verbale di prova
+
+Un test qui, e un altro test più in là, nello stesso paragrafo.
+
+- Primo punto dell'elenco
+- Secondo punto dell'elenco
+
+Questo paragrafo ha del **grassetto** in mezzo, e finisce qui.
+FINE
+
+if clang -fobjc-arc -framework Cocoa -framework WebKit \
+         -IMacDown/Code/Utility -IDependency/hoedown/src \
+         -o "$WORK/selection_probe" Tools/selection_probe.m \
+         MacDown/Code/Utility/MPPreviewSelection.m \
+         Dependency/hoedown/src/*.c > "$WORK/probe.log" 2>&1
+then
+    probe() { "$WORK/selection_probe" "$DOC_SEL" "$@" > "$WORK/probe.out" 2>&1; }
+
+    ok "una parola scelta nella pagina si ritrova nel sorgente" \
+        probe pick "Un test qui"
+    ok "e in una voce di elenco, che prima non riportava niente" \
+        probe pick "Primo punto"
+    # The second "test" of a paragraph is the second one, not the first:
+    # the page says how far into its own text the selection began.
+    probe pick "test" 2
+    ok "la seconda occorrenza è la seconda" \
+        contains "$WORK/probe.out" "a 44"
+    ok "una selezione che attraversa un'enfasi porta con sé i marcatori" \
+        grep -q "«del \*\*grassetto\*\* in mezzo»" \
+        <(probe pick "del grassetto in mezzo"; cat "$WORK/probe.out")
+    ok "parole che nella pagina non ci sono non si piazzano" \
+        sh -c '! "$0" "$1" pick "queste parole non esistono" >/dev/null 2>&1' \
+        "$WORK/selection_probe" "$DOC_SEL"
+    # And the other way: the editor has a selection, the page marks it.
+    ok "il verso opposto: la pagina segna quello che l'editor seleziona" \
+        probe show "del **grassetto** in mezzo"
+    ok "e quello che il sorgente ha e la pagina no resta senza segno" \
+        sh -c '! "$0" "$1" show "*sottolineato*" >/dev/null 2>&1' \
+        "$WORK/selection_probe" "$DOC_SEL"
+else
+    skip "il banco della selezione non si è compilato — $WORK/probe.log"
+fi
+
+
 # ------------------------------------------------------------------ Italian
 
 # A string with no translation shows the reader the key, and a nib object
