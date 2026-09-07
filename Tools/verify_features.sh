@@ -406,8 +406,19 @@ else
         --predicate 'process == "MacDownQuickLook"' --style compact \
         > "$WORK/diagrams.log" 2>/dev/null
 
-    ok "il diagramma mermaid viene disegnato" \
-        contains "$WORK/diagrams.log" "drawn 1 of 1"
+    # Which copy actually answered. Two extensions with the *same* bundle
+    # identifier — the installed one and the one just built — cannot be
+    # told apart by pluginkit, and macOS picks by path: saying so is better
+    # than passing or failing on somebody else's code.
+    SERVED=$(sed -n 's/.*"CFBundleExecutablePath"="\([^"]*\)".*/\1/p' \
+             "$WORK/diagrams.log" | head -1)
+    case "$SERVED" in
+        "$APP"/*)
+            ok "il diagramma mermaid viene disegnato" \
+                contains "$WORK/diagrams.log" "drawn 1 of 1" ;;
+        *)
+            skip "il diagramma disegnato — ha risposto ${SERVED:-una copia sconosciuta}" ;;
+    esac
 fi
 
 # Whatever was ignored to make room for the copy under test goes back.
