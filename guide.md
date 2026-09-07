@@ -378,6 +378,14 @@ application opens with, instead of the source.
   something that starts by itself.
 - Front matter is left out, and a document longer than two megabytes is
   shown up to that point, saying so.
+- **mermaid diagrams are drawn**, not shown as source. The page has no
+  scripts in it, so the extension draws each diagram in a web view of its
+  own and puts finished SVG in the page — up to eight diagrams, with two and
+  a half seconds for all of them together. A diagram that does not draw in
+  time, or at all, keeps its fence. The extension carries the network
+  entitlement for this — WebKit will not finish a load without it, even for
+  a page built in memory — and makes no request with it: mermaid is read
+  from the bundle, and the page Finder gets still forbids the network.
 
 **Preferences › Quick Look** says where that preview stands and does
 something about it: whether macOS has it, which copy of the application is

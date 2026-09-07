@@ -42,7 +42,17 @@ WORK=$(mktemp -d "${TMPDIR:-/tmp}/macdown-verifica.XXXXXX")
 # The sandbox the Finder preview runs in can read the home folder and not
 # much else, so the document a real preview is asked for has to live there.
 HOME_WORK="$HOME/.macdown-verifica"
-trap 'rm -rf "$WORK" "$HOME_WORK"' EXIT
+# Extensions ignored to make room for the copy under test are put back,
+# however this run ends: leaving somebody's installed preview turned off
+# would be a rude way to fail.
+restore_extensions() {
+    [ -s "$WORK/ignored" ] || return 0
+    while read -r other; do
+        [ -n "$other" ] && pluginkit -e use -i "$other" >/dev/null 2>&1
+    done < "$WORK/ignored"
+    : > "$WORK/ignored"
+}
+trap 'restore_extensions; rm -rf "$WORK" "$HOME_WORK"' EXIT
 
 PASSED=0
 FAILED=0
@@ -163,6 +173,9 @@ if [ -d "$APPEX" ]; then
     # until a preview does not appear.
     codesign -d --entitlements - --xml "$APPEX" > "$WORK/rights.plist" 2>/dev/null
     ok "firmata" codesign --verify --strict "$APPEX"
+    ok "può usare WebKit, che pretende il permesso di rete" \
+        grep -q "com.apple.security.network.client" \
+        <(codesign -d --entitlements - --xml "$APPEX" 2>/dev/null | plutil -p -)
     ok "in sandbox (o Quick Look non la carica)" \
         contains "$WORK/rights.plist" "com.apple.security.app-sandbox"
     ok "può leggere le figure accanto al documento" \
@@ -344,6 +357,19 @@ else
     "$LSREGISTER" -f -R -trusted "$APP" >/dev/null 2>&1
     sleep 5
 
+    # Two copies of this extension can be present at once — the one in
+    # /Applications and the one just built — and macOS asks one of them.
+    # Until this was measured the live checks were reading the *installed*
+    # extension, and passing on code nobody had just changed.
+    pluginkit -m -p com.apple.quicklook.preview 2>/dev/null \
+        | sed -n 's/.*[[:space:]]\(com\.[^(]*macdown[^(]*\)(.*/\1/p' \
+        | grep -v "^$IDENTIFIER$" > "$WORK/ignored" || true
+    while read -r other; do
+        [ -n "$other" ] && pluginkit -e ignore -i "$other" >/dev/null 2>&1
+    done < "$WORK/ignored"
+    pluginkit -e use -i "$IDENTIFIER" >/dev/null 2>&1
+    sleep 2
+
     ok "il sistema la elenca fra le anteprime" \
         grep -q "$IDENTIFIER" <(pluginkit -m -p com.apple.quicklook.preview \
                                 2>/dev/null)
@@ -364,7 +390,28 @@ else
         contains "$WORK/extension.log" "beginning extension request"
     ok "e non muore per un'asserzione del sistema" \
         absent "$WORK/extension.log" "Assertion failure"
+
+    # The diagrams are drawn in a web view of the extension's own, and that
+    # is the part that can only be tried for real: measured, WebKit inside
+    # this sandbox draws in under half a second, and without the entitlement
+    # it never finishes loading at all.
+    DIAGRAM="$HOME_WORK/$(date +%s)-$RANDOM-diagramma.md"
+    printf '# Diagramma\n\n```mermaid\ngraph TD\n  A[Inizio] --> B[Fine]\n```\n' \
+        > "$DIAGRAM"
+    SINCE=$(date "+%Y-%m-%d %H:%M:%S")
+    (qlmanage -p "$DIAGRAM" >/dev/null 2>&1 &)
+    sleep 8
+    pkill -x qlmanage >/dev/null 2>&1
+    /usr/bin/log show --start "$SINCE" --info --debug \
+        --predicate 'process == "MacDownQuickLook"' --style compact \
+        > "$WORK/diagrams.log" 2>/dev/null
+
+    ok "il diagramma mermaid viene disegnato" \
+        contains "$WORK/diagrams.log" "drawn 1 of 1"
 fi
+
+# Whatever was ignored to make room for the copy under test goes back.
+restore_extensions
 
 
 # ------------------------------------------------------------------ Italian

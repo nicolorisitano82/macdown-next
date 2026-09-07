@@ -27,6 +27,8 @@
 		D2B0000000000000000000E6 /* MPHoverWatchTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000E5 /* MPHoverWatchTests.m */; };
 		D2B0000000000000000000B0 /* MDQuickLookProvider.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000A1 /* MDQuickLookProvider.m */; };
 		D2B0000000000000000000B1 /* MDPreviewPage.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000A3 /* MDPreviewPage.m */; };
+		D2B0000000000000000001B0 /* MDDiagramRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000001B3 /* MDDiagramRenderer.m */; };
+		D2B0000000000000000001B4 /* mermaid.min.js in Resources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000001B5 /* mermaid.min.js */; };
 		D2B0000000000000000000B2 /* autolink.c in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000A7 /* autolink.c */; };
 		D2B0000000000000000000B3 /* buffer.c in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000A8 /* buffer.c */; };
 		D2B0000000000000000000B4 /* document.c in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000A9 /* document.c */; };
@@ -41,7 +43,9 @@
 		D2B0000000000000000001A1 /* it-IT.lproj in Resources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000001A3 /* it-IT.lproj */; };
 		D2B0000000000000000000BC /* MacDownQuickLook.appex in Embed Plug-ins */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000A6 /* MacDownQuickLook.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D2B0000000000000000000C6 /* MDPreviewPageTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000C5 /* MDPreviewPageTests.m */; };
+		D2B0000000000000000001B6 /* MDDiagramRendererTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000001B7 /* MDDiagramRendererTests.m */; };
 		D2B0000000000000000000C7 /* MDPreviewPage.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000A3 /* MDPreviewPage.m */; };
+		D2B0000000000000000001B1 /* MDDiagramRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000001B3 /* MDDiagramRenderer.m */; };
 		F55A342A5A01CEBCC9F60063 /* MPLinkPreview.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310073 /* MPLinkPreview.m */; };
 		F55A342A5A01CEBCC9F60064 /* MPLinkPreviewViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310075 /* MPLinkPreviewViewController.m */; };
 		F55A342A5A01CEBCC9F60065 /* MPLinkPreviewTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310076 /* MPLinkPreviewTests.m */; };
@@ -316,6 +320,9 @@
 		D2B0000000000000000001A2 /* en.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = en.lproj; path = Localization/en.lproj; sourceTree = "<group>"; };
 		D2B0000000000000000001A3 /* it-IT.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "it-IT.lproj"; path = "Localization/it-IT.lproj"; sourceTree = "<group>"; };
 		D2B0000000000000000001A4 /* MDQuickLookStrings.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MDQuickLookStrings.h; sourceTree = "<group>"; };
+		D2B0000000000000000001B2 /* MDDiagramRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MDDiagramRenderer.h; sourceTree = "<group>"; };
+		D2B0000000000000000001B3 /* MDDiagramRenderer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MDDiagramRenderer.m; sourceTree = "<group>"; };
+		D2B0000000000000000001B5 /* mermaid.min.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; name = mermaid.min.js; path = "MacDown/Resources/Extensions/mermaid.min.js"; sourceTree = SOURCE_ROOT; };
 		D2B0000000000000000000A6 /* MacDownQuickLook.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MacDownQuickLook.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2B0000000000000000000A7 /* autolink.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = autolink.c; path = "Dependency/hoedown/src/autolink.c"; sourceTree = SOURCE_ROOT; };
 		D2B0000000000000000000A8 /* buffer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = buffer.c; path = "Dependency/hoedown/src/buffer.c"; sourceTree = SOURCE_ROOT; };
@@ -327,6 +334,7 @@
 		D2B0000000000000000000AE /* stack.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = stack.c; path = "Dependency/hoedown/src/stack.c"; sourceTree = SOURCE_ROOT; };
 		D2B0000000000000000000AF /* version.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = version.c; path = "Dependency/hoedown/src/version.c"; sourceTree = SOURCE_ROOT; };
 		D2B0000000000000000000C5 /* MDPreviewPageTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "MDPreviewPageTests.m"; sourceTree = "<group>"; };
+		D2B0000000000000000001B7 /* MDDiagramRendererTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "MDDiagramRendererTests.m"; sourceTree = "<group>"; };
 		7DA2311453239F0973310072 /* MPLinkPreview.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPLinkPreview.h; sourceTree = "<group>"; };
 		7DA2311453239F0973310073 /* MPLinkPreview.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPLinkPreview.m; sourceTree = "<group>"; };
 		7DA2311453239F0973310074 /* MPLinkPreviewViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPLinkPreviewViewController.h; sourceTree = "<group>"; };
@@ -853,6 +861,9 @@
 				D2B0000000000000000000A2 /* MDPreviewPage.h */,
 				D2B0000000000000000000A3 /* MDPreviewPage.m */,
 				D2B0000000000000000001A4 /* MDQuickLookStrings.h */,
+				D2B0000000000000000001B2 /* MDDiagramRenderer.h */,
+				D2B0000000000000000001B3 /* MDDiagramRenderer.m */,
+				D2B0000000000000000001B5 /* mermaid.min.js */,
 				D2B0000000000000000000A5 /* GitHub2.css */,
 				D2B0000000000000000001A2 /* en.lproj */,
 				D2B0000000000000000001A3 /* it-IT.lproj */,
@@ -1281,6 +1292,7 @@
 				D2B0000000000000000000EE /* MPQuickLookExtensionTests.m */,
 				D2B0000000000000000000E5 /* MPHoverWatchTests.m */,
 				D2B0000000000000000000C5 /* MDPreviewPageTests.m */,
+				D2B0000000000000000001B7 /* MDDiagramRendererTests.m */,
 				1FF1420319A8A24800CF8A6A /* MPUtilityTests.m */,
 				7DA2311453239F097331E216 /* MPTableSourceTests.m */,
 				7DA2311453239F0973310001 /* MPMarkerHiderTests.m */,
@@ -1543,6 +1555,7 @@
 				D2B0000000000000000000BB /* GitHub2.css in Resources */,
 				D2B0000000000000000001A0 /* en.lproj in Resources */,
 				D2B0000000000000000001A1 /* it-IT.lproj in Resources */,
+				D2B0000000000000000001B4 /* mermaid.min.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1747,6 +1760,7 @@
 			files = (
 				D2B0000000000000000000B0 /* MDQuickLookProvider.m in Sources */,
 				D2B0000000000000000000B1 /* MDPreviewPage.m in Sources */,
+				D2B0000000000000000001B0 /* MDDiagramRenderer.m in Sources */,
 				D2B0000000000000000000B2 /* autolink.c in Sources */,
 				D2B0000000000000000000B3 /* buffer.c in Sources */,
 				D2B0000000000000000000B4 /* document.c in Sources */,
@@ -1870,7 +1884,9 @@
 				D2B0000000000000000000EF /* MPQuickLookExtensionTests.m in Sources */,
 				D2B0000000000000000000E6 /* MPHoverWatchTests.m in Sources */,
 				D2B0000000000000000000C6 /* MDPreviewPageTests.m in Sources */,
+				D2B0000000000000000001B6 /* MDDiagramRendererTests.m in Sources */,
 				D2B0000000000000000000C7 /* MDPreviewPage.m in Sources */,
+				D2B0000000000000000001B1 /* MDDiagramRenderer.m in Sources */,
 				1FF1420419A8A24800CF8A6A /* MPUtilityTests.m in Sources */,
 				F55A342A5A01CEBCC9F68E3A /* MPTableSourceTests.m in Sources */,
 				F55A342A5A01CEBCC9F60001 /* MPMarkerHiderTests.m in Sources */,
@@ -2314,6 +2330,8 @@
 					QuickLookUI,
 					"-framework",
 					UniformTypeIdentifiers,
+					"-framework",
+					WebKit,
 				);
 			};
 			name = Debug;
@@ -2343,6 +2361,8 @@
 					QuickLookUI,
 					"-framework",
 					UniformTypeIdentifiers,
+					"-framework",
+					WebKit,
 				);
 			};
 			name = Release;

@@ -9,6 +9,14 @@
 	     itself may not reach the network, so what is read stays on screen. -->
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
+	<!-- WebKit will not finish a load without this, even for a page built
+	     in memory: measured, with the diagrams drawn in 428 ms with it and
+	     the load never finishing without it. Nothing here asks the network
+	     for anything — mermaid is read from this bundle and the page is an
+	     inline string — and the page Finder is shown still carries
+	     default-src 'none', so a document cannot fetch anything either. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
 	<key>com.apple.security.files.user-selected.read-only</key>
 	<true/>
 	<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
