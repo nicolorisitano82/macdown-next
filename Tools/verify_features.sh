@@ -166,6 +166,14 @@ if [ -d "$APPEX" ]; then
         <(read_plist :NSExtension:NSExtensionAttributes:QLSupportedContentTypes)
     ok "lo stile dell'app è dentro l'estensione" \
         test -f "$APPEX/Contents/Resources/GitHub2.css"
+    ok "e lo stile dei WikiLink con esso" \
+        test -f "$APPEX/Contents/Resources/wikilink.css"
+    # Le tre librerie che disegnano. Senza, un diagramma resta il suo
+    # sorgente e nessuno lo dice.
+    ok "porta mermaid, Graphviz e MathJax" \
+        test -f "$APPEX/Contents/Resources/mermaid.min.js" \
+             -a -f "$APPEX/Contents/Resources/viz.js" \
+             -a -f "$APPEX/Contents/Resources/tex-svg.js"
 
 
     # Quick Look loads sandboxed extensions only, and `codesign --deep` on
@@ -256,7 +264,13 @@ def saluta(nome):
 ![rete](rete.png)
 
 ![fuori](https://esempio.it/tracciante.png)
+
+Vedi [[vicino]] e anche [[manca-del-tutto|questa che non c'è]].
 EOF
+
+# A WikiLink resolves against the document's own folder, so the target has
+# to be a real file for the check to mean anything.
+printf 'accanto\n' > "$HOME_WORK/vicino.md"
 
 if clang -fobjc-arc -framework Foundation -IQuickLook \
          -IDependency/hoedown/src -o "$WORK/quicklook_page" \
@@ -289,6 +303,11 @@ then
     ok "e non può essere scaricata" \
         contains "$WORK/page.html" "default-src 'none'"
     ok "niente script nella pagina" absent "$WORK/page.html" "<script"
+    ok "un WikiLink al file accanto è un collegamento" \
+        contains "$WORK/page.html" '<a href="vicino" class="wikilink">'
+    ok "e uno che non porta a niente lo dice" \
+        contains "$WORK/page.html" 'class="wikilink wikilink-missing"'
+
 else
     skip "banco di prova non compilato — $WORK/harness.log"
 fi

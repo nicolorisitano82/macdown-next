@@ -388,6 +388,11 @@ application opens with, instead of the source.
   finish a load without it, even for a page built in memory — and makes no
   request with it: the libraries are read from the bundle, and the page
   Finder gets still forbids the network.
+- **WikiLinks are links**: `[[Target]]` and `[[Target|label]]` resolve
+  against the document's folder — the name as written, then `.md`,
+  `.markdown`, `.txt` — and a target that is not there yet is marked, as it
+  is in the editor. Nothing navigates from a preview; a document should
+  simply read the same closed as open.
 - What counts as a formula is **the application's own setting**: `$$…$$`
   always, and a single `$…$` only when *Rendering › TeX-like math syntax* is
   on, because otherwise "costs $5 and $7" reads as algebra. The extension

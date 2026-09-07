@@ -36,6 +36,19 @@
 /// Front matter is not the document talking, so it is stepped over.
 extern NSString *MDPreviewTitleForMarkdown(NSString *markdown, NSURL *fileURL);
 
+/** `[[Target]]` and `[[Target|label]]` turned into links.
+ *
+ * The same shape the application gives them, so a document reads the same
+ * in Finder as it does open: a link, with a dashed underline when the page
+ * it points at is not there yet. The target is resolved against the
+ * document's own folder, trying the name as written and then the extensions
+ * a Markdown document is likely to carry.
+ *
+ * Runs on the HTML rather than the Markdown so that code can be skipped:
+ * `[[this]]` inside a fence is code, not a link.
+ */
+extern NSString *MDBodyWithWikiLinks(NSString *bodyHTML, NSURL *documentURL);
+
 /// The document without its front matter.
 ///
 /// A glance at a document should show what it says, and `title:` and

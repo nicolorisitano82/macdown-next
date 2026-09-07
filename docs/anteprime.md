@@ -131,6 +131,21 @@ documento e 16 KB di sorgente ciascuno: un'anteprima che arriva tardi non è
 arrivata, e quello che non si disegna in tempo resta il suo sorgente — cioè
 quello che l'anteprima mostrava prima.
 
+### I WikiLink sono collegamenti anche nel Finder
+
+`[[Verbale]]` e `[[Verbale|il verbale]]` sono collegamenti in anteprima, con
+la stessa forma che hanno nell'applicazione: il bersaglio viene cercato
+accanto al documento — il nome come è scritto, poi `.md`, `.markdown`,
+`.txt` — e quello che non c'è porta la sottolineatura tratteggiata e il
+motivo nel `title`. Nessuno ci naviga (un'anteprima non naviga), ma un
+documento deve **leggersi** allo stesso modo aperto e chiuso.
+
+Il passaggio gira sull'HTML e non sul Markdown, così `[[questo]]` dentro un
+recinto resta codice. Lo stile è `wikilink.css`, lo stesso file
+dell'applicazione, copiato nel bundle dell'estensione invece di riscritto
+nel codice. Anche questo segue l'interruttore dell'applicazione
+(`htmlWikiLinks`), che è **acceso** di serie.
+
 ### Che cosa è una formula lo dice l'applicazione
 
 `$$…$$` è inequivocabile e si typesetta sempre. Un dollaro **singolo** no:

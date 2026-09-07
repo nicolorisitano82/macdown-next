@@ -30,7 +30,11 @@ static const int kMDExtensions =
     HOEDOWN_EXT_TABLES | HOEDOWN_EXT_FENCED_CODE | HOEDOWN_EXT_FOOTNOTES |
     HOEDOWN_EXT_AUTOLINK | HOEDOWN_EXT_STRIKETHROUGH | HOEDOWN_EXT_HIGHLIGHT |
     HOEDOWN_EXT_QUOTE | HOEDOWN_EXT_SUPERSCRIPT |
-    HOEDOWN_EXT_NO_INTRA_EMPHASIS | HOEDOWN_EXT_SPACE_HEADERS;
+    HOEDOWN_EXT_NO_INTRA_EMPHASIS | HOEDOWN_EXT_SPACE_HEADERS |
+    // Maths the unambiguous way. The extension also honours the
+    // application's switch for a single dollar; there is no application
+    // here, so this is the default half of that answer.
+    HOEDOWN_EXT_MATH;
 
 
 static NSString *MDBody(NSString *markdown)
@@ -94,6 +98,9 @@ int main(int argc, const char *argv[])
         }
 
         NSString *body = MDBody(MDMarkdownWithoutFrontMatter(markdown));
+        // What the extension does before it draws anything: the diagrams
+        // need a web view and cannot come this way, the WikiLinks can.
+        body = MDBodyWithWikiLinks(body, file);
         MDPreviewPage *page = [MDPreviewPage pageForBody:body
             title:MDPreviewTitleForMarkdown(markdown, file)
             styleSheet:style documentAt:file];

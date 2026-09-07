@@ -107,6 +107,8 @@ static NSString *MDBodyForMarkdown(NSString *markdown, int extensions)
     // page to hand over, and drawing them takes a web view and a moment.
     NSString *body = MDBodyForMarkdown(MDMarkdownWithoutFrontMatter(markdown),
                                        [self mathExtensions]);
+    if ([self wikiLinksWanted])
+        body = MDBodyWithWikiLinks(body, fileURL);
     NSArray<MDDrawingJob *> *jobs = [self drawableJobsIn:body];
     if (!jobs.count)
     {
@@ -150,23 +152,52 @@ static NSString *MDBodyForMarkdown(NSString *markdown, int extensions)
 /// reading them.
 - (int)mathExtensions
 {
+    NSNumber *maths = [self preference:@"htmlMathJax"];
+    NSNumber *dollars = [self preference:@"htmlMathJaxInlineDollar"];
+    int flags = MDMathExtensionsFor(maths, dollars);
+    os_log(OS_LOG_DEFAULT, "maths: %{public}@ says %@ / %@, so flags %d",
+           [self applicationDomain], maths ?: @"(nothing)",
+           dollars ?: @"(nothing)", flags);
+    return flags;
+}
+
+
+/// Whether WikiLinks are links here, as they are in the application.
+///
+/// On unless the application says otherwise, which is the application's own
+/// default: `[[Verbale]]` is written to be a link, and showing the brackets
+/// in Finder while the editor shows a link would be two answers to one
+/// question.
+- (BOOL)wikiLinksWanted
+{
+    NSNumber *wanted = [self preference:@"htmlWikiLinks"];
+    return wanted ? wanted.boolValue : YES;
+}
+
+
+/// The preferences domain of the application this extension belongs to.
+///
+/// The extension's own identifier is the application's with `.quicklook`
+/// added, so the domain to read is the identifier without that suffix. The
+/// entitlement names both — release and debug — and allows nothing but
+/// reading them.
+- (NSString *)applicationDomain
+{
     NSString *identifier =
         [NSBundle bundleForClass:[self class]].bundleIdentifier ?: @"";
-    NSString *domain = [identifier hasSuffix:@".quicklook"]
+    return [identifier hasSuffix:@".quicklook"]
         ? [identifier substringToIndex:identifier.length
                                        - @".quicklook".length]
         : identifier;
-    NSNumber *maths = (__bridge_transfer NSNumber *)
-        CFPreferencesCopyAppValue(CFSTR("htmlMathJax"),
-                                  (__bridge CFStringRef)domain);
-    NSNumber *dollars = (__bridge_transfer NSNumber *)
-        CFPreferencesCopyAppValue(CFSTR("htmlMathJaxInlineDollar"),
-                                  (__bridge CFStringRef)domain);
-    int flags = MDMathExtensionsFor(maths, dollars);
-    os_log(OS_LOG_DEFAULT,
-           "maths: %{public}@ says %@ / %@, so flags %d",
-           domain, maths ?: @"(nothing)", dollars ?: @"(nothing)", flags);
-    return flags;
+}
+
+
+- (NSNumber *)preference:(NSString *)key
+{
+    id value = (__bridge_transfer id)CFPreferencesCopyAppValue(
+        (__bridge CFStringRef)key,
+        (__bridge CFStringRef)[self applicationDomain]);
+    return [value isKindOfClass:[NSNumber class]] ? value : nil;
 }
 
 
@@ -252,18 +283,28 @@ static NSString *MDBodyForMarkdown(NSString *markdown, int extensions)
 /// Finder as it does once it is open.
 - (NSString *)styleSheetWith:(NSString *)extra
 {
-    NSURL *css = [[NSBundle bundleForClass:[self class]]
-        URLForResource:@"GitHub2" withExtension:@"css"];
-    NSString *sheet = css
-        ? [NSString stringWithContentsOfURL:css
-                                   encoding:NSUTF8StringEncoding error:NULL]
-        : nil;
+    NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+    NSMutableString *sheet = [NSMutableString string];
+    // The preview style the application opens with, then the rules for the
+    // things it draws itself. Read from the bundle rather than copied into
+    // the code, so there is one copy of each to keep right.
+    for (NSString *name in @[@"GitHub2", @"wikilink"])
+    {
+        NSURL *css = [bundle URLForResource:name withExtension:@"css"];
+        NSString *text = css
+            ? [NSString stringWithContentsOfURL:css
+                                       encoding:NSUTF8StringEncoding
+                                          error:NULL]
+            : nil;
+        if (text.length)
+            [sheet appendFormat:@"%@\n", text];
+    }
     if (!extra.length)
         return sheet;
     // MathJax's own rules, which say how a formula sits on the line. They
     // come from the web view that typeset it, so the page needs no script to
     // get them right.
-    return [NSString stringWithFormat:@"%@\n%@", sheet ?: @"", extra];
+    return [NSString stringWithFormat:@"%@%@", sheet, extra];
 }
 
 

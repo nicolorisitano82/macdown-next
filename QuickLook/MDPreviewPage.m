@@ -207,6 +207,117 @@ static NSURL *MDPictureFile(NSString *src, NSURL *folder,
 }
 
 
+#pragma mark - WikiLinks
+
+/// Whether a WikiLink target resolves to a file next to the document.
+///
+/// The name as written first, then the extensions a Markdown document is
+/// likely to carry — the same order the application uses when it follows
+/// one.
+static BOOL MDWikiTargetExists(NSURL *directory, NSString *target)
+{
+    if (!directory.isFileURL || !target.length)
+        return NO;
+
+    NSFileManager *manager = [NSFileManager defaultManager];
+    NSURL *base = [directory URLByAppendingPathComponent:target];
+    if ([manager fileExistsAtPath:base.path])
+        return YES;
+
+    for (NSString *extension in @[@"md", @"markdown", @"txt"])
+    {
+        NSURL *candidate = [base URLByAppendingPathExtension:extension];
+        if ([manager fileExistsAtPath:candidate.path])
+            return YES;
+    }
+    return NO;
+}
+
+
+NSString *MDBodyWithWikiLinks(NSString *bodyHTML, NSURL *documentURL)
+{
+    if (![bodyHTML containsString:@"[["])
+        return bodyHTML ?: @"";
+
+    static NSRegularExpression *wiki = nil;
+    static NSRegularExpression *code = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        wiki = [NSRegularExpression regularExpressionWithPattern:
+            @"\\[\\[([^\\[\\]|]+)(?:\\|([^\\[\\]]+))?\\]\\]"
+                                                        options:0 error:NULL];
+        code = [NSRegularExpression regularExpressionWithPattern:
+            @"<pre[\\s\\S]*?</pre>|<code[\\s\\S]*?</code>"
+                    options:NSRegularExpressionCaseInsensitive error:NULL];
+    });
+
+    NSRange whole = NSMakeRange(0, bodyHTML.length);
+    NSArray<NSTextCheckingResult *> *links =
+        [wiki matchesInString:bodyHTML options:0 range:whole];
+    if (!links.count)
+        return bodyHTML;
+
+    NSArray<NSTextCheckingResult *> *spans =
+        [code matchesInString:bodyHTML options:0 range:whole];
+    NSURL *directory = documentURL.URLByDeletingLastPathComponent;
+    NSCharacterSet *spaces = [NSCharacterSet whitespaceCharacterSet];
+    NSMutableString *out = [bodyHTML mutableCopy];
+
+    // Back to front, so each replacement leaves the earlier ranges valid.
+    for (NSInteger i = (NSInteger)links.count - 1; i >= 0; i--)
+    {
+        NSTextCheckingResult *link = links[(NSUInteger)i];
+
+        BOOL insideCode = NO;
+        for (NSTextCheckingResult *span in spans)
+        {
+            if (NSIntersectionRange(span.range, link.range).length)
+            {
+                insideCode = YES;
+                break;
+            }
+        }
+        if (insideCode)
+            continue;
+
+        NSString *target = [[bodyHTML substringWithRange:
+            [link rangeAtIndex:1]] stringByTrimmingCharactersInSet:spaces];
+        if (!target.length)
+            continue;
+
+        NSRange labelRange = [link rangeAtIndex:2];
+        NSString *label = labelRange.location == NSNotFound ? target
+            : [[bodyHTML substringWithRange:labelRange]
+                stringByTrimmingCharactersInSet:spaces];
+
+        // The href carries no extension, as the application's does not.
+        // Nothing here follows it — a preview does not navigate — and a
+        // link that reads the way the document wrote it is the point.
+        NSString *href = [target stringByAddingPercentEncodingWithAllowedCharacters:
+            [NSCharacterSet URLPathAllowedCharacterSet]] ?: target;
+
+        NSString *replacement;
+        if (MDWikiTargetExists(directory, target))
+        {
+            replacement = [NSString stringWithFormat:
+                @"<a href=\"%@\" class=\"wikilink\">%@</a>",
+                MDEscaped(href), label];
+        }
+        else
+        {
+            replacement = [NSString stringWithFormat:
+                @"<a href=\"%@\" class=\"wikilink wikilink-missing\" "
+                @"title=\"%@\">%@</a>", MDEscaped(href),
+                MDEscaped(MDQLLocalizedString(@"This page does not exist yet",
+                    @"tooltip on a WikiLink whose target is missing")),
+                label];
+        }
+        [out replaceCharactersInRange:link.range withString:replacement];
+    }
+    return out;
+}
+
+
 @implementation MDPreviewPage
 
 + (instancetype)pageForBody:(NSString *)bodyHTML

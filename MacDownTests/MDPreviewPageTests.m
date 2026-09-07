@@ -241,4 +241,80 @@
     XCTAssertEqual(page.pictures.count, 0u);
 }
 
+#pragma mark - WikiLinks
+
+- (NSString *)wikiLinksIn:(NSString *)body
+{
+    return MDBodyWithWikiLinks(body, self.document);
+}
+
+- (void)testAWikiLinkToAFileBesideTheDocumentIsALink
+{
+    [self writePictureOfBytes:10 named:@"Appunti.md"];
+    NSString *out = [self wikiLinksIn:@"<p>vedi [[Appunti]] per il resto</p>"];
+    XCTAssertEqualObjects(out,
+        @"<p>vedi <a href=\"Appunti\" class=\"wikilink\">Appunti</a>"
+        @" per il resto</p>");
+}
+
+- (void)testAWikiLinkToNothingIsMarkedAsMissing
+{
+    NSString *out = [self wikiLinksIn:@"<p>[[Non c'è]]</p>"];
+    XCTAssertTrue([out containsString:@"wikilink wikilink-missing"]);
+    XCTAssertTrue([out containsString:@"title=\""]);
+    // The label is what the document wrote, whether the page exists or not.
+    XCTAssertTrue([out containsString:@">Non c'è</a>"]);
+}
+
+- (void)testALabelledWikiLinkKeepsItsLabel
+{
+    [self writePictureOfBytes:10 named:@"Appunti.md"];
+    NSString *out = [self wikiLinksIn:@"<p>[[Appunti|gli appunti]]</p>"];
+    XCTAssertEqualObjects(out,
+        @"<p><a href=\"Appunti\" class=\"wikilink\">gli appunti</a></p>");
+}
+
+- (void)testTheTargetIsTriedWithTheUsualExtensions
+{
+    [self writePictureOfBytes:10 named:@"Note.markdown"];
+    [self writePictureOfBytes:10 named:@"Testo.txt"];
+    [self writePictureOfBytes:10 named:@"Esatto"];
+    for (NSString *name in @[@"Note", @"Testo", @"Esatto"])
+    {
+        NSString *out = [self wikiLinksIn:[NSString stringWithFormat:
+            @"<p>[[%@]]</p>", name]];
+        XCTAssertFalse([out containsString:@"wikilink-missing"], @"%@", name);
+    }
+}
+
+- (void)testAWikiLinkInsideCodeStaysCode
+{
+    [self writePictureOfBytes:10 named:@"Appunti.md"];
+    NSString *fence = @"<pre><code>[[Appunti]]</code></pre>";
+    XCTAssertEqualObjects([self wikiLinksIn:fence], fence);
+    NSString *span = @"<p>si scrive <code>[[Appunti]]</code></p>";
+    XCTAssertEqualObjects([self wikiLinksIn:span], span);
+}
+
+- (void)testASpaceInTheTargetIsEncodedInTheAddress
+{
+    [self writePictureOfBytes:10 named:@"Verbale di prova.md"];
+    NSString *out = [self wikiLinksIn:@"<p>[[Verbale di prova]]</p>"];
+    XCTAssertTrue([out containsString:@"href=\"Verbale%20di%20prova\""]);
+    XCTAssertTrue([out containsString:@">Verbale di prova</a>"]);
+    XCTAssertFalse([out containsString:@"wikilink-missing"]);
+}
+
+- (void)testADocumentWithoutWikiLinksIsLeftAlone
+{
+    NSString *body = @"<p>niente parentesi qui</p>";
+    XCTAssertEqualObjects([self wikiLinksIn:body], body);
+}
+
+- (void)testEmptyBracketsAreNotALink
+{
+    NSString *body = @"<p>[[]] e [[ ]]</p>";
+    XCTAssertEqualObjects([self wikiLinksIn:body], body);
+}
+
 @end
