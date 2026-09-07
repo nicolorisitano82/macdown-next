@@ -276,7 +276,14 @@ NSString *MPSelectionWatchScript(void)
     @"if(c&&c.tagName!=='TABLE'&&c.parentElement)"
     @"cell=Array.prototype.indexOf.call(c.parentElement.children,c);}"
     @"while(node&&!node.hasAttribute('data-src'))node=node.parentElement;"
-    @"if(!node)return;"
+    // Nothing above it says where it came from: the words are still worth
+    // reporting, and the editor will look for them in the whole document.
+    @"if(!node){"
+    @"if(done&&!sel.isCollapsed){keep(sel);"
+    @"window.webkit.messageHandlers.macdownSelection.postMessage("
+    @"{begin:0,end:-1,cell:-1,offset:-1,text:sel.toString(),"
+    @"done:true,focus:!!focus,action:action||''});}"
+    @"return;}"
     @"var all=blocks(),i=all.indexOf(node);"
     @"var begin=parseInt(node.getAttribute('data-src'),10);"
     // How much of this block's text comes before the selection. It is what
@@ -287,8 +294,13 @@ NSString *MPSelectionWatchScript(void)
     @"pre.selectNodeContents(node);"
     @"pre.setEnd(r.startContainer,r.startOffset);"
     @"offset=pre.toString().length;}catch(e){offset=-1;}"
-    @"var end=(i>=0&&i+1<all.length)"
-    @"?parseInt(all[i+1].getAttribute('data-src'),10):-1;"
+    // The next block that starts somewhere *else*. A list and its first
+    // item begin at the same character, and a block that ends where it
+    // begins is no window to search in.
+    @"var end=-1;"
+    @"for(var k=i+1;k>0&&k<all.length;k++){"
+    @"var s=parseInt(all[k].getAttribute('data-src'),10);"
+    @"if(s>begin){end=s;break;}}"
     @"if(done&&!sel.isCollapsed)keep(sel);"
     @"window.webkit.messageHandlers.macdownSelection.postMessage("
     @"{begin:begin,end:end,cell:cell,offset:offset,"

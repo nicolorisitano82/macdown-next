@@ -2023,13 +2023,28 @@ parse_list(hoedown_buffer *ob, hoedown_document *doc, uint8_t *data, size_t size
 
 	work = newbuf(doc, BUFFER_BLOCK);
 
+	/* Where the list itself starts, to put back before its own callback:
+	 * the items overwrite it one after another below. */
+	size_t src_list = doc->data.src_begin;
+
 	while (i < size) {
+		/* Each item reports where it starts, as each table row does. A
+		 * list is one block to the parser and a dozen lines to whoever is
+		 * reading it, and a preview that only knows where the list begins
+		 * cannot say which item somebody is looking at. */
+		if (doc->src_depth == 1)
+			doc->data.src_begin = hoedown_src_offset(
+				doc, doc->src_block_norm + i) + 1;
+
 		j = parse_listitem(work, doc, data + i, size - i, &flags);
 		i += j;
 
 		if (!j || (flags & HOEDOWN_LI_END))
 			break;
 	}
+
+	if (doc->src_depth == 1)
+		doc->data.src_begin = src_list;
 
 	if (doc->md.list) {
 		/* Set beside the call, and put back after it: a nested list

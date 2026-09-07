@@ -277,10 +277,15 @@ static void
 rndr_list(hoedown_buffer *ob, const hoedown_buffer *content, hoedown_list_flags flags, const hoedown_renderer_data *data)
 {
 	if (ob->size) hoedown_buffer_putc(ob, '\n');
-	if ((flags & HOEDOWN_LIST_ORDERED) && data && data->list_start > 1)
-		hoedown_buffer_printf(ob, "<ol start=\"%u\">\n", data->list_start);
-	else
-		hoedown_buffer_put(ob, (const uint8_t *)(flags & HOEDOWN_LIST_ORDERED ? "<ol>\n" : "<ul>\n"), 5);
+	if ((flags & HOEDOWN_LIST_ORDERED) && data && data->list_start > 1) {
+		HOEDOWN_BUFPUTSL(ob, "<ol");
+		hoedown_html_put_src(ob, data);
+		hoedown_buffer_printf(ob, " start=\"%u\">\n", data->list_start);
+	} else {
+		hoedown_buffer_put(ob, (const uint8_t *)(flags & HOEDOWN_LIST_ORDERED ? "<ol" : "<ul"), 3);
+		hoedown_html_put_src(ob, data);
+		HOEDOWN_BUFPUTSL(ob, ">\n");
+	}
 	if (content) hoedown_buffer_put(ob, content->data, content->size);
 	hoedown_buffer_put(ob, (const uint8_t *)(flags & HOEDOWN_LIST_ORDERED ? "</ol>\n" : "</ul>\n"), 6);
 }
@@ -288,7 +293,9 @@ rndr_list(hoedown_buffer *ob, const hoedown_buffer *content, hoedown_list_flags 
 static void
 rndr_listitem(hoedown_buffer *ob, const hoedown_buffer *content, hoedown_list_flags flags, const hoedown_renderer_data *data)
 {
-	HOEDOWN_BUFPUTSL(ob, "<li>");
+	HOEDOWN_BUFPUTSL(ob, "<li");
+	hoedown_html_put_src(ob, data);
+	HOEDOWN_BUFPUTSL(ob, ">");
 	if (content) {
 		size_t size = content->size;
 		while (size && content->data[size - 1] == '\n')

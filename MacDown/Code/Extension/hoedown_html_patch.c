@@ -17,6 +17,17 @@
     (opt->flags & HOEDOWN_HTML_BLOCKCODE_INFORMATION)
 #define USE_TASK_LIST(opt) (opt->flags & HOEDOWN_HTML_USE_TASK_LIST)
 
+// Where the block being rendered starts in the source, when the parser knew
+// it. The same attribute the stock renderers write; see hoedown's html.c.
+static void hoedown_patch_put_src(hoedown_buffer *ob,
+                                  const hoedown_renderer_data *data)
+{
+    if (data == NULL || data->src_begin == 0)
+        return;
+    hoedown_buffer_printf(ob, " data-src=\"%lu\"",
+                          (unsigned long)(data->src_begin - 1));
+}
+
 // rndr_blockcode from HEAD. The "language-" prefix in class in needed to make
 // the HTML compatible with Prism.
 void hoedown_patch_render_blockcode(
@@ -56,12 +67,7 @@ void hoedown_patch_render_blockcode(
     }
 
     HOEDOWN_BUFPUTSL(ob, "<div");
-    if (data != NULL && data->src_begin != 0)
-    {
-        // Same attribute the stock renderers emit; see hoedown_renderer_data.
-        hoedown_buffer_printf(ob, " data-src=\"%lu\"",
-                              (unsigned long)(data->src_begin - 1));
-    }
+    hoedown_patch_put_src(ob, data);
     HOEDOWN_BUFPUTSL(ob, "><pre");
     if (state->flags & HOEDOWN_HTML_BLOCKCODE_LINE_NUMBERS)
         HOEDOWN_BUFPUTSL(ob, " class=\"line-numbers\"");
@@ -119,7 +125,9 @@ void hoedown_patch_render_listitem(
         {
             if (strncmp((char *)(text->data + offset), "[ ]", 3) == 0)
             {
-                HOEDOWN_BUFPUTSL(ob, "<li class=\"task-list-item\">");
+                HOEDOWN_BUFPUTSL(ob, "<li class=\"task-list-item\"");
+                hoedown_patch_put_src(ob, data);
+                HOEDOWN_BUFPUTSL(ob, ">");
                 hoedown_buffer_put(ob, text->data, offset);
                 if (USE_XHTML(state))
                     HOEDOWN_BUFPUTSL(ob, "<input type=\"checkbox\" />");
@@ -129,7 +137,9 @@ void hoedown_patch_render_listitem(
             }
             else if (ticked)
             {
-                HOEDOWN_BUFPUTSL(ob, "<li class=\"task-list-item\">");
+                HOEDOWN_BUFPUTSL(ob, "<li class=\"task-list-item\"");
+                hoedown_patch_put_src(ob, data);
+                HOEDOWN_BUFPUTSL(ob, ">");
                 hoedown_buffer_put(ob, text->data, offset);
                 if (USE_XHTML(state))
                     HOEDOWN_BUFPUTSL(ob, "<input type=\"checkbox\" checked />");
@@ -139,13 +149,17 @@ void hoedown_patch_render_listitem(
             }
             else
             {
-                HOEDOWN_BUFPUTSL(ob, "<li>");
+                HOEDOWN_BUFPUTSL(ob, "<li");
+                hoedown_patch_put_src(ob, data);
+                HOEDOWN_BUFPUTSL(ob, ">");
                 offset = 0;
             }
         }
         else
         {
-            HOEDOWN_BUFPUTSL(ob, "<li>");
+            HOEDOWN_BUFPUTSL(ob, "<li");
+            hoedown_patch_put_src(ob, data);
+            HOEDOWN_BUFPUTSL(ob, ">");
             offset = 0;
         }
 		size_t size = text->size;

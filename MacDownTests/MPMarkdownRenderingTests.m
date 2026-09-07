@@ -137,18 +137,33 @@
 /// CommonMark: `)` closes an ordered list marker just as `.` does.
 - (void)testAnOrderedListWithParentheses
 {
-    [self assert:@"1) prima\n2) seconda\n" contains:@"<ol>"];
-    [self assert:@"1) prima\n2) seconda\n" contains:@"<li>prima</li>"];
+    // The tags carry where they came from now, so what is asserted is the
+    // tag and its own attributes rather than the whole of it.
+    [self assert:@"1) prima\n2) seconda\n" contains:@"<ol"];
+    [self assert:@"1) prima\n2) seconda\n" contains:@">prima</li>"];
     // Not in the middle of a sentence, though: `Vedi 1) qui` is prose.
-    [self assert:@"Vedi il punto 1) qui" lacks:@"<ol>"];
+    [self assert:@"Vedi il punto 1) qui" lacks:@"<ol"];
 }
 
 /// CommonMark: a list that starts at five is numbered from five.
 - (void)testAnOrderedListKeepsItsFirstNumber
 {
-    [self assert:@"5. quinta\n6. sesta\n" contains:@"<ol start=\"5\">"];
+    [self assert:@"5. quinta\n6. sesta\n" contains:@"start=\"5\">"];
     // One is the default and says nothing.
-    [self assert:@"1. prima\n2. seconda\n" contains:@"<ol>"];
+    [self assert:@"1. prima\n2. seconda\n" contains:@"<ol"];
+    [self assert:@"1. prima\n2. seconda\n" lacks:@"start="];
+}
+
+/// Every block says where it came from, lists and their items included:
+/// it is what lets a selection in one pane be found in the other.
+- (void)testAListSaysWhereEachItemStarts
+{
+    NSString *html = [self render:@"- primo\n- secondo\n"];
+    XCTAssertTrue([html containsString:@"<ul data-src=\"0\">"], @"%@", html);
+    XCTAssertTrue([html containsString:@"<li data-src=\"0\">primo"],
+                  @"%@", html);
+    XCTAssertTrue([html containsString:@"<li data-src=\"8\">secondo"],
+                  @"%@", html);
 }
 
 /// CommonMark: a backslash at the end of a line is a hard break.

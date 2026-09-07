@@ -21,6 +21,10 @@ static NSString * const kMPPage =
     @"<html><body>"
     @"<p data-src='0'>Questo è un test da cancellare, e un altro test.</p>"
     @"<p data-src='33'>E un secondo paragrafo.</p>"
+    @"<ul data-src='60'>"
+    @"<li data-src='60'>Primo punto</li>"
+    @"<li data-src='74'>Secondo punto</li>"
+    @"</ul>"
     @"</body></html>";
 
 
@@ -384,6 +388,68 @@ static NSString * const kMPPage =
     XCTAssertEqualObjects(body[@"text"], @"test");
     // Deleting is the end of it, and what comes next is typing.
     XCTAssertTrue([body[@"focus"] boolValue]);
+}
+
+
+- (void)testAWordInAListIsReportedWithItsOwnItem
+{
+    // A list used to report nothing at all: neither the <ul> nor the <li>
+    // said where it came from, so the search walked up to the body and
+    // gave up.
+    [self loadPageWithScript];
+
+    XCTestExpectation *done = [self expectationWithDescription:@"selezione"];
+    [self.webView evaluateJavaScript:
+        @"var li = document.querySelectorAll('li')[1];"
+        @"var text = li.firstChild;"
+        @"var range = document.createRange();"
+        @"range.setStart(text, 0);"
+        @"range.setEnd(text, 7);"
+        @"var sel = document.getSelection();"
+        @"sel.removeAllRanges(); sel.addRange(range);"
+        @"li.dispatchEvent(new MouseEvent('mouseup', {bubbles: true}));"
+                   completionHandler:^(id result, NSError *error) {
+        XCTAssertNil(error);
+        [done fulfill];
+    }];
+    [self waitForExpectations:@[done] timeout:kMPPatience];
+
+    NSDictionary *body = [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    XCTAssertEqualObjects(body[@"text"], @"Secondo");
+    // The item's own offset, not the list's, and not nothing.
+    XCTAssertEqualObjects(body[@"begin"], @74);
+    XCTAssertEqualObjects(body[@"offset"], @0);
+}
+
+- (void)testTheWindowSkipsABlockThatStartsWhereThisOneDoes
+{
+    // A list and its first item begin at the same character; the window to
+    // search has to end at the *next* one that starts somewhere else.
+    [self loadPageWithScript];
+
+    XCTestExpectation *done = [self expectationWithDescription:@"selezione"];
+    [self.webView evaluateJavaScript:
+        @"var li = document.querySelectorAll('li')[0];"
+        @"var text = li.firstChild;"
+        @"var range = document.createRange();"
+        @"range.setStart(text, 0);"
+        @"range.setEnd(text, 5);"
+        @"var sel = document.getSelection();"
+        @"sel.removeAllRanges(); sel.addRange(range);"
+        @"li.dispatchEvent(new MouseEvent('mouseup', {bubbles: true}));"
+                   completionHandler:^(id result, NSError *error) {
+        [done fulfill];
+    }];
+    [self waitForExpectations:@[done] timeout:kMPPatience];
+
+    NSDictionary *body = [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    XCTAssertEqualObjects(body[@"begin"], @60);
+    XCTAssertEqualObjects(body[@"end"], @74);
+    XCTAssertEqualObjects(body[@"text"], @"Primo");
 }
 
 
