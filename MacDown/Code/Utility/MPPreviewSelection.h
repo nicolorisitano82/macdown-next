@@ -49,6 +49,20 @@ extern NSRange MPSourceRangeForPreviewText(NSString *source,
                                            NSUInteger renderedOffset);
 
 
+/** What the page would show for that piece of source.
+ *
+ * The other direction: the editor has a selection, and the preview has to
+ * mark the same words. What the reader wrote is `**grassetto**` and what
+ * they are looking at is `grassetto`, so the markers that became formatting
+ * come out — emphasis, code ticks, list bullets, heading hashes, the
+ * address of a link — and what is left is roughly the text on the page.
+ *
+ * Roughly is enough: the page searches for it with the same tolerance for
+ * whitespace and for the punctuation Smartypants changed.
+ */
+extern NSString *MPPreviewTextForSource(NSString *sourceSelection);
+
+
 /** The script the preview runs to report where the reader is.
  *
  * It marks the block the caret is in, tells the document which block a

@@ -211,6 +211,48 @@ NSRange MPSourceRangeForPreviewText(NSString *source, NSString *selected,
 }
 
 
+#pragma mark - The other direction
+
+NSString *MPPreviewTextForSource(NSString *sourceSelection)
+{
+    if (!sourceSelection.length)
+        return @"";
+
+    static NSArray<NSArray<NSString *> *> *rules;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        rules = @[
+            // An image or a link shows its text, not its address.
+            @[@"!?\\[\\[([^\\]|]*)\\|([^\\]]*)\\]\\]", @"$2"],
+            @[@"!?\\[\\[([^\\]]*)\\]\\]", @"$1"],
+            @[@"!?\\[([^\\]]*)\\]\\([^)]*\\)", @"$1"],
+            @[@"!?\\[([^\\]]*)\\]\\[[^\\]]*\\]", @"$1"],
+            // What a line begins with and the page does not show.
+            @[@"(?m)^\\s{0,3}#{1,6}\\s+", @""],
+            @[@"(?m)^\\s{0,3}>\\s?", @""],
+            @[@"(?m)^\\s*(?:[-+*]|\\d{1,9}[.)])\\s+", @""],
+            // The markers that became formatting. The underscore is left
+            // alone: file_name is a name, not an emphasis.
+            @[@"(?<!\\\\)[*~`]", @""],
+            // An escape shows the character it was protecting.
+            @[@"\\\\([\\\\`*_{}\\[\\]()#+.!~-])", @"$1"],
+        ];
+    });
+
+    NSMutableString *text = [sourceSelection mutableCopy];
+    for (NSArray<NSString *> *rule in rules)
+    {
+        NSRegularExpression *regex = [NSRegularExpression
+            regularExpressionWithPattern:rule[0] options:0 error:NULL];
+        [regex replaceMatchesInString:text options:0
+                                range:NSMakeRange(0, text.length)
+                         withTemplate:rule[1]];
+    }
+    return [text stringByTrimmingCharactersInSet:
+        [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+}
+
+
 #pragma mark - What the page reports
 
 /** Keeps the two panes pointing at the same block.
@@ -336,6 +378,62 @@ NSString *MPSelectionWatchScript(void)
     @"CSS.highlights.delete('macdown-lost');"
     @"picked=null;}"
     @"window.MacDownForgetPicked=forget;"
+    // The other direction: the editor has a selection and these are the
+    // words it shows. Found in the block it says, marked the same way, and
+    // answered so the editor knows whether it worked.
+    @"window.MacDownShowPicked=function(text,begin){"
+    @"if(typeof CSS==='undefined'||!CSS.highlights||!text)return false;"
+    @"var host=null,all=blocks();"
+    @"for(var i=0;i<all.length;i++){"
+    @"if(parseInt(all[i].getAttribute('data-src'),10)<=begin)host=all[i];"
+    @"else break;}"
+    @"if(!host)host=document.body;"
+    // How far into the block the selection began, counted in the source.
+    // The page has fewer characters than the source, never more, so this
+    // is a ceiling to measure distance from rather than a position.
+    @"var hint=Math.max(0,begin-parseInt("
+    @"host.getAttribute&&host.getAttribute('data-src')||0,10));"
+    // Every character of the block, and which text node each came from, so
+    // a match can be turned back into a range.
+    @"var walker=document.createTreeWalker(host,NodeFilter.SHOW_TEXT);"
+    @"var nodes=[],starts=[],whole='',n;"
+    @"while((n=walker.nextNode())){"
+    @"nodes.push(n);starts.push(whole.length);whole+=n.data;}"
+    @"if(!whole)return false;"
+    @"var m=null,best=null,closest=Infinity;"
+    @"var re=window.MacDownPattern(text);"
+    @"if(!re)return false;"
+    @"while((m=re.exec(whole))!==null){"
+    @"var d=Math.abs(m.index-(hint||0));"
+    @"if(d<closest){closest=d;best=m;}"
+    @"if(m.index===re.lastIndex)re.lastIndex++;}"
+    @"if(!best)return false;"
+    @"function where(at){"
+    @"for(var j=nodes.length-1;j>=0;j--)"
+    @"if(starts[j]<=at)return [nodes[j],at-starts[j]];"
+    @"return [nodes[0],0];}"
+    @"try{var a=where(best.index),b=where(best.index+best[0].length-1);"
+    @"var range=document.createRange();"
+    @"range.setStart(a[0],a[1]);range.setEnd(b[0],b[1]+1);"
+    @"picked=range;CSS.highlights.delete('macdown-lost');"
+    @"CSS.highlights.set('macdown-picked',new Highlight(range));"
+    @"return true;}catch(e){return false;}};"
+    // The same tolerance the editor's side has: any whitespace for any
+    // other, and what Smartypants changed for what was typed.
+    @"window.MacDownPattern=function(text){"
+    @"var map={'\"':'[\"\u201c\u201d]','\u201c':'[\"\u201c\u201d]',"
+    @"'\u201d':'[\"\u201c\u201d]',\"'\":\"['\u2018\u2019]\","
+    @"'\u2018':\"['\u2018\u2019]\",'\u2019':\"['\u2018\u2019]\","
+    @"'\u2013':'(?:\u2013|--)','\u2014':'(?:\u2014|---|--)',"
+    @"'\u2026':'(?:\u2026|\\\\.\\\\.\\\\.)'};"
+    @"var out='';"
+    @"for(var i=0;i<text.length;i++){"
+    @"var c=text[i];"
+    @"if(/\\s/.test(c)){"
+    @"while(i+1<text.length&&/\\s/.test(text[i+1]))i++;"
+    @"out+='\\\\s+';continue;}"
+    @"out+=map[c]||c.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&');}"
+    @"try{return new RegExp(out,'g');}catch(e){return null;}};"
     // Said by the editor when it could not find those words in the source.
     @"window.MacDownPickedLost=function(){"
     @"if(typeof CSS==='undefined'||!CSS.highlights||!picked)return;"

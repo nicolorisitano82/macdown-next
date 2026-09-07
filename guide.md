@@ -214,7 +214,12 @@ for them. Click a cell in the preview and the caret goes to that cell.
   the preview with a dotted line instead of the filled one. A selection over
   several paragraphs is searched for across all of them, not only the one it
   began in. Switch it
-  off in *Rendering* if the preview should stay a page to read.
+  off in *Rendering* if the preview should stay a page to read. It works **both ways**: select a sentence in the editor
+  and the same words are marked in the page, so you can see which paragraph
+  you are about to change. What you wrote is `**grassetto**` and what the
+  page shows is `grassetto`, so what goes across is the text as the page
+  would show it — the markers that became formatting, the address of a
+  link, the bullet of a list, all taken off first.
 - **A sidebar with the document outline** (⌥⌘S), for moving around a long
   file.
 - **Seven styles** for the rendered page and **fifteen editor themes**, all

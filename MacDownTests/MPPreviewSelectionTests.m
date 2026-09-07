@@ -636,6 +636,114 @@ static NSString * const kMPPage =
 }
 
 
+#pragma mark - The other direction
+
+- (void)testWhatThePageWouldShowForAPieceOfSource
+{
+    // The markers that became formatting come out.
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"questo è **grassetto** qui"),
+                          @"questo è grassetto qui");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"del *corsivo* e `codice`"),
+                          @"del corsivo e codice");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"~~cancellato~~"),
+                          @"cancellato");
+    // A link shows its text, not its address.
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"vedi [la nota](nota.md) qui"),
+                          @"vedi la nota qui");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"vedi [[Verbale|il verbale]]"),
+                          @"vedi il verbale");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"vedi [[Verbale]]"),
+                          @"vedi Verbale");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"![la rete](rete.png)"),
+                          @"la rete");
+    // And what a line begins with.
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"## Un titolo"),
+                          @"Un titolo");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"- primo\n- secondo"),
+                          @"primo\nsecondo");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"1. primo\n2. secondo"),
+                          @"primo\nsecondo");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"> citato"), @"citato");
+}
+
+- (void)testTheUnderscoreIsLeftAlone
+{
+    // file_name is a name, not an emphasis, and the page shows it whole.
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"apri file_name.txt"),
+                          @"apri file_name.txt");
+}
+
+- (void)testAnEscapeShowsWhatItWasProtecting
+{
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"due asterischi \\*qui\\*"),
+                          @"due asterischi *qui*");
+}
+
+- (void)testNothingIsNothing
+{
+    XCTAssertEqualObjects(MPPreviewTextForSource(@""), @"");
+    XCTAssertEqualObjects(MPPreviewTextForSource(@"   \n  "), @"");
+}
+
+- (void)testThePageMarksWhatTheEditorSelected
+{
+    [self loadPageWithScript];
+    XCTAssertFalse([self isPainted:@"macdown-picked"]);
+
+    XCTestExpectation *asked = [self expectationWithDescription:@"chiesto"];
+    __block BOOL found = NO;
+    [self.webView evaluateJavaScript:
+        @"MacDownShowPicked('secondo paragrafo', 33)"
+                   completionHandler:^(id result, NSError *error) {
+        found = [result boolValue];
+        [asked fulfill];
+    }];
+    [self waitForExpectations:@[asked] timeout:kMPPatience];
+    XCTAssertTrue(found);
+    XCTAssertTrue([self isPainted:@"macdown-picked"]);
+}
+
+- (void)testWordsThePageDoesNotShowAreNotMarked
+{
+    [self loadPageWithScript];
+
+    XCTestExpectation *asked = [self expectationWithDescription:@"chiesto"];
+    __block BOOL found = YES;
+    [self.webView evaluateJavaScript:
+        @"MacDownShowPicked('parole che non ci sono', 0)"
+                   completionHandler:^(id result, NSError *error) {
+        found = [result boolValue];
+        [asked fulfill];
+    }];
+    [self waitForExpectations:@[asked] timeout:kMPPatience];
+    XCTAssertFalse(found);
+    XCTAssertFalse([self isPainted:@"macdown-picked"]);
+}
+
+- (void)testTheEditorsSideAlsoMarksTheRightOneOfTwo
+{
+    [self loadPageWithScript];
+
+    // "test" twice in the first paragraph, and an offset near the second:
+    // the mark has to land on that one, not on the first.
+    XCTestExpectation *asked = [self expectationWithDescription:@"chiesto"];
+    __block NSString *answer = nil;
+    [self.webView evaluateJavaScript:
+        @"(function(){"
+        @"if(!MacDownShowPicked('test', 30)) return 'non trovato';"
+        @"var r = CSS.highlights.get('macdown-picked').values().next().value;"
+        @"var shown = document.querySelector('p').firstChild.data;"
+        @"return r.toString() + ' @' + (r.startOffset ==="
+        @" shown.lastIndexOf('test') ? 'seconda' : 'prima');})()"
+                   completionHandler:^(id result, NSError *error) {
+        answer = result;
+        [asked fulfill];
+    }];
+    [self waitForExpectations:@[asked] timeout:kMPPatience];
+    XCTAssertEqualObjects(answer, @"test @seconda");
+}
+
+
 #pragma mark - Across more than one block
 
 - (void)testASelectionOverTwoParagraphsIsFoundWhole
