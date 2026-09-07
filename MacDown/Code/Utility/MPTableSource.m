@@ -552,6 +552,152 @@ static NSString *MPSpecForAlignment(MPTableAlignment alignment, NSUInteger width
     return [self serialiseWithCaretRow:0 column:caretColumn caret:caret];
 }
 
+- (NSString *)textByMovingRow:(NSUInteger)row by:(NSInteger)delta
+                        caret:(NSUInteger *)caret
+{
+    if (row >= self.rows.count || row == self.separatorRow || !delta)
+        return nil;
+    NSInteger target = (NSInteger)row + delta;
+    if (target < 0 || target >= (NSInteger)self.rows.count)
+        return nil;
+    // The header stays the header, and the separator stays under it: a row
+    // cannot be moved across either.
+    if (self.separatorRow != NSNotFound
+            && (target == (NSInteger)self.separatorRow
+                || (row < self.separatorRow) != (target < (NSInteger)self.separatorRow)))
+        return nil;
+
+    NSMutableArray<NSString *> *moving = self.rows[row];
+    [self.rows removeObjectAtIndex:row];
+    [self.rows insertObject:moving atIndex:(NSUInteger)target];
+    return [self serialiseWithCaretRow:(NSUInteger)target column:0
+                                 caret:caret];
+}
+
+
+- (NSString *)textByMovingColumn:(NSUInteger)column by:(NSInteger)delta
+                           caret:(NSUInteger *)caret
+{
+    if (column >= self.columnCount || !delta)
+        return nil;
+    NSInteger target = (NSInteger)column + delta;
+    if (target < 0 || target >= (NSInteger)self.columnCount)
+        return nil;
+
+    for (NSMutableArray<NSString *> *row in self.rows)
+    {
+        while (row.count < self.columnCount)
+            [row addObject:@""];
+        NSString *moving = row[column];
+        [row removeObjectAtIndex:column];
+        [row insertObject:moving atIndex:(NSUInteger)target];
+    }
+    // The alignment belongs to the column and travels with it.
+    while (self.alignments.count < self.columnCount)
+        [self.alignments addObject:@(MPTableAlignmentNone)];
+    NSNumber *alignment = self.alignments[column];
+    [self.alignments removeObjectAtIndex:column];
+    [self.alignments insertObject:alignment atIndex:(NSUInteger)target];
+
+    NSUInteger caretRow = self.separatorRow == NSNotFound ? 0
+        : (self.separatorRow + 1 < self.rows.count ? self.separatorRow + 1 : 0);
+    return [self serialiseWithCaretRow:caretRow column:(NSUInteger)target
+                                 caret:caret];
+}
+
+
+#pragma mark - Handing the table to something else
+
+- (NSArray<NSArray<NSString *> *> *)cells
+{
+    NSMutableArray<NSArray<NSString *> *> *out = [NSMutableArray array];
+    for (NSUInteger r = 0; r < self.rows.count; r++)
+    {
+        if (r == self.separatorRow)
+            continue;               // dashes are not data
+        NSMutableArray<NSString *> *row = [NSMutableArray array];
+        for (NSUInteger c = 0; c < self.columnCount; c++)
+        {
+            NSString *cell = c < self.rows[r].count ? self.rows[r][c] : @"";
+            [row addObject:cell];
+        }
+        [out addObject:row];
+    }
+    return out;
+}
+
+
+/// A field as a delimited file wants it: quoted when it has to be.
+static NSString *MPDelimitedField(NSString *cell, NSString *separator)
+{
+    BOOL quoting = [cell containsString:separator]
+        || [cell containsString:@"\""] || [cell containsString:@"\n"];
+    if (!quoting)
+        return cell;
+    NSString *escaped = [cell stringByReplacingOccurrencesOfString:@"\""
+                                                       withString:@"\"\""];
+    return [NSString stringWithFormat:@"\"%@\"", escaped];
+}
+
+
+- (NSString *)delimitedTextWithSeparator:(NSString *)separator
+{
+    NSMutableArray<NSString *> *lines = [NSMutableArray array];
+    for (NSArray<NSString *> *row in self.cells)
+    {
+        NSMutableArray<NSString *> *fields = [NSMutableArray array];
+        for (NSString *cell in row)
+            [fields addObject:MPDelimitedField(cell, separator)];
+        [lines addObject:[fields componentsJoinedByString:separator]];
+    }
+    return [[lines componentsJoinedByString:@"\n"]
+        stringByAppendingString:@"\n"];
+}
+
+
+/// The five characters a cell must not carry into markup.
+static NSString *MPEscapedForHTML(NSString *cell)
+{
+    NSMutableString *out = [cell mutableCopy];
+    NSArray<NSArray<NSString *> *> *pairs = @[
+        @[@"&", @"&amp;"], @[@"<", @"&lt;"], @[@">", @"&gt;"],
+        @[@"\"", @"&quot;"], @[@"'", @"&#39;"],
+    ];
+    for (NSArray<NSString *> *pair in pairs)
+    {
+        [out replaceOccurrencesOfString:pair[0] withString:pair[1]
+                                options:0 range:NSMakeRange(0, out.length)];
+    }
+    return out;
+}
+
+
+- (NSString *)htmlText
+{
+    NSArray<NSArray<NSString *> *> *cells = self.cells;
+    if (!cells.count)
+        return @"";
+
+    NSMutableString *html = [NSMutableString stringWithString:@"<table>\n"];
+    // The first row is the header when the table has a separator; without
+    // one there is no header to promise.
+    BOOL header = self.separatorRow != NSNotFound;
+    for (NSUInteger r = 0; r < cells.count; r++)
+    {
+        [html appendString:@"  <tr>"];
+        NSString *tag = (header && r == 0) ? @"th" : @"td";
+        for (NSString *cell in cells[r])
+        {
+            [html appendFormat:@"<%@>%@</%@>", tag,
+             MPEscapedForHTML(cell), tag];
+        }
+        [html appendString:@"</tr>\n"];
+    }
+    [html appendString:@"</table>\n"];
+    return html;
+}
+
+
 - (NSString *)textBySettingAlignment:(MPTableAlignment)alignment
                            forColumn:(NSUInteger)column
                                caret:(NSUInteger *)caret

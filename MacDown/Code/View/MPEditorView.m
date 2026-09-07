@@ -783,6 +783,33 @@ NS_INLINE BOOL MPAreRectsEqual(NSRect r1, NSRect r2)
     add(NSLocalizedString(@"Insert Column to the Right", @"Table menu"),
         @selector(insertTableColumnRight:));
 
+    // Moving, which is otherwise retyping two lines and getting one of
+    // them wrong. Only where there is somewhere to move to: the header
+    // stays the header and the separator stays under it.
+    NSUInteger firstBody = table.separatorRow == NSNotFound
+        ? 1 : table.separatorRow + 1;
+    BOOL canMoveUp = !onSeparator && row != NSNotFound && row > firstBody;
+    BOOL canMoveDown = !onSeparator && row != NSNotFound
+        && row >= firstBody && row + 1 < table.rowCount;
+    NSUInteger here = [table columnContainingIndex:index];
+    BOOL canMoveLeft = here != NSNotFound && here > 0;
+    BOOL canMoveRight = here != NSNotFound && here + 1 < table.columnCount;
+
+    if (canMoveUp || canMoveDown || canMoveLeft || canMoveRight)
+        [items addObject:[NSMenuItem separatorItem]];
+    if (canMoveUp)
+        add(NSLocalizedString(@"Move Row Up", @"Table menu"),
+            @selector(moveTableRowUp:));
+    if (canMoveDown)
+        add(NSLocalizedString(@"Move Row Down", @"Table menu"),
+            @selector(moveTableRowDown:));
+    if (canMoveLeft)
+        add(NSLocalizedString(@"Move Column Left", @"Table menu"),
+            @selector(moveTableColumnLeft:));
+    if (canMoveRight)
+        add(NSLocalizedString(@"Move Column Right", @"Table menu"),
+            @selector(moveTableColumnRight:));
+
     [items addObject:[NSMenuItem separatorItem]];
     if (!onSeparator && table.rowCount > 2)
         add(NSLocalizedString(@"Delete Row", @"Table menu"),
@@ -815,6 +842,27 @@ NS_INLINE BOOL MPAreRectsEqual(NSRect r1, NSRect r2)
     align.submenu = alignments;
     [items addObject:[NSMenuItem separatorItem]];
     [items addObject:align];
+
+    // And the table handed to something that is not Markdown.
+    NSMenuItem *copy = [[NSMenuItem alloc]
+        initWithTitle:NSLocalizedString(@"Copy Table As", @"Table menu")
+               action:NULL keyEquivalent:@""];
+    NSMenu *shapes = [[NSMenu alloc] init];
+    NSArray<NSString *> *kinds = @[
+        NSLocalizedString(@"Tab-separated", @"Table menu: copy as"),
+        NSLocalizedString(@"Comma-separated", @"Table menu: copy as"),
+        NSLocalizedString(@"HTML", @"Table menu: copy as"),
+    ];
+    for (NSUInteger i = 0; i < kinds.count; i++)
+    {
+        NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:kinds[i]
+            action:@selector(copyTableAs:) keyEquivalent:@""];
+        item.target = self;
+        item.tag = (NSInteger)i;
+        [shapes addItem:item];
+    }
+    copy.submenu = shapes;
+    [items addObject:copy];
     [items addObject:[NSMenuItem separatorItem]];
 
     for (NSUInteger i = 0; i < items.count; i++)
@@ -966,6 +1014,67 @@ NS_INLINE BOOL MPAreRectsEqual(NSRect r1, NSRect r2)
                                      NSUInteger column, NSUInteger *caret) {
         return [t textByDeletingColumn:column caret:caret];
     }];
+}
+
+- (IBAction)moveTableRowUp:(id)sender
+{
+    [self applyTableEdit:^NSString *(MPTableSource *t, NSUInteger row,
+                                     NSUInteger column, NSUInteger *caret) {
+        return [t textByMovingRow:row by:-1 caret:caret];
+    }];
+}
+
+- (IBAction)moveTableRowDown:(id)sender
+{
+    [self applyTableEdit:^NSString *(MPTableSource *t, NSUInteger row,
+                                     NSUInteger column, NSUInteger *caret) {
+        return [t textByMovingRow:row by:1 caret:caret];
+    }];
+}
+
+- (IBAction)moveTableColumnLeft:(id)sender
+{
+    [self applyTableEdit:^NSString *(MPTableSource *t, NSUInteger row,
+                                     NSUInteger column, NSUInteger *caret) {
+        return [t textByMovingColumn:column by:-1 caret:caret];
+    }];
+}
+
+- (IBAction)moveTableColumnRight:(id)sender
+{
+    [self applyTableEdit:^NSString *(MPTableSource *t, NSUInteger row,
+                                     NSUInteger column, NSUInteger *caret) {
+        return [t textByMovingColumn:column by:1 caret:caret];
+    }];
+}
+
+
+/** The table on the clipboard in a shape something else can read.
+ *
+ * The tag says which: a spreadsheet wants tabs, a form wants commas, a page
+ * wants markup. Nothing is changed in the document — this is the one table
+ * command that only reads.
+ */
+- (IBAction)copyTableAs:(id)sender
+{
+    MPTableSource *table = [MPTableSource
+        tableCoveringIndex:self.tableActionIndex inText:self.string];
+    if (!table)
+        return;
+
+    NSString *text = nil;
+    switch ([(NSMenuItem *)sender tag])
+    {
+        case 1:  text = [table delimitedTextWithSeparator:@","]; break;
+        case 2:  text = [table htmlText]; break;
+        default: text = [table delimitedTextWithSeparator:@"\t"]; break;
+    }
+    if (!text.length)
+        return;
+
+    NSPasteboard *board = [NSPasteboard generalPasteboard];
+    [board clearContents];
+    [board setString:text forType:NSPasteboardTypeString];
 }
 
 - (IBAction)alignTableColumn:(id)sender

@@ -122,6 +122,13 @@ character.
 Every one of these can be switched off in **Preferences › Rendering ›
 Writing**.
 
+* **Tables are edited by command**: rows and columns inserted and deleted,
+  moved up, down, left and right, a column's alignment set from a submenu,
+  and a mangled `|---|` row repaired — an em dash in it stops the block
+  being a table at all and looks identical to one that works. **Copy Table
+  As** hands it to a spreadsheet, a form or a page: tab-separated,
+  comma-separated or HTML.
+
 ### Collecting
 
 * **Save a web page as Markdown**, beside the document: the address and the

@@ -123,9 +123,19 @@ the character. Everything in this section can be switched off in
 ### Tables
 
 Tables are **edited by command, not by hand**: right-click one for rows and
-columns, a column's alignment, or a repair of its dashes row. The editor
-shows the source; the columns are drawn in the preview, which has the room
-for them. Click a cell in the preview and the caret goes to that cell.
+columns, for moving a row up or down and a column left or right, for a
+column's alignment, or for a repair of its dashes row. Moving is offered
+only where there is somewhere to move to — the header stays the header and
+the separator stays under it — and a column takes its alignment with it.
+
+**Copy Table As** hands the whole thing to something that is not Markdown:
+tab-separated for a spreadsheet, comma-separated for a form, or HTML for a
+page, with the header as `<th>` and the fields quoted or escaped as each
+format requires. It is the one table command that only reads.
+
+The editor shows the source; the columns are drawn in the preview, which has
+the room for them. Click a cell in the preview and the caret goes to that
+cell.
 
 ### Closer to CommonMark and GitHub
 

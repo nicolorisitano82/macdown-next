@@ -500,3 +500,13 @@
 "This Textpack holds no text" = "Questo Textpack non contiene testo";
 "This is not a Textpack: the archive cannot be read" = "Questo non è un Textpack: l'archivio non si riesce a leggere";
 "“%@” could not be opened" = "«%@» non si è potuto aprire";
+
+/* Altre voci del menù delle tabelle */
+"Move Row Up" = "Sposta la riga in alto";
+"Move Row Down" = "Sposta la riga in basso";
+"Move Column Left" = "Sposta la colonna a sinistra";
+"Move Column Right" = "Sposta la colonna a destra";
+"Copy Table As" = "Copia la tabella come";
+"Tab-separated" = "Testo separato da tabulazioni";
+"Comma-separated" = "Testo separato da virgole";
+"HTML" = "HTML";

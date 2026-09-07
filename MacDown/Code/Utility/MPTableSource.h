@@ -100,6 +100,31 @@ typedef NS_ENUM(NSUInteger, MPTableAlignment) {
                            forColumn:(NSUInteger)column
                                caret:(NSUInteger *)caret;
 
+/** Moves a row up or down, or a column left or right.
+ *
+ * `delta` is -1 or 1; anything that would step over the header, over the
+ * separator row or out of the table answers nil, and nothing is written.
+ * Reordering a table by hand is retyping two lines and getting one of them
+ * wrong, which is exactly the kind of work an editor should do.
+ */
+- (NSString *)textByMovingRow:(NSUInteger)row by:(NSInteger)delta
+                        caret:(NSUInteger *)caret;
+- (NSString *)textByMovingColumn:(NSUInteger)column by:(NSInteger)delta
+                           caret:(NSUInteger *)caret;
+
+/** The table's cells, header first and the separator row left out.
+ *
+ * For handing the thing to something that is not Markdown — a spreadsheet,
+ * a message, a page.
+ */
+@property (readonly, nonatomic) NSArray<NSArray<NSString *> *> *cells;
+
+/// The same cells with `separator` between them and a newline between rows.
+- (NSString *)delimitedTextWithSeparator:(NSString *)separator;
+
+/// The same cells as an HTML table, header row included.
+- (NSString *)htmlText;
+
 /// Gives a table that has none the separator row that makes it one.
 - (NSString *)textByAddingSeparatorRowWithCaret:(NSUInteger *)caret;
 

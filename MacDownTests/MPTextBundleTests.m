@@ -92,14 +92,44 @@
         @"![a](assets/rete.png)\n\n![ancora](assets/rete.png)");
 }
 
-- (void)testANameWithSpacesIsEncodedInTheLink
+- (void)testANameWithSpacesLosesThem
 {
+    // Measured with Bear: a %20 in the path is a picture that does not
+    // appear. The way to be found is to have nothing to decode.
     [self writePicture:@"foto di prova.png"];
     NSArray<MPTextBundleAsset *> *assets = nil;
     NSString *out = MPTextBundleMarkdown(@"![f](foto%20di%20prova.png)",
                                          self.document, &assets);
-    XCTAssertEqualObjects(out, @"![f](assets/foto%20di%20prova.png)");
-    XCTAssertEqualObjects(assets[0].name, @"foto di prova.png");
+    XCTAssertEqualObjects(out, @"![f](assets/foto-di-prova.png)");
+    XCTAssertEqualObjects(assets[0].name, @"foto-di-prova.png");
+    XCTAssertEqualObjects(assets[0].fileURL.lastPathComponent,
+                          @"foto di prova.png");
+}
+
+- (void)testANameKeepsNothingThatWouldNeedEncoding
+{
+    for (NSString *given in @[@"Città e più.png", @"foto (2).png",
+                              @"schermata 2026-09-02 alle 12.09.57.png",
+                              @"già+così&via.png"])
+    {
+        [self writePicture:given];
+        NSArray<MPTextBundleAsset *> *assets = nil;
+        NSCharacterSet *allowed = [NSCharacterSet URLPathAllowedCharacterSet];
+        NSString *written = [given
+            stringByAddingPercentEncodingWithAllowedCharacters:allowed];
+        NSString *markdown = [NSString stringWithFormat:@"![x](%@)", written];
+        NSString *out = MPTextBundleMarkdown(markdown, self.document,
+                                             &assets);
+        XCTAssertEqual(assets.count, 1u, @"%@", given);
+
+        NSString *name = assets[0].name;
+        NSString *encoded = [name
+            stringByAddingPercentEncodingWithAllowedCharacters:allowed];
+        // Nothing left that a reader would have to decode.
+        XCTAssertEqualObjects(name, encoded, @"%@", given);
+        NSString *wanted = [NSString stringWithFormat:@"assets/%@", name];
+        XCTAssertTrue([out containsString:wanted], @"%@", out);
+    }
 }
 
 - (void)testATitleAfterTheDestinationSurvives
@@ -115,7 +145,7 @@
     [self writePicture:@"foto di prova.png"];
     NSString *out = MPTextBundleMarkdown(@"![f](<foto di prova.png>)",
                                          self.document, NULL);
-    XCTAssertEqualObjects(out, @"![f](<assets/foto%20di%20prova.png>)");
+    XCTAssertEqualObjects(out, @"![f](<assets/foto-di-prova.png>)");
 }
 
 - (void)testAReferenceDefinitionIsRewrittenToo

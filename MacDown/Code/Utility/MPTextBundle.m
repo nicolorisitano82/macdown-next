@@ -30,6 +30,64 @@ static NSSet<NSString *> *MPPictureExtensions(void)
 }
 
 
+/** What to call a picture inside `assets/`.
+ *
+ * Plain, and nothing that has to be percent-encoded in the link: measured
+ * with Bear, a `%20` in the path is a picture that does not appear. Other
+ * readers of the format do the same naive lookup, so the way to be found is
+ * to have nothing to decode — spaces become hyphens, accents lose them, and
+ * anything else that is not a letter, a digit, a dot, a hyphen or an
+ * underscore goes the same way.
+ */
+static NSString *MPAssetName(NSString *original)
+{
+    NSString *name = [original stringByRemovingPercentEncoding] ?: original;
+    NSString *stem = name.stringByDeletingPathExtension;
+    NSString *extension = name.pathExtension;
+
+    NSString *plain = [stem stringByApplyingTransform:NSStringTransformToLatin
+                                              reverse:NO] ?: stem;
+    plain = [plain stringByApplyingTransform:
+        NSStringTransformStripDiacritics reverse:NO] ?: plain;
+
+    NSMutableString *clean = [NSMutableString string];
+    NSCharacterSet *keep = [NSCharacterSet
+        characterSetWithCharactersInString:
+            @"abcdefghijklmnopqrstuvwxyz"
+            @"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"];
+    BOOL lastWasDash = NO;
+    for (NSUInteger i = 0; i < plain.length; i++)
+    {
+        unichar c = [plain characterAtIndex:i];
+        if ([keep characterIsMember:c])
+        {
+            [clean appendFormat:@"%C", c];
+            lastWasDash = NO;
+            continue;
+        }
+        if (!lastWasDash && clean.length)
+        {
+            [clean appendString:@"-"];
+            lastWasDash = YES;
+        }
+    }
+    while ([clean hasSuffix:@"-"])
+        [clean deleteCharactersInRange:NSMakeRange(clean.length - 1, 1)];
+    if (!clean.length)
+        [clean setString:@"immagine"];
+
+    NSString *safeExtension = extension.length
+        ? [extension stringByTrimmingCharactersInSet:
+               [[NSCharacterSet characterSetWithCharactersInString:
+                   @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                   @"0123456789"] invertedSet]]
+        : @"";
+    return safeExtension.length
+        ? [clean stringByAppendingPathExtension:safeExtension]
+        : [clean copy];
+}
+
+
 @interface MPTextBundleAsset ()
 @property (copy, nonatomic) NSURL *fileURL;
 @property (copy, nonatomic) NSString *name;
@@ -52,8 +110,11 @@ static NSArray<NSTextCheckingResult *> *MPImageDestinations(NSString *markdown)
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         regex = [NSRegularExpression regularExpressionWithPattern:
-            // ![alt](destination "title")   destination may be in <>
-            @"!\\[[^\\]]*\\]\\(\\s*(?:<([^>]*)>|([^\\s\\)]+))"
+            // ![alt](destination "title")   destination may be in <>,
+            // and may have balanced parentheses in it: foto (2).png is a
+            // name macOS and Windows both produce.
+            @"!\\[[^\\]]*\\]\\(\\s*(?:<([^>]*)>"
+            @"|((?:[^\\s()]|\\([^\\s()]*\\))+))"
             @"(?:\\s+\"[^\"]*\")?\\s*\\)"
             // [label]: destination "title"
             @"|^[ \\t]{0,3}\\[[^\\]]+\\]:[ \\t]*(?:<([^>]*)>|(\\S+))"
@@ -189,7 +250,7 @@ NSString *MPTextBundleMarkdown(
         MPTextBundleAsset *asset = byPath[file.path];
         if (!asset)
         {
-            NSString *name = file.lastPathComponent;
+            NSString *name = MPAssetName(file.lastPathComponent);
             NSString *stem = name.stringByDeletingPathExtension;
             NSString *extension = name.pathExtension;
             NSUInteger attempt = 2;
