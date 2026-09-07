@@ -18,8 +18,41 @@ static const NSUInteger kMPSpanSlack = 40;
 static const NSUInteger kMPSelectionAtLeast = 2;
 
 
+/** What a character in the rendered page can have been in the source.
+ *
+ * The page is not what was typed. Smartypants turns a straight quote into a
+ * curly one and two hyphens into a dash, and the renderer writes `&amp;`
+ * for an ampersand; a reader selecting `l’editor` has `l\'editor` in front
+ * of them in the editor. Each of those is one character in the page and
+ * something else in the source, so the pattern accepts both.
+ */
+static NSString *MPPatternForCharacter(NSString *character)
+{
+    static NSDictionary<NSString *, NSString *> *alternatives;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        alternatives = @{
+            @"\u201c": @"[\"\u201c\u201d]", @"\u201d": @"[\"\u201c\u201d]",
+            @"\"": @"[\"\u201c\u201d]",
+            @"\u2018": @"['\u2018\u2019]", @"\u2019": @"['\u2018\u2019]",
+            @"'": @"['\u2018\u2019]",
+            @"\u2013": @"(?:\u2013|--)",
+            @"\u2014": @"(?:\u2014|---|--)",
+            @"\u2026": @"(?:\u2026|\\.\\.\\.)",
+            @"&": @"(?:&|&amp;)",
+            @"<": @"(?:<|&lt;)",
+            @">": @"(?:>|&gt;)",
+        };
+    });
+    NSString *alternative = alternatives[character];
+    return alternative ?: [NSRegularExpression
+        escapedPatternForString:character];
+}
+
+
 /// The selection as a pattern: every run of whitespace matches any other,
-/// everything else matches itself.
+/// everything else matches itself or whatever it was before the renderer
+/// got to it.
 static NSRegularExpression *MPPatternForText(NSString *text)
 {
     NSMutableString *pattern = [NSMutableString string];
@@ -35,9 +68,14 @@ static NSRegularExpression *MPPatternForText(NSString *text)
             [pattern appendString:@"\\s+"];
             continue;
         }
-        if ([scanner scanUpToCharactersFromSet:spaces intoString:&run])
-            [pattern appendString:
-                [NSRegularExpression escapedPatternForString:run]];
+        if (![scanner scanUpToCharactersFromSet:spaces intoString:&run])
+            continue;
+        [run enumerateSubstringsInRange:NSMakeRange(0, run.length)
+                                options:NSStringEnumerationByComposedCharacterSequences
+                             usingBlock:^(NSString *character, NSRange r,
+                                          NSRange e, BOOL *stop) {
+            [pattern appendString:MPPatternForCharacter(character)];
+        }];
     }
     if (!pattern.length)
         return nil;
@@ -46,16 +84,49 @@ static NSRegularExpression *MPPatternForText(NSString *text)
 }
 
 
-/// The first match of that pattern inside `range`, or a not-found range.
-static NSRange MPFirstMatch(NSRegularExpression *regex, NSString *source,
-                            NSRange range)
+/** The match of that pattern inside `range` that the reader meant.
+ *
+ * With no idea where they were, the first one; with an idea, the one
+ * nearest it. A paragraph that says "test" three times is the reason this
+ * takes an argument at all.
+ */
+static NSRange MPMatchNear(NSRegularExpression *regex, NSString *source,
+                           NSRange range, NSUInteger wanted)
 {
     if (!regex || range.location == NSNotFound
             || NSMaxRange(range) > source.length)
         return NSMakeRange(NSNotFound, 0);
-    NSTextCheckingResult *match = [regex firstMatchInString:source options:0
-                                                      range:range];
-    return match ? match.range : NSMakeRange(NSNotFound, 0);
+
+    __block NSRange best = NSMakeRange(NSNotFound, 0);
+    __block NSUInteger closest = NSUIntegerMax;
+    [regex enumerateMatchesInString:source options:0 range:range
+                         usingBlock:^(NSTextCheckingResult *match,
+                                      NSMatchingFlags flags, BOOL *stop) {
+        if (!match)
+            return;
+        if (wanted == NSNotFound)
+        {
+            best = match.range;
+            *stop = YES;
+            return;
+        }
+        NSUInteger distance = match.range.location > wanted
+            ? match.range.location - wanted : wanted - match.range.location;
+        if (distance < closest)
+        {
+            closest = distance;
+            best = match.range;
+        }
+    }];
+    return best;
+}
+
+
+/// The first match of that pattern inside `range`, or a not-found range.
+static NSRange MPFirstMatch(NSRegularExpression *regex, NSString *source,
+                            NSRange range)
+{
+    return MPMatchNear(regex, source, range, NSNotFound);
 }
 
 
@@ -78,7 +149,7 @@ static NSArray<NSString *> *MPEdgeWords(NSString *text)
 
 
 NSRange MPSourceRangeForPreviewText(NSString *source, NSString *selected,
-                                    NSRange block)
+                                    NSRange block, NSUInteger renderedOffset)
 {
     NSRange nowhere = NSMakeRange(NSNotFound, 0);
     if (!source.length || !selected.length)
@@ -97,15 +168,22 @@ NSRange MPSourceRangeForPreviewText(NSString *source, NSString *selected,
     else if (NSMaxRange(within) > source.length)
         within.length = source.length - within.location;
 
+    // Where in the source the reader probably was: the block's own start
+    // plus what the page counted before the selection. The source has more
+    // characters than the page shows — markup — never fewer, so this is a
+    // floor to measure distance from, not a guess at the answer.
+    NSUInteger wanted = renderedOffset == NSNotFound
+        ? NSNotFound : within.location + renderedOffset;
+
     NSRegularExpression *regex = MPPatternForText(text);
 
-    // 1. Inside the block it came from.
-    NSRange found = MPFirstMatch(regex, source, within);
+    // 1. Inside the block it came from, nearest to where they were.
+    NSRange found = MPMatchNear(regex, source, within, wanted);
     if (found.location != NSNotFound)
         return found;
 
     // 2. Anywhere, for a block whose offset has moved.
-    found = MPFirstMatch(regex, source, NSMakeRange(0, source.length));
+    found = MPMatchNear(regex, source, NSMakeRange(0, source.length), wanted);
     if (found.location != NSNotFound)
         return found;
 
@@ -194,11 +272,19 @@ NSString *MPSelectionWatchScript(void)
     @"if(!node)return;"
     @"var all=blocks(),i=all.indexOf(node);"
     @"var begin=parseInt(node.getAttribute('data-src'),10);"
+    // How much of this block's text comes before the selection. It is what
+    // tells the second "test" of a paragraph from the first, and it is
+    // measured on the page because only the page knows what it shows.
+    @"var offset=-1;"
+    @"try{var r=sel.getRangeAt(0);var pre=document.createRange();"
+    @"pre.selectNodeContents(node);"
+    @"pre.setEnd(r.startContainer,r.startOffset);"
+    @"offset=pre.toString().length;}catch(e){offset=-1;}"
     @"var end=(i>=0&&i+1<all.length)"
     @"?parseInt(all[i+1].getAttribute('data-src'),10):-1;"
     @"window.webkit.messageHandlers.macdownSelection.postMessage("
-    @"{begin:begin,end:end,cell:cell,text:done?sel.toString():'',"
-    @"done:!!done});}"
+    @"{begin:begin,end:end,cell:cell,offset:offset,"
+    @"text:done?sel.toString():'',done:!!done});}"
     @"var pending=false;"
     // setTimeout rather than requestAnimationFrame: a frame callback only
     // arrives while the page is being drawn, and a preview whose pane is

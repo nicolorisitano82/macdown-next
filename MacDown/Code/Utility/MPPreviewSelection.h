@@ -21,6 +21,12 @@
 
 /** Where `selected` sits in `source`, looked for inside `block` first.
  *
+ * `renderedOffset` is how many characters of the block's *rendered* text
+ * come before the selection, or `NSNotFound` when the page could not say.
+ * It is what tells the second "test" of a paragraph from the first: the
+ * source has more characters than the page shows, never fewer, so the
+ * occurrence nearest that point is the one the reader picked.
+ *
  * Three attempts, in this order, because each is right about a different
  * kind of selection:
  *
@@ -39,7 +45,8 @@
  */
 extern NSRange MPSourceRangeForPreviewText(NSString *source,
                                            NSString *selected,
-                                           NSRange block);
+                                           NSRange block,
+                                           NSUInteger renderedOffset);
 
 
 /** The script the preview runs to report where the reader is.

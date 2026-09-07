@@ -19,7 +19,7 @@ static const NSTimeInterval kMPPatience = 5.0;
 /// offset the renderer would have given it.
 static NSString * const kMPPage =
     @"<html><body>"
-    @"<p data-src='0'>Questo è un test da cancellare.</p>"
+    @"<p data-src='0'>Questo è un test da cancellare, e un altro test.</p>"
     @"<p data-src='33'>E un secondo paragrafo.</p>"
     @"</body></html>";
 
@@ -110,15 +110,26 @@ static NSString * const kMPPage =
 /// then lets go of the mouse.
 - (void)selectWordAndRelease:(BOOL)release
 {
-    NSString *script =
+    [self selectOccurrence:1 release:release];
+}
+
+/// Selects the first or the second "test" of the first paragraph, the way a
+/// reader would, and then lets go of the mouse.
+- (void)selectOccurrence:(NSUInteger)which release:(BOOL)release
+{
+    NSString *script = [NSString stringWithFormat:
         @"var p = document.querySelector('p[data-src=\"0\"]');"
         @"var text = p.firstChild;"
         @"var start = text.data.indexOf('test');"
+        @"for (var n = 1; n < %lu; n++)"
+        @"start = text.data.indexOf('test', start + 1);",
+        (unsigned long)which];
+    script = [script stringByAppendingString:
         @"var range = document.createRange();"
         @"range.setStart(text, start);"
         @"range.setEnd(text, start + 4);"
         @"var sel = document.getSelection();"
-        @"sel.removeAllRanges(); sel.addRange(range);";
+        @"sel.removeAllRanges(); sel.addRange(range);"];
     if (release)
     {
         script = [script stringByAppendingString:
@@ -185,8 +196,36 @@ static NSString * const kMPPage =
     NSString *source = @"Questo è un test da cancellare.\n\nE un secondo.";
     NSRange block = NSMakeRange(0, 31);
     NSRange range = MPSourceRangeForPreviewText(source, body[@"text"],
-                                                block);
+                                                block, NSNotFound);
     XCTAssertEqualObjects([source substringWithRange:range], @"test");
+}
+
+- (void)testThePageSaysWhichOccurrenceWasSelected
+{
+    [self loadPageWithScript];
+    [self selectOccurrence:2 release:YES];
+
+    NSDictionary *body = [self waitForMessageWhere:^BOOL (NSDictionary *b) {
+        return [b[@"done"] boolValue];
+    }];
+    XCTAssertEqualObjects(body[@"text"], @"test");
+
+    // The rendered offset of the *second* "test", counted in the page's own
+    // text — which is what tells it from the first.
+    NSString *rendered = @"Questo è un test da cancellare, e un altro test.";
+    NSUInteger second = [rendered rangeOfString:@"test"
+        options:NSBackwardsSearch].location;
+    XCTAssertEqual((NSUInteger)[body[@"offset"] integerValue], second);
+
+    // And with that offset the right one is placed in a source that says
+    // "test" twice.
+    NSString *source = @"Questo è un **test** da cancellare, e un altro "
+        @"*test*.";
+    NSRange range = MPSourceRangeForPreviewText(source, body[@"text"],
+        NSMakeRange(0, source.length),
+        (NSUInteger)[body[@"offset"] integerValue]);
+    XCTAssertEqual(range.location, [source rangeOfString:@"test"
+        options:NSBackwardsSearch].location);
 }
 
 /// The whole source as the search window, for the cases where the block
@@ -194,7 +233,8 @@ static NSString * const kMPPage =
 - (NSRange)rangeOf:(NSString *)selected in:(NSString *)source
 {
     return MPSourceRangeForPreviewText(source, selected,
-                                       NSMakeRange(0, source.length));
+                                       NSMakeRange(0, source.length),
+                                       NSNotFound);
 }
 
 
@@ -267,7 +307,8 @@ static NSString * const kMPPage =
     NSString *source = @"test in cima.\n\nAltro.\n\ntest in fondo.\n";
     NSRange block = [source rangeOfString:@"test in fondo"];
     block.length = source.length - block.location;
-    NSRange range = MPSourceRangeForPreviewText(source, @"test", block);
+    NSRange range = MPSourceRangeForPreviewText(source, @"test", block,
+                                                NSNotFound);
     XCTAssertEqual(range.location,
                    [source rangeOfString:@"test in fondo"].location);
 }
@@ -278,7 +319,8 @@ static NSString * const kMPPage =
     // offsets are stale, and the text is still in the document.
     NSString *source = @"Aggiunto dopo.\n\nQuesto è il testo.\n";
     NSRange stale = NSMakeRange(source.length - 3, 3);
-    NSRange range = MPSourceRangeForPreviewText(source, @"il testo", stale);
+    NSRange range = MPSourceRangeForPreviewText(source, @"il testo", stale,
+                                                NSNotFound);
     XCTAssertEqualObjects([source substringWithRange:range], @"il testo");
 }
 
@@ -286,8 +328,119 @@ static NSString * const kMPPage =
 {
     NSString *source = @"Poche parole.";
     NSRange range = MPSourceRangeForPreviewText(source, @"parole",
-                                                NSMakeRange(9000, 40));
+                                                NSMakeRange(9000, 40),
+                                                NSNotFound);
     XCTAssertEqualObjects([source substringWithRange:range], @"parole");
+}
+
+
+#pragma mark - Which occurrence of the same words
+
+/// Where the reader was, counted in the *rendered* text of the block.
+- (NSRange)rangeOf:(NSString *)selected in:(NSString *)source
+             after:(NSUInteger)renderedOffset
+{
+    return MPSourceRangeForPreviewText(source, selected,
+                                       NSMakeRange(0, source.length),
+                                       renderedOffset);
+}
+
+- (void)testTheSecondTestIsTheSecondTest
+{
+    NSString *source = @"Un test qui, e un altro test più in là, e basta.";
+    NSUInteger first = [source rangeOfString:@"test"].location;
+    NSUInteger second = [source rangeOfString:@"test"
+        options:NSBackwardsSearch].location;
+    XCTAssertNotEqual(first, second);
+
+    // Senza sapere dove fosse il lettore, la prima.
+    XCTAssertEqual([self rangeOf:@"test" in:source].location, first);
+    // Sapendolo, quella vicina.
+    XCTAssertEqual([self rangeOf:@"test" in:source after:3].location, first);
+    XCTAssertEqual([self rangeOf:@"test" in:source
+                           after:second].location, second);
+}
+
+- (void)testThePointerIsAFloorAndNotAnAnswer
+{
+    // The source has markup the page does not show, so the same words sit
+    // further along in the source than the page counted. The nearest match
+    // is still the right one.
+    NSString *source = @"**test** in cima, e poi *test* in fondo.";
+    NSUInteger second = [source rangeOfString:@"test"
+        options:NSBackwardsSearch].location;
+    XCTAssertEqual([self rangeOf:@"test" in:source after:20].location,
+                   second);
+}
+
+- (void)testTheOffsetCountsInsideTheBlockAndNotTheDocument
+{
+    NSString *source = @"Prima riga.\n\ntest qui e test là.\n";
+    NSRange block = [source rangeOfString:@"test qui e test là."];
+    block.length = source.length - block.location;
+    NSUInteger inBlock = [@"test qui e " length];
+    NSRange range = MPSourceRangeForPreviewText(source, @"test", block,
+                                                inBlock);
+    XCTAssertEqual(range.location,
+                   [source rangeOfString:@"test là"].location);
+}
+
+
+#pragma mark - What the renderer changed on the way out
+
+- (void)testCurlyQuotesFindTheStraightOnes
+{
+    // Smartypants shows “così”; the writer typed "così".
+    NSString *source = @"Dice \"così\" e poi basta.";
+    NSRange range = [self rangeOf:@"“così” e poi" in:source];
+    XCTAssertEqualObjects([source substringWithRange:range],
+                          @"\"così\" e poi");
+}
+
+- (void)testACurlyApostropheFindsTheTypedOne
+{
+    NSString *source = @"Con l'editor aperto.";
+    NSRange range = [self rangeOf:@"l’editor" in:source];
+    XCTAssertEqualObjects([source substringWithRange:range], @"l'editor");
+}
+
+- (void)testADashFindsTheHyphens
+{
+    NSString *source = @"Le pagine 10--12 sono da rifare.";
+    NSRange range = [self rangeOf:@"10–12 sono" in:source];
+    XCTAssertEqualObjects([source substringWithRange:range],
+                          @"10--12 sono");
+
+    NSString *lungo = @"Un inciso --- messo lì --- che rompe.";
+    XCTAssertEqualObjects([lungo substringWithRange:
+        [self rangeOf:@"inciso — messo" in:lungo]], @"inciso --- messo");
+}
+
+- (void)testAnEllipsisFindsTheThreeDots
+{
+    NSString *source = @"Aspetta... e poi vai.";
+    NSRange range = [self rangeOf:@"Aspetta… e poi" in:source];
+    XCTAssertEqualObjects([source substringWithRange:range],
+                          @"Aspetta... e poi");
+}
+
+- (void)testAnEntityFindsWhatItStandsFor
+{
+    NSString *source = @"Tizio &amp; Caio, soci.";
+    NSRange range = [self rangeOf:@"Tizio & Caio" in:source];
+    XCTAssertEqualObjects([source substringWithRange:range],
+                          @"Tizio &amp; Caio");
+}
+
+- (void)testWhatIsAlreadyStraightStillMatches
+{
+    // The reader may have Smartypants off, and then the page shows exactly
+    // what the source says.
+    NSString *source = @"Dice \"così\" e l'altro \"cosà\".";
+    XCTAssertEqualObjects([source substringWithRange:
+        [self rangeOf:@"\"cosà\"" in:source]], @"\"cosà\"");
+    XCTAssertEqualObjects([source substringWithRange:
+        [self rangeOf:@"l'altro" in:source]], @"l'altro");
 }
 
 

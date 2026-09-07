@@ -195,10 +195,14 @@ for them. Click a cell in the preview and the caret goes to that cell.
   out of the rendered page, and when you let go of the mouse the same words
   are selected in the source with the focus there: delete removes them,
   typing replaces them. The words are looked for inside the block they came
-  from, so the third "test" of a document is the third one; a selection that
+  from — and *which* "test" of that paragraph, since the page says how much
+  of its own text came before the selection; a selection that
   crosses an emphasis takes the asterisks with it, since that is what the
-  source says; and a selection that cannot be placed with certainty leaves
-  the editor alone rather than selecting nearly the right thing. Switch it
+  source says; and what the renderer changed on the way out is undone on the
+  way back — `“così”` finds `"così"`, `l’editor` finds `l'editor`, `10–12`
+  finds `10--12`, `&` finds `&amp;`. A selection that cannot be placed with
+  certainty leaves the editor alone rather than selecting nearly the right
+  thing. Switch it
   off in *Rendering* if the preview should stay a page to read.
 - **A sidebar with the document outline** (⌥⌘S), for moving around a long
   file.

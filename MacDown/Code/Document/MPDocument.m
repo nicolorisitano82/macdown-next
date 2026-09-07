@@ -2155,8 +2155,12 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
                 && selected.length
                 && self.preferences.previewSelectionSelectsSource)
         {
-            [self selectInEditor:selected fromBlock:NSMakeRange(begin,
-                                                               end - begin)];
+            NSInteger reported = body[@"offset"]
+                ? [body[@"offset"] integerValue] : -1;
+            [self selectInEditor:selected
+                       fromBlock:NSMakeRange(begin, end - begin)
+                        rendered:reported < 0 ? NSNotFound
+                                              : (NSUInteger)reported];
             return;
         }
 
@@ -2191,9 +2195,11 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
  * and it is why this waits for the end of the gesture.
  */
 - (void)selectInEditor:(NSString *)selected fromBlock:(NSRange)block
+              rendered:(NSUInteger)renderedOffset
 {
     NSString *text = self.editor.string ?: @"";
-    NSRange range = MPSourceRangeForPreviewText(text, selected, block);
+    NSRange range = MPSourceRangeForPreviewText(text, selected, block,
+                                                renderedOffset);
     if (range.location == NSNotFound
             || NSMaxRange(range) > self.editor.textStorage.length)
     {
