@@ -161,7 +161,7 @@ Writing**.
 ### When something does not work
 
 * **Help › Record What I Do.** Off unless you switch it on, and then every
-  command and its answer goes into `~/Library/Logs/MacDown Next/azioni.log`
+  command and its answer goes into `~/Library/Logs/MacDown Next/actions.log`
   — what a backlink search read, what a command answered. Nothing leaves
   the Mac; the menu shows the file in the Finder and empties it. It exists
   because the alternative was guessing at what somebody else's screen was

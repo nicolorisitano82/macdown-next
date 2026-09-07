@@ -60,7 +60,7 @@ static const unsigned long long kMPActionLogLimit = 2 * 1024 * 1024;
         stringByAppendingPathComponent:
             [@"Logs" stringByAppendingPathComponent:kMPApplicationName]];
     return [NSURL fileURLWithPath:
-        [folder stringByAppendingPathComponent:@"azioni.log"]];
+        [folder stringByAppendingPathComponent:@"actions.log"]];
 }
 
 - (void)setRecording:(BOOL)recording
@@ -73,7 +73,7 @@ static const unsigned long long kMPActionLogLimit = 2 * 1024 * 1024;
         // Written while it is still on: a note taken after the flag has
         // gone down is a note that goes nowhere, which is how this line
         // was missing the first time.
-        [self note:@"— registrazione fermata —"];
+        [self note:@"— recording stopped —"];
         _recording = NO;
         // Both go through the one queue, so the closing happens after the
         // line above has been written and not instead of it.
@@ -85,7 +85,7 @@ static const unsigned long long kMPActionLogLimit = 2 * 1024 * 1024;
     }
 
     _recording = YES;
-    [self note:@"— registrazione avviata (%@ %@) —",
+    [self note:@"— recording started (%@ %@) —",
         kMPApplicationName,
         [NSBundle mainBundle].infoDictionary[
             @"CFBundleShortVersionString"] ?: @"?"];

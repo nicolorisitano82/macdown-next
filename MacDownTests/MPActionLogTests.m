@@ -59,7 +59,7 @@
         componentsSeparatedByString:@"\n"];
     // The line that says the recording started, then the two above.
     XCTAssertEqual(lines.count, 3u);
-    XCTAssertTrue([lines[0] containsString:@"registrazione avviata"]);
+    XCTAssertTrue([lines[0] containsString:@"recording started"]);
     XCTAssertTrue([lines[1] containsString:@"   2  "],
                   @"manca il numero di sequenza: %@", lines[1]);
 }
@@ -71,7 +71,7 @@
     MPNote(@"qualcosa");
     log.recording = NO;
 
-    XCTAssertTrue([log.text containsString:@"registrazione fermata"]);
+    XCTAssertTrue([log.text containsString:@"recording stopped"]);
     MPNote(@"e questo no");
     XCTAssertFalse([log.text containsString:@"e questo no"]);
 
@@ -84,7 +84,7 @@
     NSURL *url = [MPActionLog sharedLog].fileURL;
     XCTAssertTrue([url.path containsString:@"/Library/Logs/"],
                   @"%@", url.path);
-    XCTAssertEqualObjects(url.lastPathComponent, @"azioni.log");
+    XCTAssertEqualObjects(url.lastPathComponent, @"actions.log");
 }
 
 @end

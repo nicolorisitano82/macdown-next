@@ -256,13 +256,13 @@ NSBundle *MDDrawioBundle(void)
     self.log = [[MDDrawioLog alloc] init];
     NSNumber *size = nil;
     [panel.URL getResourceValue:&size forKey:NSURLFileSizeKey error:NULL];
-    [self.log noteFormat:@"file: %@ (%@ byte)", panel.URL.path, size];
+    [self.log noteFormat:@"file: %@ (%@ bytes)", panel.URL.path, size];
 
     NSError *error = nil;
     MDDrawioFile *file = [MDDrawioFile fileWithURL:panel.URL error:&error];
     if (!file)
     {
-        [self.log noteFormat:@"non letto: %@ (%@ %ld)",
+        [self.log noteFormat:@"not read: %@ (%@ %ld)",
             error.localizedDescription, error.domain, (long)error.code];
         [self say:MDLocalizedString(@"The diagram could not be read",
                                     @"The file did not parse")
@@ -270,10 +270,10 @@ NSBundle *MDDrawioBundle(void)
         return NO;
     }
 
-    [self.log noteFormat:@"pagine: %lu", (unsigned long)file.pages.count];
+    [self.log noteFormat:@"pages: %lu", (unsigned long)file.pages.count];
     for (MDDrawioPage *page in file.pages)
     {
-        [self.log noteFormat:@"  «%@», modello di %lu caratteri",
+        [self.log noteFormat:@"  “%@”, %lu characters of model",
             page.name, (unsigned long)page.xml.length];
     }
 
@@ -320,9 +320,9 @@ NSBundle *MDDrawioBundle(void)
     }
 
     NSURL *service = options.usesService ? options.service : nil;
-    [self.log noteFormat:@"scala %g, %@", options.scale,
+    [self.log noteFormat:@"scale %g, %@", options.scale,
         service ? [@"export server " stringByAppendingString:
-                    service.absoluteString] : @"disegnato qui"];
+                    service.absoluteString] : @"drawn here"];
 
     self.renderer = [[MDDrawioRenderer alloc]
         initWithBundle:[NSBundle bundleForClass:[self class]]];
@@ -362,7 +362,7 @@ NSBundle *MDDrawioBundle(void)
         BOOL stopped = self.progress.isCancelled;
         if (stopped && queue.count)
         {
-            [self.log noteFormat:@"annullato: %lu pagine non disegnate",
+            [self.log noteFormat:@"cancelled: %lu pages not drawn",
                 (unsigned long)queue.count];
         }
 
@@ -374,7 +374,7 @@ NSBundle *MDDrawioBundle(void)
 
             if (problems.count)
             {
-                [self.log noteFormat:@"finito con %lu problemi",
+                [self.log noteFormat:@"finished with %lu problems",
                     (unsigned long)problems.count];
                 [self say:MDLocalizedString(
                     @"Not every page arrived", @"Some pages failed")
@@ -383,7 +383,7 @@ NSBundle *MDDrawioBundle(void)
             }
             else
             {
-                [self.log note:@"finito"];
+                [self.log note:@"finished"];
             }
             return;
         }
@@ -400,7 +400,7 @@ NSBundle *MDDrawioBundle(void)
                : stem);
 
         [self.progress showPage:index of:total named:label];
-        [self.log noteFormat:@"pagina %lu/%lu «%@»: disegno",
+        [self.log noteFormat:@"page %lu/%lu “%@”: drawing",
             (unsigned long)index, (unsigned long)total, label];
 
         MDDrawioRenderHandler done = ^(NSData *png, NSError *error) {
@@ -409,15 +409,15 @@ NSBundle *MDDrawioBundle(void)
             NSArray *served = self.renderer.resources.servedPaths;
             NSArray *missing = self.renderer.resources.failedPaths;
             if (served.count)
-                [self.log noteFormat:@"  serviti: %@",
+                [self.log noteFormat:@"  served: %@",
                     [served componentsJoinedByString:@", "]];
             if (missing.count)
-                [self.log noteFormat:@"  NON serviti: %@",
+                [self.log noteFormat:@"  NOT served: %@",
                     [missing componentsJoinedByString:@", "]];
 
             if (!png)
             {
-                [self.log noteFormat:@"  errore: %@ (%@ %ld)",
+                [self.log noteFormat:@"  error: %@ (%@ %ld)",
                     error.localizedDescription, error.domain,
                     (long)error.code];
                 [problems addObject:[NSString stringWithFormat:@"%@: %@",
@@ -427,7 +427,7 @@ NSBundle *MDDrawioBundle(void)
             }
             else
             {
-                [self.log noteFormat:@"  %lu byte di PNG",
+                [self.log noteFormat:@"  %lu bytes of PNG",
                     (unsigned long)png.length];
                 NSString *problem = [self write:png forLabel:label
                                            stem:stem document:document
@@ -471,13 +471,13 @@ NSBundle *MDDrawioBundle(void)
     // picture gets brought up to date, and the link must keep working.
     if (![png writeToURL:file options:NSDataWritingAtomic error:&error])
     {
-        [self.log noteFormat:@"  non scritto in %@: %@ (%@ %ld)",
+        [self.log noteFormat:@"  not written to %@: %@ (%@ %ld)",
             file.path, error.localizedDescription, error.domain,
             (long)error.code];
         return [NSString stringWithFormat:@"%@: %@", label,
                 error.localizedDescription];
     }
-    [self.log noteFormat:@"  scritto %@", file.path];
+    [self.log noteFormat:@"  written %@", file.path];
 
     NSString *target = [MDDrawioNaming linkTargetForFile:file
                                       besideDocument:document.fileURL];
@@ -489,7 +489,7 @@ NSBundle *MDDrawioBundle(void)
     // to add: adding it would show the same picture twice.
     if ([editor.string containsString:target])
     {
-        [self.log noteFormat:@"  già collegato come %@, non ripetuto", target];
+        [self.log noteFormat:@"  already linked as %@, not repeated", target];
         return nil;
     }
 
@@ -500,11 +500,11 @@ NSBundle *MDDrawioBundle(void)
     {
         [editor insertText:markup replacementRange:at];
         editor.selectedRange = NSMakeRange(at.location + markup.length, 0);
-        [self.log noteFormat:@"  collegato come %@", target];
+        [self.log noteFormat:@"  linked as %@", target];
     }
     else
     {
-        [self.log note:@"  l'editor non ha accettato la modifica"];
+        [self.log note:@"  the editor did not accept the change"];
     }
     return nil;
 }

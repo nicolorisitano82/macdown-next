@@ -4011,7 +4011,7 @@ static NSString * const kMPDocxHeadingToken = @"MPHDGPLACEHOLDER";
         if (!strong)
             return;
 
-        MPNote(@"esporto con %@ in %@", exporter.name, url.lastPathComponent);
+        MPNote(@"exporting with %@ to %@", exporter.name, url.lastPathComponent);
         NSError *error = nil;
         NSData *data = [exporter exportDataFromHTML:ready
                                            markdown:strong.markdown
@@ -4105,7 +4105,7 @@ static NSString * const kMPDocxHeadingToken = @"MPHDGPLACEHOLDER";
         ? MPResolveInstructionImports(nearest) : nil;
     NSArray<MPInstructionIssue *> *issues =
         MPInstructionIssues(tree, hierarchy);
-    MPNote(@"istruzioni: %lu file, %lu avvisi",
+    MPNote(@"instructions: %lu files, %lu warnings",
            (unsigned long)hierarchy.count, (unsigned long)issues.count);
 
     MPInstructionsViewController *list = [[MPInstructionsViewController alloc]
@@ -4168,11 +4168,11 @@ static NSString * const kMPDocxHeadingToken = @"MPHDGPLACEHOLDER";
 
     BOOL installed = MPSendToDesktopAppIsInstalled(target);
     NSURL *url = MPSendToURL(target, text, installed);
-    MPNote(@"mando %lu caratteri a %@ (%@, testo nel link: %@)",
+    MPNote(@"sending %lu characters to %@ (%@, text in the link: %@)",
            (unsigned long)text.length,
            target == MPSendToClaude ? @"Claude" : @"ChatGPT",
-           installed ? @"applicazione" : @"web",
-           MPSendToLinkCarriesText(target, text, installed) ? @"sì" : @"no");
+           installed ? @"application" : @"web",
+           MPSendToLinkCarriesText(target, text, installed) ? @"yes" : @"no");
     if (url)
         [[NSWorkspace sharedWorkspace] openURL:url];
 }
@@ -5394,7 +5394,7 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
     if (NSMaxRange(range) > text.length
         || ![[text substringWithRange:range] isEqualToString:issue.text])
     {
-        MPNote(@"correzione saltata: il testo si è mosso");
+        MPNote(@"fix skipped: the text moved");
         return;
     }
 
@@ -5404,7 +5404,7 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
     [self.editor.textStorage replaceCharactersInRange:range
                                            withString:issue.replacement];
     [self.editor didChangeText];
-    MPNote(@"corretto «%@» in «%@» a %lu", issue.text, issue.replacement,
+    MPNote(@"fixed “%@” to “%@” at %lu", issue.text, issue.replacement,
            (unsigned long)range.location);
 
     // The list behind the panel is now one line out of date, and the tally
@@ -5598,7 +5598,7 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
 
 - (void)clipFromURL:(NSURL *)url
 {
-    MPNote(@"ritaglio %@", url.absoluteString);
+    MPNote(@"clipping %@", url.absoluteString);
     __weak MPDocument *document = self;
     [MPWebClipper clipURL:url completion:^(NSString *markdown,
                                            NSString *title, NSError *error) {
@@ -5607,7 +5607,7 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
             return;
         if (!markdown)
         {
-            MPNote(@"  non ritagliata: %@", error.localizedDescription);
+            MPNote(@"  not clipped: %@", error.localizedDescription);
             [strong say:NSLocalizedString(@"The page could not be saved",
                                           @"Web clipping")
                    text:error.localizedDescription];
@@ -5641,13 +5641,13 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
         if (![markdown writeToURL:file atomically:YES
                          encoding:NSUTF8StringEncoding error:&writing])
         {
-            MPNote(@"  non scritta: %@", writing.localizedDescription);
+            MPNote(@"  not written: %@", writing.localizedDescription);
             [strong say:NSLocalizedString(@"The page could not be written",
                                           @"Web clipping")
                    text:writing.localizedDescription];
             return;
         }
-        MPNote(@"  scritta %@ (%lu caratteri)", file.path,
+        MPNote(@"  written %@ (%lu characters)", file.path,
                (unsigned long)markdown.length);
 
         // Linked where the caret is: a clipping taken while writing a report
@@ -5690,7 +5690,7 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
     BOOL on = !self.preferences.editorFocusMode;
     self.preferences.editorFocusMode = on;
     self.editor.focusModeEnabled = on;
-    MPNote(@"modo fuoco: %@", on ? @"acceso" : @"spento");
+    MPNote(@"focus mode: %@", on ? @"on" : @"off");
 }
 
 - (IBAction)toggleTypewriterScrolling:(id)sender
@@ -5698,7 +5698,7 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
     BOOL on = !self.preferences.editorTypewriter;
     self.preferences.editorTypewriter = on;
     self.editor.typewriterEnabled = on;
-    MPNote(@"macchina da scrivere: %@", on ? @"accesa" : @"spenta");
+    MPNote(@"typewriter scrolling: %@", on ? @"on" : @"off");
 }
 
 
@@ -5717,7 +5717,7 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
         self.editor.selectedRange.location, &replaced);
     if (!sorted || replaced.location == NSNotFound)
     {
-        MPNote(@"attività fatte in fondo: niente da spostare");
+        MPNote(@"done tasks to the bottom: nothing to move");
         return;
     }
 
@@ -5729,7 +5729,7 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
     // undo takes it back.
     self.editor.selectedRange = NSMakeRange(replaced.location,
                                             sorted.length);
-    MPNote(@"attività fatte in fondo: %lu caratteri riscritti",
+    MPNote(@"done tasks to the bottom: %lu characters rewritten",
            (unsigned long)sorted.length);
 }
 
@@ -5750,7 +5750,7 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
     // A caret blinking in a document that refuses to change is a lie.
     self.editor.selectable = YES;
     [self updateReadOnlyBadge];
-    MPNote(@"sola lettura: %@", self.readOnly ? @"accesa" : @"spenta");
+    MPNote(@"read only: %@", self.readOnly ? @"on" : @"off");
 }
 
 /// The badge in the title bar, made once and hidden when it is not wanted.
@@ -5842,7 +5842,7 @@ static BOOL MPActionEditsTheDocument(SEL action)
                                                              error:&making];
     if (!fresh)
     {
-        MPNote(@"  non aperta: %@", making.localizedDescription);
+        MPNote(@"  not opened: %@", making.localizedDescription);
         [self say:NSLocalizedString(@"The clipping could not be opened",
                                     @"Web clipping")
              text:making.localizedDescription];
@@ -5851,7 +5851,7 @@ static BOOL MPActionEditsTheDocument(SEL action)
 
     fresh.markdown = markdown;
     [fresh updateChangeCount:NSChangeDone];
-    MPNote(@"  aperta come documento nuovo (%lu caratteri)",
+    MPNote(@"  opened as a new document (%lu characters)",
            (unsigned long)markdown.length);
     return YES;
 }
@@ -5875,13 +5875,13 @@ static BOOL MPActionEditsTheDocument(SEL action)
         return;
 
     NSURL *folder = self.fileURL.URLByDeletingLastPathComponent;
-    MPNote(@"cerco chi collega %@ in %@", self.fileURL.lastPathComponent,
+    MPNote(@"looking for what links %@ in %@", self.fileURL.lastPathComponent,
            folder.path);
     __weak MPDocument *document = self;
     [MPBacklinkFinder findLinksTo:self.fileURL inFolder:folder
                        completion:^(NSArray<MPBacklink *> *found,
                                     NSUInteger read) {
-        MPNote(@"  %lu collegamenti in %lu documenti letti",
+        MPNote(@"  %lu links in %lu documents read",
                (unsigned long)found.count, (unsigned long)read);
         [document showBacklinkList:found counted:read];
     }];

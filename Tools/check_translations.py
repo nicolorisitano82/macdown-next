@@ -77,7 +77,9 @@ ANY_CALL = re.compile(
 
 # A line written to a diary rather than shown in the interface. The action
 # log and the plug-in's log are diagnostics, in one language on purpose:
-# they are read next to a stack trace, not in a menu.
+# they are read next to a stack trace, not in a menu. That language is
+# English, and this checks it — an untranslatable string is bad enough
+# without it being in a language the reader may not have.
 LOG_CALL = re.compile(
     r'(?:MPNote|MDNote)\s*\(\s*(?:@"(?:[^"\\]|\\.)*"\s*)+'
     r'|(?:note|noteFormat):\s*(?:@"(?:[^"\\]|\\.)*"\s*)+', re.S)
@@ -200,6 +202,23 @@ def looks_like_prose(value):
         return True
     italian = sum(1 for word in words if word in ITALIAN_WORDS)
     return italian >= 2 or (italian == 1 and len(words) <= 4)
+
+
+def log_lines(bundle):
+    """The lines that bundle writes to a log, and where."""
+    found = defaultdict(list)
+    for path in sources_of(bundle):
+        with open(path, encoding="utf-8", errors="ignore") as handle:
+            text = handle.read()
+        for match in LOG_CALL.finditer(text):
+            line = "".join(unescape(piece) for piece
+                           in LITERAL.findall(match.group(0)))
+            if not line.strip() or not re.search(r"[A-Za-z]", line):
+                continue
+            where = text.count("\n", 0, match.start()) + 1
+            found[line].append(
+                "%s:%d" % (os.path.relpath(path, ROOT), where))
+    return found
 
 
 def strings_files(bundle, language):
@@ -332,6 +351,9 @@ def main():
         missing_it = [k for k in english_keys if k not in italian]
         missing_en = [k for k in italian_keys if k not in english]
         stranded = unreachable_strings(bundle)
+        logs = log_lines(bundle)
+        log_language = classify_languages(logs) if logs else {}
+        italian_logs = sorted(k for k in logs if log_language[k] == "it")
 
         print("\033[1m%s\033[0m" % bundle.name)
         print("  %d stringhe chieste: %d in inglese, %d in italiano"
@@ -342,7 +364,12 @@ def main():
               % (len(missing_en), " ✓" if not missing_en else ""))
         print("  %d stringhe fuori da ogni chiamata, non traducibili%s"
               % (len(stranded), " ✓" if not stranded else ""))
-        failures += len(missing_it) + len(missing_en) + len(stranded)
+        if logs:
+            print("  %d righe di diario, di cui %d non in inglese%s"
+                  % (len(logs), len(italian_logs),
+                     " ✓" if not italian_logs else ""))
+        failures += (len(missing_it) + len(missing_en) + len(stranded)
+                     + len(italian_logs))
 
         base = base_nib_objects(bundle)
         if base:
@@ -375,12 +402,15 @@ def main():
         if show_all or only:
             for title, keys in (("Chiavi inglesi senza italiano", missing_it),
                                 ("Chiavi italiane senza inglese", missing_en),
-                                ("Fuori da ogni chiamata", sorted(stranded))):
+                                ("Fuori da ogni chiamata", sorted(stranded)),
+                                ("Righe di diario non in inglese",
+                                 italian_logs)):
                 if not keys:
                     continue
                 print("  \033[1m%s\033[0m" % title)
                 for key in keys:
-                    place = (used.get(key) or stranded.get(key))[0]
+                    place = (used.get(key) or stranded.get(key)
+                             or logs.get(key))[0]
                     print("    %s\n        %s"
                           % (key.replace("\n", "⏎")[:96], place))
         if only:
