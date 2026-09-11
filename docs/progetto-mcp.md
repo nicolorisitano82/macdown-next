@@ -1,11 +1,12 @@
 # Progetto: un server MCP sulla cartella
 
-Progetto e, da oggi, diario: le **fasi 1, 2 e 3 sono scritte** — il
+Progetto e, da oggi, diario: **le quattro fasi sono scritte** — il
 perimetro, l'indice, i quattro strumenti di lettura, i tre che leggono la
-cartella come un insieme di note, e i tre che la cambiano ai livelli in cui
-è permesso — e il binario viaggia dentro l'applicazione. Le sezioni da 1 a 6
-restano il progetto com'era; la 7 dice cosa è stato deciso, e la 8, la 9 e
-la 10 come sono andate le tre fasi, con i numeri.
+cartella come un insieme di note, i tre che la cambiano ai livelli in cui è
+permesso, e il pannello da cui si guarda e si spegne tutto. Il binario
+viaggia dentro l'applicazione. Le sezioni da 1 a 6 restano il progetto
+com'era; la 7 dice cosa è stato deciso, e dalla 8 alla 11 come sono andate
+le quattro fasi, con i numeri.
 
 Viene da due studi già scritti — la [strada C dello studio su Claude e
 GPT](studio-claude-gpt.md) e la [fase 3 della roadmap](roadmap-bear.md) — e
@@ -443,15 +444,72 @@ file, e costano quello che costa toccarlo.
   che ha dentro sia l'ok sia il rifiuto; e una conversazione in sola lettura
   che non aggiunge niente a niente.
 
-### Cosa resta
+### Cosa la fase 3 non fa
 
-La fase 4: il pannello **Impostazioni ▸ Agenti**, con le radici, il livello,
-la riga da incollare nella configurazione del client e le ultime chiamate
-lette dal diario. Il server non ne ha bisogno per funzionare — è il posto
-dove si guarda cosa è successo.
+Niente cancella, niente rinomina, niente scrive un file intero sopra uno che
+c'era — e non è una mancanza: è il progetto.
+
+## 11. La fase 4, com'è andata
+
+Il server gira senza l'applicazione, ma l'applicazione è il posto dove si
+guarda cosa è successo — e dove si spegne. **Impostazioni ▸ Agenti**:
+
+* un **interruttore**: «Permetti agli assistenti di usare il server sulla
+  cartella». Spento, il server si rifiuta di partire e lo dice, qualunque
+  cosa abbia il client nella sua configurazione;
+* la **cartella** da offrire e il **livello** (solo leggere / e aggiungere
+  in coda / e creare e sostituire);
+* la **riga da incollare** nel client, costruita con quei due e con il
+  percorso del binario **dentro questa copia dell'applicazione**, e un
+  pulsante che la copia;
+* il **diario**: le ultime duecento righe di `mcp.log`, con «mostra nel
+  Finder» e «svuota».
+
+### L'interruttore, e come fa il server a saperlo
+
+La cartella e il livello non li legge nessuno: servono a costruire la riga.
+L'interruttore invece è l'unica cosa che l'applicazione decide davvero, e il
+server la legge all'avvio — dal dominio delle preferenze **dell'applicazione
+attorno a sé**, non da un nome scritto nel codice:
+
+```
+…/MacDown Next.app/Contents/SharedSupport/bin/macdownext-mcp
+                  └── Contents/Info.plist → CFBundleIdentifier
+```
+
+Così una copia di sviluppo e una installata tengono ognuna le proprie
+preferenze e ognuna governa il proprio server. Chiave mai scritta vuol dire
+acceso: l'interruttore esiste per spegnere, non per dare il permesso una
+seconda volta dopo che qualcuno ha già scritto la riga in un client.
+
+Spento, il server scrive nel diario *perché* si è fermato ed esce con 4
+dicendolo su standard error: un rifiuto che non si vede è indistinguibile da
+un server rotto.
+
+### Com'è provata
+
+* **Cinque prove unitarie** (`MPAgentsPanelTests`): che il pannello si
+  costruisca, che la riga dica cartella e livello — e che a «solo leggere»
+  non ci sia né `--append` né `--write` — che senza cartella la riga resti
+  leggibile, che l'interruttore sia la preferenza in entrambi i versi, e che
+  il diario si mostri e si svuoti (rimettendo a posto quello di chi esegue
+  le prove).
+* **Due prove nella suite**: spento dalle impostazioni il binario **non
+  parte** e lo dice; riacceso riparte. La suite rimette l'interruttore come
+  l'ha trovato, e due giri di fila danno lo stesso risultato — che è la cosa
+  che è andata storta la prima volta che l'ho scritta.
+* **A mano, nell'applicazione vera**: pannello aperto con System Events,
+  interruttore tolto, binario avviato → `uscita=4` e il messaggio;
+  interruttore rimesso → riparte.
+
+### Le stringhe
+
+Diciotto chiavi nuove, tutte in inglese nel codice e tradotte in italiano,
+con `Tools/check_translations.py` che torna a dire zero mancanti.
 
 ---
 
-*Fasi 1, 2 e 3 fatte l'11 settembre 2026, versione 0.33.0. Resta il pannello
-nelle impostazioni (fase 4): quando toccherà a lui, questo file cresce di
-una sezione, con i numeri veri invece delle intenzioni.*
+*Le quattro fasi sono fatte, l'11 settembre 2026, versione 0.33.0. Quello
+che resta è nella sezione 3 e non è una fase: `open_in_macdown`, la ricerca
+per espressione regolare, `.macdownignore`. Roba da aggiungere quando
+qualcuno la chiede, non prima.*

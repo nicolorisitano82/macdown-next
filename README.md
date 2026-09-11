@@ -258,7 +258,11 @@ Writing**.
   document, make one that is not there, and replace text that is — saying
   how many times and on which lines. Nothing deletes, nothing renames,
   nothing writes over a file that exists, and every call (refusals included)
-  goes into `~/Library/Logs/MacDown Next/mcp.log`, which leaves nowhere. No tool writes, renames or
+  goes into `~/Library/Logs/MacDown Next/mcp.log`, which leaves nowhere.
+  **Settings ▸ Agents** builds the line to paste into the client, shows what
+  has been asked of the folder, and holds the switch that turns the whole
+  thing off — off, the server refuses to start, whatever a client has in its
+  configuration. No tool writes, renames or
   deletes; a path outside the folder is refused; a second `--root` is an
   error rather than a second permission; text only, 2 MB at most, a
   `.textbundle` counted as one document. The application does not have to be

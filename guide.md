@@ -533,6 +533,7 @@ the list is read, and again before the download starts.
 | **Rendering** | The HTML style, syntax highlighting and its theme, line numbers, task lists, hard wrap, MathJax, Graphviz, Mermaid, front matter, wiki links, table of contents, whether selecting in one pane selects in the other — and the **Writing** switches for everything the editor draws |
 | **Terminal** | The `macdownext` command line tool: install, uninstall, where it is |
 | **Quick Look** | The Finder preview: state, version, Install / Update / Remove |
+| **Agents** | The folder server: the switch, the folder and level to offer, the line to paste into a client, and what has been asked of it |
 | **Updates** | Whether to look once a day, when it last looked, and a check now |
 
 ---
@@ -685,7 +686,25 @@ nowhere: `--log <file>` puts it somewhere else, `--no-log` switches it off,
 and past 2 MB it starts again. It is a different file from the editor's own
 `actions.log`, which is a diagnostic recording you switch on.
 
-The design, the measurements and what the next phase will add are in
+### The panel
+
+**Settings ▸ Agents** is where this is set up and watched:
+
+- a **switch** — off, the server refuses to start and says so, whatever a
+  client has in its configuration. It is the one thing about the server the
+  application decides, and each copy of the application governs its own;
+- the **folder** to offer and what it **may** do, which together build the
+  line above — with the path of the server inside *this* copy of the
+  application, and a button that copies it;
+- **what has been asked of it**: the last two hundred lines of the log, with
+  a way to show the file in the Finder or empty it.
+
+Nothing here is a setting the server reads afterwards, apart from the
+switch: the folder and the level travel in the line you paste, so what a
+client may do is written in the client's own configuration where you can
+read it.
+
+The design, the measurements and what was deliberately left out are in
 [the journal](docs/progetto-mcp.md).
 
 ---

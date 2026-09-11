@@ -119,6 +119,16 @@ extern NSString * const MPDidDetectFreshInstallationNotification;
 /// Whether selecting text in the preview selects it in the editor too.
 @property (assign) BOOL previewSelectionSelectsSource;
 
+/// Whether an assistant may use the folder server at all. On, because the
+/// server only runs when a client starts it — the switch is here so that a
+/// thing that can be turned off can also be turned on without worrying.
+@property (assign) BOOL agentsAllowed;
+/// The folder the panel writes into the line you paste in a client's
+/// configuration. Nothing reads it but that line.
+@property (copy) NSString *agentsFolderPath;
+/// What that line asks for: 0 reading, 1 appending, 2 writing.
+@property (assign) NSInteger agentsWritingLevel;
+
 /// Whether the application looks for a newer release by itself, once a day.
 @property (assign) BOOL updatesCheckAutomatically;
 /// When it last looked, whatever the answer was.

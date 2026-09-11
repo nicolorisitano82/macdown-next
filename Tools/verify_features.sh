@@ -625,6 +625,39 @@ if [ -x "$MCP" ]; then
         contains "$WORK/mcp-ro.out" "not started with permission"
     ok "e la relazione è rimasta quella" \
         sh -c '! grep -q "di nascosto" "$0"' "$MCP_ROOT/relazione.md"
+
+    # The switch in Settings ▸ Agents is the one thing about this server the
+    # application decides, so it is asked the way a person would: turn it
+    # off, start the server, and see it refuse.
+    MCP_DOMAIN=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" \
+        "$APP/Contents/Info.plist" 2>/dev/null)
+    mcp_hello() {
+        printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"suite","version":"1"}}}' \
+            | "$MCP" --root "$MCP_ROOT" --no-log > "$1" 2>&1
+    }
+    if [ -n "$MCP_DOMAIN" ]; then
+        MCP_WAS=$(defaults read "$MCP_DOMAIN" agentsAllowed 2>/dev/null)
+        defaults write "$MCP_DOMAIN" agentsAllowed -bool NO
+        mcp_hello "$WORK/mcp-off.out"
+        ok "spento dalle impostazioni, il server non parte" \
+            contains "$WORK/mcp-off.out" "assistenti sono spenti"
+
+        # Put the switch back the way it was found, whatever happens next.
+        case "$MCP_WAS" in
+            1) defaults write "$MCP_DOMAIN" agentsAllowed -bool YES ;;
+            0) defaults write "$MCP_DOMAIN" agentsAllowed -bool NO ;;
+            *) defaults delete "$MCP_DOMAIN" agentsAllowed 2>/dev/null ;;
+        esac
+        # Whatever it was, the server has to come back: a suite that leaves
+        # assistants switched off would fail every run after this one.
+        defaults read "$MCP_DOMAIN" agentsAllowed 2>/dev/null | grep -q 0 \
+            && defaults delete "$MCP_DOMAIN" agentsAllowed 2>/dev/null
+        mcp_hello "$WORK/mcp-on.out"
+        ok "e riacceso riparte" \
+            contains "$WORK/mcp-on.out" "macdownext-mcp"
+    else
+        skip "l'interruttore degli agenti (manca l'identificativo dell'app)"
+    fi
 fi
 
 

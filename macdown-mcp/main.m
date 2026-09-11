@@ -21,6 +21,37 @@
 #import "MDMCPTools.h"
 
 
+/** Whether the application this server ships inside has assistants switched
+ * off, in Settings ▸ Agents.
+ *
+ * The domain is the one of the application around the binary rather than a
+ * name written down here: a debug copy and a release copy keep their own
+ * preferences, and each one's switch has to govern its own server. Outside
+ * an application — a copy somebody moved — there is nothing to ask, and a
+ * server nobody can switch off is not what this is for, so it reads the
+ * release domain and goes on if it is not there.
+ */
+static BOOL MDAssistantsAreOff(void)
+{
+    NSString *domain = @"com.nicolorisitano82.macdown";
+    NSURL *binary = [NSURL fileURLWithPath:
+        [NSProcessInfo processInfo].arguments.firstObject];
+    // …/Contents/SharedSupport/bin/macdownext-mcp → …/Contents/Info.plist
+    NSURL *contents = binary.URLByDeletingLastPathComponent
+        .URLByDeletingLastPathComponent.URLByDeletingLastPathComponent;
+    NSDictionary *plist = [NSDictionary dictionaryWithContentsOfURL:
+        [contents URLByAppendingPathComponent:@"Info.plist"]];
+    if ([plist[@"CFBundleIdentifier"] isKindOfClass:[NSString class]])
+        domain = plist[@"CFBundleIdentifier"];
+
+    id value = CFBridgingRelease(CFPreferencesCopyValue(
+        CFSTR("agentsAllowed"), (__bridge CFStringRef)domain,
+        kCFPreferencesCurrentUser, kCFPreferencesAnyHost));
+    // Never set is allowed: the switch is on until somebody turns it off.
+    return [value isKindOfClass:[NSNumber class]] && ![value boolValue];
+}
+
+
 static void MDUsage(void)
 {
     fprintf(stderr,
@@ -128,6 +159,18 @@ int main(int argc, const char *argv[])
         perimeter.writing = writing;
 
         MDMCPDiary *diary = [[MDMCPDiary alloc] initWithFile:log];
+        if (MDAssistantsAreOff())
+        {
+            // Said to the client and written down: a refusal nobody can see
+            // is indistinguishable from a server that is broken.
+            [diary noteTool:@"started" outcome:@"refused"
+                       path:perimeter.root.path
+                     detail:@"assistants are switched off in the application"];
+            fprintf(stderr,
+                "MacDown Next: gli assistenti sono spenti.\n"
+                "Impostazioni ▸ Agenti, per riaccenderli.\n");
+            return 4;
+        }
         [diary noteTool:@"started"
                 outcome:writing == MDMCPReadOnly ? @"read-only"
                     : (writing == MDMCPAppendOnly ? @"append" : @"write")

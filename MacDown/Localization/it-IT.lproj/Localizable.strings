@@ -523,3 +523,23 @@
 "Nothing is at %@ any more. What is on screen is all there is: save it somewhere it can live." = "In %@ non c'è più niente. Quello che vedi è tutto quello che c'è: salvalo da qualche parte dove possa stare.";
 "Reload from the File" = "Ricarica dal file";
 "Keep What I Have" = "Tieni quello che ho";
+
+/* Il pannello degli agenti */
+"An assistant that speaks MCP — Claude Code, Claude Desktop, anything else — can be given one folder of Markdown to read. It is not this application that answers: the client starts a small server that ships inside it, macdownext-mcp, talks to it over a pipe and stops it when it is done. Nothing is running until a client starts it, and nothing leaves your Mac." = "Un assistente che parla MCP — Claude Code, Claude Desktop, o qualunque altro — può ricevere una cartella di Markdown da leggere. Non è questa applicazione a rispondere: il client avvia un piccolo server che viaggia dentro di lei, macdownext-mcp, gli parla su un tubo e lo spegne quando ha finito. Finché un client non lo avvia non c'è niente in esecuzione, e niente esce da questo Mac.";
+"Let assistants use the folder server" = "Permetti agli assistenti di usare il server sulla cartella";
+"Off, the server refuses to start and says so, whatever a client has in its configuration." = "Spento, il server si rifiuta di partire e lo dice, qualunque cosa abbia il client nella sua configurazione.";
+"Folder to offer:" = "Cartella da offrire:";
+"It may:" = "Può:";
+"only read" = "solo leggere";
+"read, and add to the end of a document" = "leggere, e aggiungere in coda a un documento";
+"read, add, make new documents and replace text" = "leggere, aggiungere, creare documenti nuovi e sostituire testo";
+"The line to paste in the client:" = "La riga da incollare nel client:";
+"Copy" = "Copia";
+"What has been asked of it:" = "Cosa gli è stato chiesto:";
+"Nothing yet." = "Ancora niente.";
+"Show the Log in Finder" = "Mostra il diario nel Finder";
+"Clear the Log" = "Svuota il diario";
+"Offer" = "Offri";
+"none chosen" = "nessuna scelta";
+"/path/to/your/notes" = "/percorso/dei/tuoi/appunti";
+"Agents" = "Agenti";

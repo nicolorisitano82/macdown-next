@@ -65,6 +65,9 @@ static NSString * const kMPDefaultHtmlStyleName = @"GitHub2";
         // rest of what reaches the network.
         @"previewFetchesLinkPages": @YES,
         @"previewSelectionSelectsSource": @YES,
+        // The server is started by whoever wants it, so this is not a door
+        // standing open: it is the switch that closes it.
+        @"agentsAllowed": @YES,
     }];
 
     [self cleanupObsoleteAutosaveValues];
@@ -161,6 +164,9 @@ static NSString * const kMPDefaultHtmlStyleName = @"GitHub2";
 @dynamic disabledPlugIns;
 @dynamic previewFetchesLinkPages;
 @dynamic previewSelectionSelectsSource;
+@dynamic agentsAllowed;
+@dynamic agentsFolderPath;
+@dynamic agentsWritingLevel;
 @dynamic updatesCheckAutomatically;
 @dynamic updatesLastCheck;
 @dynamic htmlCodeBlockAccessory;

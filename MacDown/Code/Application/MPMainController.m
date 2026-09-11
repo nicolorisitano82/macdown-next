@@ -20,6 +20,7 @@
 #import "MPGeneralPreferencesViewController.h"
 #import "MPMarkdownPreferencesViewController.h"
 #import "MPEditorPreferencesViewController.h"
+#import "MPAgentsPreferencesViewController.h"
 #import "MPQuickLookPreferencesViewController.h"
 #import "MPUpdateController.h"
 #import "MPUpdatePreferencesViewController.h"
@@ -406,6 +407,7 @@ static const NSInteger kMPPlugInExportItemTag = 9003;
             [[MPHtmlPreferencesViewController alloc] init],
             [[MPTerminalPreferencesViewController alloc] init],
             [[MPQuickLookPreferencesViewController alloc] init],
+            [[MPAgentsPreferencesViewController alloc] init],
             [[MPUpdatePreferencesViewController alloc] init],
         ];
         NSString *title = NSLocalizedString(@"Preferences",

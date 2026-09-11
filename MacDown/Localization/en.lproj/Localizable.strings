@@ -52,3 +52,24 @@
 "Passive tells" = "Passive tells";
 "Repeated words" = "Repeated words";
 "Hide the Markdown markers until the caret reaches them" = "Hide the Markdown markers until the caret reaches them";
+
+/* The agents panel */
+"An assistant that speaks MCP — Claude Code, Claude Desktop, anything else — can be given one folder of Markdown to read. It is not this application that answers: the client starts a small server that ships inside it, macdownext-mcp, talks to it over a pipe and stops it when it is done. Nothing is running until a client starts it, and nothing leaves your Mac." = "An assistant that speaks MCP — Claude Code, Claude Desktop, anything else — can be given one folder of Markdown to read. It is not this application that answers: the client starts a small server that ships inside it, macdownext-mcp, talks to it over a pipe and stops it when it is done. Nothing is running until a client starts it, and nothing leaves your Mac.";
+"Let assistants use the folder server" = "Let assistants use the folder server";
+"Off, the server refuses to start and says so, whatever a client has in its configuration." = "Off, the server refuses to start and says so, whatever a client has in its configuration.";
+"Folder to offer:" = "Folder to offer:";
+"It may:" = "It may:";
+"only read" = "only read";
+"read, and add to the end of a document" = "read, and add to the end of a document";
+"read, add, make new documents and replace text" = "read, add, make new documents and replace text";
+"The line to paste in the client:" = "The line to paste in the client:";
+"Copy" = "Copy";
+"What has been asked of it:" = "What has been asked of it:";
+"Nothing yet." = "Nothing yet.";
+"Show the Log in Finder" = "Show the Log in Finder";
+"Clear the Log" = "Clear the Log";
+"Choose…" = "Choose…";
+"Offer" = "Offer";
+"none chosen" = "none chosen";
+"/path/to/your/notes" = "/path/to/your/notes";
+"Agents" = "Agents";

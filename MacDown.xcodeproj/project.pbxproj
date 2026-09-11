@@ -35,6 +35,7 @@
 		D2B0000000000000000000FE /* MPUpdateTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000FD /* MPUpdateTests.m */; };
 		D2B0000000000000000000EC /* MPQuickLookExtension.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000E9 /* MPQuickLookExtension.m */; };
 		D2B0000000000000000000ED /* MPQuickLookPreferencesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000EB /* MPQuickLookPreferencesViewController.m */; };
+		1F0D9E0100000000000F6A /* MPAgentsPreferencesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000F6 /* MPAgentsPreferencesViewController.m */; };
 		D2B0000000000000000000EF /* MPQuickLookExtensionTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000EE /* MPQuickLookExtensionTests.m */; };
 		D2B0000000000000000000E6 /* MPHoverWatchTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000E5 /* MPHoverWatchTests.m */; };
 		D2B0000000000000000000B0 /* MDQuickLookProvider.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B0000000000000000000A1 /* MDQuickLookProvider.m */; };
@@ -75,6 +76,7 @@
 		F55A342A5A01CEBCC9F60049 /* MPBacklinks.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310053 /* MPBacklinks.m */; };
 		F55A342A5A01CEBCC9F60050 /* MPBacklinksViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310055 /* MPBacklinksViewController.m */; };
 		F55A342A5A01CEBCC9F60051 /* MPBacklinkTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310056 /* MPBacklinkTests.m */; };
+		1F0D9E0100000000000F7A /* MPAgentsPanelTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000F7 /* MPAgentsPanelTests.m */; };
 		F55A342A5A01CEBCC9F60047 /* MPProseIssuesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310050 /* MPProseIssuesViewController.m */; };
 		F55A342A5A01CEBCC9F60048 /* MPPlugInsTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310051 /* MPPlugInsTests.m */; };
 		D1A0000000000000000000BA /* MDDrawioProgress.m in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000000D3 /* MDDrawioProgress.m */; };
@@ -364,6 +366,8 @@
 		D2B0000000000000000000E9 /* MPQuickLookExtension.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPQuickLookExtension.m; sourceTree = "<group>"; };
 		D2B0000000000000000000EA /* MPQuickLookPreferencesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPQuickLookPreferencesViewController.h; sourceTree = "<group>"; };
 		D2B0000000000000000000EB /* MPQuickLookPreferencesViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPQuickLookPreferencesViewController.m; sourceTree = "<group>"; };
+		1F0D9E01000000000000F5 /* MPAgentsPreferencesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPAgentsPreferencesViewController.h; sourceTree = "<group>"; };
+		1F0D9E01000000000000F6 /* MPAgentsPreferencesViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPAgentsPreferencesViewController.m; sourceTree = "<group>"; };
 		D2B0000000000000000000EE /* MPQuickLookExtensionTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPQuickLookExtensionTests.m; sourceTree = "<group>"; };
 		D2B0000000000000000000E5 /* MPHoverWatchTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPHoverWatchTests.m; sourceTree = "<group>"; };
 		D2B0000000000000000000A0 /* MDQuickLookProvider.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "MDQuickLookProvider.h"; sourceTree = "<group>"; };
@@ -415,6 +419,7 @@
 		7DA2311453239F0973310054 /* MPBacklinksViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPBacklinksViewController.h; sourceTree = "<group>"; };
 		7DA2311453239F0973310055 /* MPBacklinksViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPBacklinksViewController.m; sourceTree = "<group>"; };
 		7DA2311453239F0973310056 /* MPBacklinkTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPBacklinkTests.m; sourceTree = "<group>"; };
+		1F0D9E01000000000000F7 /* MPAgentsPanelTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPAgentsPanelTests.m; sourceTree = "<group>"; };
 		7DA2311453239F0973310049 /* MPProseIssuesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPProseIssuesViewController.h; sourceTree = "<group>"; };
 		7DA2311453239F0973310050 /* MPProseIssuesViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPProseIssuesViewController.m; sourceTree = "<group>"; };
 		D1A0000000000000000000CF /* MDDrawioProgress.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MDDrawioProgress.h; sourceTree = "<group>"; };
@@ -1106,6 +1111,8 @@
 				1F0D9D87194AC83C008E1856 /* MPHtmlPreferencesViewController.xib */,
 				D2B0000000000000000000FA /* MPUpdatePreferencesViewController.h */,
 				D2B0000000000000000000FB /* MPUpdatePreferencesViewController.m */,
+				1F0D9E01000000000000F5 /* MPAgentsPreferencesViewController.h */,
+				1F0D9E01000000000000F6 /* MPAgentsPreferencesViewController.m */,
 				D2B0000000000000000000EA /* MPQuickLookPreferencesViewController.h */,
 				D2B0000000000000000000EB /* MPQuickLookPreferencesViewController.m */,
 				852D52391E260A6400BA7162 /* MPTerminalPreferencesViewController.h */,
@@ -1386,6 +1393,7 @@
 				7DA2311453239F0973310048 /* MDDrawioPlugInTests.m */,
 				7DA2311453239F0973310051 /* MPPlugInsTests.m */,
 				7DA2311453239F0973310056 /* MPBacklinkTests.m */,
+				1F0D9E01000000000000F7 /* MPAgentsPanelTests.m */,
 				7DA2311453239F0973310062 /* MPActionLogTests.m */,
 				7DA2311453239F0973310076 /* MPLinkPreviewTests.m */,
 				7DA2311453239F0973310070 /* MPWebClipperTests.m */,
@@ -1952,6 +1960,7 @@
 				D2B0000000000000000000FC /* MPUpdatePreferencesViewController.m in Sources */,
 				D2B0000000000000000000EC /* MPQuickLookExtension.m in Sources */,
 				D2B0000000000000000000ED /* MPQuickLookPreferencesViewController.m in Sources */,
+				1F0D9E0100000000000F6A /* MPAgentsPreferencesViewController.m in Sources */,
 				F55A342A5A01CEBCC9F60054 /* MPActionLog.m in Sources */,
 				F55A342A5A01CEBCC9F60060 /* MPWebClipper.m in Sources */,
 				F55A342A5A01CEBCC9F60057 /* MPTaskList.m in Sources */,
@@ -2031,6 +2040,7 @@
 				F55A342A5A01CEBCC9F60046 /* MDDrawioPlugInTests.m in Sources */,
 				F55A342A5A01CEBCC9F60048 /* MPPlugInsTests.m in Sources */,
 				F55A342A5A01CEBCC9F60051 /* MPBacklinkTests.m in Sources */,
+				1F0D9E0100000000000F7A /* MPAgentsPanelTests.m in Sources */,
 				F55A342A5A01CEBCC9F60055 /* MPActionLogTests.m in Sources */,
 				F55A342A5A01CEBCC9F60065 /* MPLinkPreviewTests.m in Sources */,
 				F55A342A5A01CEBCC9F60061 /* MPWebClipperTests.m in Sources */,
