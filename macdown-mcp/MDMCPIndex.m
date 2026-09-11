@@ -160,4 +160,19 @@
     return [entry.lines componentsJoinedByString:@"\n"];
 }
 
+
+- (void)eachDocument:(void (^)(NSURL *, NSString *))block
+{
+    if (!block)
+        return;
+    [self refresh];
+    for (NSURL *document in self.order)
+    {
+        MDMCPEntry *entry = self.entries[document.path];
+        if (!entry)
+            continue;
+        block(document, [entry.lines componentsJoinedByString:@"\n"]);
+    }
+}
+
 @end

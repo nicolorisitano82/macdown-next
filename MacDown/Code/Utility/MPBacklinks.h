@@ -3,7 +3,7 @@
 //  MacDown
 //
 
-#import <Cocoa/Cocoa.h>
+#import <Foundation/Foundation.h>
 
 
 /// One place where a document is cited: which file, which line, what it says.

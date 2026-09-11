@@ -69,8 +69,11 @@ static NSSet<NSString *> *MDKnownVersions(void)
                              @"version": @"1"},
             @"instructions": @"Reads a folder of Markdown documents: search "
                              @"it, read a file, list what is there, see a "
-                             @"document's headings. It never leaves the "
-                             @"folder it was given and it changes nothing."
+                             @"document's headings, who cites a document, "
+                             @"what its front matter declares, and which "
+                             @"documents declare a field. It never leaves "
+                             @"the folder it was given and it changes "
+                             @"nothing."
         } for:identifier];
     }
 

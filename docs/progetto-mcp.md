@@ -1,9 +1,10 @@
 # Progetto: un server MCP sulla cartella
 
-Progetto e, da oggi, diario: la **fase 1 è scritta** — il perimetro, i
-quattro strumenti in sola lettura e l'indice — e il binario viaggia dentro
-l'applicazione. Le sezioni da 1 a 6 restano il progetto com'era; la 7 dice
-cosa è stato deciso, e la 8 cosa è venuto fuori davvero, con i numeri.
+Progetto e, da oggi, diario: le **fasi 1 e 2 sono scritte** — il perimetro,
+l'indice, i quattro strumenti di lettura e i tre che leggono la cartella
+come un insieme di note — e il binario viaggia dentro l'applicazione. Le
+sezioni da 1 a 6 restano il progetto com'era; la 7 dice cosa è stato deciso,
+la 8 com'è andata la fase 1 e la 9 la fase 2, con i numeri.
 
 Viene da due studi già scritti — la [strada C dello studio su Claude e
 GPT](studio-claude-gpt.md) e la [fase 3 della roadmap](roadmap-bear.md) — e
@@ -272,8 +273,85 @@ o, per un client che legge un file di configurazione:
 * `backlinks`, `frontmatter`, `find_by_field` restano alla fase 2, la
   scrittura alla 3, il pannello nelle impostazioni alla 4.
 
+## 9. La fase 2, com'è andata
+
+Tre strumenti in più, e **nessuna riga nuova che decida cosa è una
+citazione**: quella la decidono i pezzi che l'applicazione usa già.
+
+| Strumento | Argomenti | Risposta |
+|---|---|---|
+| `backlinks` | `path` | chi cita quel documento: file, titolo, riga, la frase |
+| `frontmatter` | `path` | i campi del front matter, come mappa |
+| `find_by_field` | `field`, `value?` | i documenti che lo dichiarano, col valore |
+
+### Il codice è lo stesso, non è un secondo
+
+`backlinks` chiama `MPBacklinksInText`, la funzione che riempie il pannello
+dei backlink nell'editor; `frontmatter` e `find_by_field` chiamano
+`-[NSString frontMatter:]`, quella che l'anteprima usa per la tabella in
+cima al documento. Un documento non può quindi risultare citato
+nell'applicazione e non citato sul tubo: è una risposta sola, data due
+volte.
+
+Per prendere quel codice senza prendersi dietro l'applicazione intera sono
+nati `MacDown/Code/Utility/MPMarkdownText.{h,m}`: le cinque funzioni di
+testo senza opinioni — che riga è questa, quali pezzi sono codice, cos'è uno
+spazio — che stavano in `MPUtilities` insieme alle preferenze, alle finestre
+e ai bundle. `MPUtilities.h` le include, e chi le usava non se ne è accorto.
+
+Il front matter torna da YAML come **dizionario ordinato** (l'anteprima
+vuole i campi nell'ordine in cui sono scritti), che non è un `NSDictionary`:
+per una risposta l'ordine non conta e i due sono la stessa cosa, quindi il
+server chiede a entrambi le due domande a cui entrambi rispondono.
+
+### I numeri, misurati
+
+Stessa cartella di prima — 259 documenti:
+
+| Chiamata | Tempo | Cosa ha letto |
+|---|---|---|
+| `backlinks` a indice freddo | 292 ms | 259 documenti |
+| `backlinks` a indice caldo | 254 ms | 0 |
+| `frontmatter` di un documento | 3 ms | uno |
+| `find_by_field` | 220 ms | 0 |
+
+Le tre domande sull'intera cartella costano quanto una ricerca, perché sono
+la stessa passeggiata: l'indice tiene il testo, e leggere il front matter di
+259 documenti già in memoria sono i quindici millisecondi che separano una
+ricerca da un `find_by_field`.
+
+### Il difetto che le prove hanno tirato fuori
+
+La cartella di prova sta in una cartella temporanea, cioè sotto `/private`,
+e **standardizzare un percorso toglie quel `/private`**: la radice diventava
+`/tmp/…` mentre i file arrivavano come `/private/tmp/…`, il confronto
+falliva e ogni documento in una sottocartella tornava col nome nudo,
+`nota.md` invece di `sotto/nota.md`. Sotto `/Users` non si vedeva. Adesso il
+percorso relativo lo calcola il perimetro — che è l'unico a sapere come ha
+standardizzato la radice — e una prova lo tiene fermo.
+
+### Com'è provata
+
+* **30 prove unitarie** (sette nuove): chi cita e chi no — il documento non
+  cita sé stesso, quello che sta fra i backtick non è una citazione, un
+  collegamento scritto da una sottocartella è lo stesso file — il front
+  matter come mappa e quando non c'è, `find_by_field` sul campo, sul valore
+  e dentro una lista, e la sottocartella che resta nel percorso.
+* **Undici prove nella suite di controllo** (tre nuove), tutte al binario:
+  che dica chi cita un documento e da quale sottocartella, che legga il
+  front matter come mappa, che trovi i documenti che dichiarano un campo.
+
+### Cosa la fase 2 non fa
+
+* **`search` non guarda il front matter come campi**: cerca testo, e il
+  front matter è testo come il resto;
+* `find_by_field` confronta valori **uguali**, non «contiene» e non
+  intervalli: una data «dopo il primo marzo» è una domanda che non sa fare;
+* niente `open_in_macdown`, niente scrittura, niente diario: fasi 3 e 4.
+
 ---
 
-*Fase 1 fatta l'11 settembre 2026, versione 0.33.0. Le fasi 2, 3 e 4 sono
-ancora progetto: quando toccherà a loro, questo file cresce di una sezione
-per volta, con i numeri veri invece delle intenzioni.*
+*Fase 1 e fase 2 fatte l'11 settembre 2026, versione 0.33.0. Restano la
+scrittura (fase 3) e il pannello nelle impostazioni (fase 4): quando
+toccherà a loro, questo file cresce di una sezione per volta, con i numeri
+veri invece delle intenzioni.*

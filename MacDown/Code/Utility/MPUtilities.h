@@ -8,6 +8,8 @@
 
 #import <Foundation/Foundation.h>
 
+#import "MPMarkdownText.h"
+
 extern NSString * const kMPStylesDirectoryName;
 extern NSString * const kMPStyleFileExtension;
 extern NSString * const kMPThemesDirectoryName;
@@ -33,13 +35,6 @@ NSArray<NSURL *> *MPPlugInBundleURLs(void);
 
 /// The same, over folders given rather than the two the application uses.
 NSArray<NSURL *> *MPPlugInBundleURLsInFolders(NSArray<NSURL *> *folders);
-
-/** Which line `location` falls on in `text`, counting from one.
- *
- * For showing where something is rather than for finding it again: a
- * number a person can compare with what the editor shows them.
- */
-NSUInteger MPLineNumberForLocation(NSString *text, NSUInteger location);
 
 /** How long a text of `words` words takes to read, in minutes.
  *
@@ -109,10 +104,6 @@ NSString *MPMarkdownLinkTargetForFileURL(NSURL *fileURL,
  */
 NSURL *MPNewMarkdownFileURLForName(NSString *name, NSURL *documentURL);
 
-BOOL MPCharacterIsWhitespace(unichar character);
-BOOL MPCharacterIsNewline(unichar character);
-BOOL MPStringIsNewline(NSString *str);
-
 NSString *MPStylePathForName(NSString *name);
 NSString *MPThemePathForName(NSString *name);
 NSURL *MPHighlightingThemeURLForName(NSString *name);
@@ -128,13 +119,6 @@ static void (^MPDocumentOpenCompletionEmpty)(
         NSDocument *doc, BOOL wasOpen, NSError *error) {
 
 };
-
-/** The ranges of fenced blocks and inline spans in Markdown: code, not prose.
- *
- * Whoever reads a document for something — citations, findings, imports —
- * has to leave code alone, and every one of them was writing this again.
- */
-NSArray<NSValue *> *MPMarkdownCodeRanges(NSString *text);
 
 /** Whether a document's file has gone from where the document thinks it is.
  *

@@ -33,7 +33,7 @@ arrivano con la 0.23.0.
 | To-do che si riordinano | **fatto**, a comando | master | — |
 | Anteprima del documento collegato | **fatta** — cartolina dopo cinque secondi sul link | master | — |
 | Anteprima nel Finder (Quick Look) | **fatta** — estensione dentro l'app | master | — |
-| Server MCP con perimetro | **fase 1 fatta** — lettura sola | master | alta |
+| Server MCP con perimetro | **fasi 1 e 2 fatte** — lettura sola | master | alta |
 | Web clipper | **fatto** — Archivio ▸ Salva una pagina come Markdown… | master | — |
 | Tag come organizzazione | **no** — l'equivalente su file è il front-matter | — | — |
 | Sync iCloud, cifratura per nota, OCR, scanner, schizzi, archivio/cestino, workspace per tag | **no** | — | — |
@@ -102,11 +102,13 @@ già è il posto giusto dove farlo comparire. *Alta.*
 Prima tappa utile e piccola: portare `macdownext` da «apre file» a
 «cerca/leggi/aggiungi», che è la stessa base su cui il server poi si appoggia.
 
-**La fase 1 adesso c'è**: [un server MCP sulla cartella](progetto-mcp.md) —
-`macdownext-mcp`, accanto a `macdownext` dentro l'app, che cerca, legge,
-elenca e dà l'indice dei titoli di **una** cartella dichiarata, e non esce
-da lì. Niente scrittura: quella è la fase 3 dello stesso documento, dove
-stanno anche il diario delle chiamate e i backlink.
+**Le fasi 1 e 2 adesso ci sono**: [un server MCP sulla
+cartella](progetto-mcp.md) — `macdownext-mcp`, accanto a `macdownext` dentro
+l'app, che cerca, legge, elenca, dà l'indice dei titoli, dice chi cita un
+documento, legge il front matter e trova i documenti che dichiarano un
+campo, dentro **una** cartella dichiarata da cui non esce. Le citazioni e il
+front matter li calcola con lo stesso codice dell'editor. Niente scrittura:
+quella è la fase 3 dello stesso documento, con il diario delle chiamate.
 
 ---
 

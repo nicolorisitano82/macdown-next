@@ -47,4 +47,11 @@
 /// The text of one document, from the index when it is current.
 - (NSString *)textOf:(NSURL *)document;
 
+/** Every document with its text, in reading order.
+ *
+ * A question about the whole folder — who cites this, which notes declare
+ * that field — is one pass over the index and not one read per document.
+ */
+- (void)eachDocument:(void (^)(NSURL *document, NSString *text))block;
+
 @end

@@ -608,10 +608,14 @@ Desktop, or anything else that speaks the protocol. The client starts it,
 talks to it over a pipe and stops it; MacDown Next does not have to be
 running, because what the server reads is the folder.
 
-It can do four things — **search** the folder, **read** a file, **list**
-what is there, give a document's **outline** — and nothing else. There is no
-tool that writes, none that renames, none that deletes. The folder is
-declared, never guessed:
+It can do seven things and nothing else: **search** the folder, **read** a
+file, **list** what is there, give a document's **outline**, say who cites a
+document (**backlinks**), read a document's YAML **frontmatter**, and find
+the documents that declare a field (**find_by_field**). There is no tool
+that writes, none that renames, none that deletes. Citations and front
+matter come from the same code the editor runs, so a document cannot be
+cited in the application and uncited over the wire. The folder is declared,
+never guessed:
 
 ```bash
 claude mcp add notes -- \

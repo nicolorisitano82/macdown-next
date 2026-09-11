@@ -97,6 +97,7 @@
 		1F0D9D65194AC7CF008E1856 /* NSString+Lookup.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9D5F194AC7CF008E1856 /* NSString+Lookup.m */; };
 		1F0D9D66194AC7CF008E1856 /* NSTextView+Autocomplete.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9D61194AC7CF008E1856 /* NSTextView+Autocomplete.m */; };
 		1F0D9D67194AC7CF008E1856 /* MPUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9D64194AC7CF008E1856 /* MPUtilities.m */; };
+		1F0D9E0100000000000F2A /* MPMarkdownText.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000F2 /* MPMarkdownText.m */; };
 		1F0D9D76194AC7F7008E1856 /* MPEditorPreferencesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9D6A194AC7F7008E1856 /* MPEditorPreferencesViewController.m */; };
 		1F0D9D78194AC7F7008E1856 /* MPHtmlPreferencesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9D6D194AC7F7008E1856 /* MPHtmlPreferencesViewController.m */; };
 		1F0D9D7A194AC7F7008E1856 /* MPMarkdownPreferencesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9D70194AC7F7008E1856 /* MPMarkdownPreferencesViewController.m */; };
@@ -217,6 +218,10 @@
 		1F0D9E010000000000000193 /* MDMCPTools.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000E6 /* MDMCPTools.m */; };
 		1F0D9E010000000000000194 /* MDMCPServer.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000E8 /* MDMCPServer.m */; };
 		1F0D9E010000000000000195 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000E9 /* main.m */; };
+		1F0D9E0100000000000F31 /* MPBacklinks.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310053 /* MPBacklinks.m */; };
+		1F0D9E0100000000000F32 /* MPMarkdownText.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000F2 /* MPMarkdownText.m */; };
+		1F0D9E0100000000000F33 /* NSString+Lookup.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9D5F194AC7CF008E1856 /* NSString+Lookup.m */; };
+		1F0D9E0100000000000F34 /* YAMLSerialization.m in Sources */ = {isa = PBXBuildFile; fileRef = 1FFEB32A19737D6E00B2254F /* YAMLSerialization.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc -Wno-unused-variable"; }; };
 		1F0D9E010000000000000196 /* macdownext-mcp in Copy Command Line Utility */ = {isa = PBXBuildFile; fileRef = 1F0D9E010000000000000190 /* macdownext-mcp */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -484,6 +489,8 @@
 		1F0D9D60194AC7CF008E1856 /* NSTextView+Autocomplete.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSTextView+Autocomplete.h"; sourceTree = "<group>"; };
 		1F0D9D61194AC7CF008E1856 /* NSTextView+Autocomplete.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSTextView+Autocomplete.m"; sourceTree = "<group>"; };
 		1F0D9D63194AC7CF008E1856 /* MPUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPUtilities.h; sourceTree = "<group>"; };
+		1F0D9E01000000000000F1 /* MPMarkdownText.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPMarkdownText.h; sourceTree = "<group>"; };
+		1F0D9E01000000000000F2 /* MPMarkdownText.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPMarkdownText.m; sourceTree = "<group>"; };
 		1F0D9D64194AC7CF008E1856 /* MPUtilities.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPUtilities.m; sourceTree = "<group>"; };
 		1F0D9D69194AC7F7008E1856 /* MPEditorPreferencesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPEditorPreferencesViewController.h; sourceTree = "<group>"; };
 		1F0D9D6A194AC7F7008E1856 /* MPEditorPreferencesViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPEditorPreferencesViewController.m; sourceTree = "<group>"; };
@@ -1067,6 +1074,8 @@
 				FD4A413A2D24286D41BAD8E9 /* MPTableSource.m */,
 				7DA2311453239F0973310003 /* MPRemoteImageFetch.h */,
 				7DA2311453239F0973310004 /* MPRemoteImageFetch.m */,
+				1F0D9E01000000000000F1 /* MPMarkdownText.h */,
+				1F0D9E01000000000000F2 /* MPMarkdownText.m */,
 				1F0D9D63194AC7CF008E1856 /* MPUtilities.h */,
 				1F0D9D64194AC7CF008E1856 /* MPUtilities.m */,
 			);
@@ -1946,6 +1955,7 @@
 				D0C1A1000000000000000023 /* MPMathEditorController.m in Sources */,
 				D0C1A1000000000000000033 /* MPSidebarController.m in Sources */,
 				1F0D9D67194AC7CF008E1856 /* MPUtilities.m in Sources */,
+				1F0D9E0100000000000F2A /* MPMarkdownText.m in Sources */,
 				852D523C1E260A6400BA7162 /* MPTerminalPreferencesViewController.m in Sources */,
 				1F0D9D78194AC7F7008E1856 /* MPHtmlPreferencesViewController.m in Sources */,
 				1F0D9D7C194AC7F7008E1856 /* MPPreferences.m in Sources */,
@@ -2050,6 +2060,10 @@
 				1F0D9E010000000000000193 /* MDMCPTools.m in Sources */,
 				1F0D9E010000000000000194 /* MDMCPServer.m in Sources */,
 				1F0D9E010000000000000195 /* main.m in Sources */,
+				1F0D9E0100000000000F31 /* MPBacklinks.m in Sources */,
+				1F0D9E0100000000000F32 /* MPMarkdownText.m in Sources */,
+				1F0D9E0100000000000F33 /* NSString+Lookup.m in Sources */,
+				1F0D9E0100000000000F34 /* YAMLSerialization.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2849,9 +2863,24 @@
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_NAME = "macdownext-mcp";
 				SKIP_INSTALL = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/macdown-mcp",
+					"$(SRCROOT)/MacDown/Code/Utility",
+					"$(SRCROOT)/MacDown/Code/Extension",
+					"$(SRCROOT)/Dependency/YAML-framework",
+					"$(SRCROOT)/Pods/Headers/Public",
+					"$(SRCROOT)/Pods/Headers/Public/LibYAML",
+					"$(SRCROOT)/Pods/Headers/Public/M13OrderedDictionary",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(BUILT_PRODUCTS_DIR)/LibYAML",
+					"$(BUILT_PRODUCTS_DIR)/M13OrderedDictionary",
+				);
 				OTHER_LDFLAGS = (
 					"-framework",
 					Foundation,
+					"-lLibYAML",
+					"-lM13OrderedDictionary",
 				);
 			};
 			name = Debug;
@@ -2865,9 +2894,24 @@
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_NAME = "macdownext-mcp";
 				SKIP_INSTALL = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/macdown-mcp",
+					"$(SRCROOT)/MacDown/Code/Utility",
+					"$(SRCROOT)/MacDown/Code/Extension",
+					"$(SRCROOT)/Dependency/YAML-framework",
+					"$(SRCROOT)/Pods/Headers/Public",
+					"$(SRCROOT)/Pods/Headers/Public/LibYAML",
+					"$(SRCROOT)/Pods/Headers/Public/M13OrderedDictionary",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(BUILT_PRODUCTS_DIR)/LibYAML",
+					"$(BUILT_PRODUCTS_DIR)/M13OrderedDictionary",
+				);
 				OTHER_LDFLAGS = (
 					"-framework",
 					Foundation,
+					"-lLibYAML",
+					"-lM13OrderedDictionary",
 				);
 			};
 			name = Release;

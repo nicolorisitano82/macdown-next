@@ -74,6 +74,16 @@ typedef NS_ENUM(NSUInteger, MDMCPWriting) {
  */
 - (NSArray<NSURL *> *)filesUnder:(NSURL *)folder;
 
+/** A path as the caller should see it: relative to the root.
+ *
+ * Nothing in an answer says where this Mac keeps its home folder, and the
+ * comparison is made on paths standardized the way the root was — a root
+ * under /private and a file the enumerator hands back with the /private
+ * still on it are the same place, and used to come back missing their
+ * folder.
+ */
+- (NSString *)relativePathFor:(NSURL *)url;
+
 /// The file to read for a document: the text inside a textbundle, or the
 /// document itself.
 + (NSURL *)textFileFor:(NSURL *)document;

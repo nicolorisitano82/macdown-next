@@ -547,6 +547,10 @@ if [ -x "$MCP" ]; then
     mkdir -p "$MCP_ROOT"
     printf '# Relazione\n\nUna riga con la parola cardine.\n' \
         > "$MCP_ROOT/relazione.md"
+    mkdir -p "$MCP_ROOT/sotto"
+    printf -- '---\ntags: [iso]\nstato: aperto\n---\n\n# Indice\n\n%s\n' \
+        'Vedi [la relazione](../relazione.md).' \
+        > "$MCP_ROOT/sotto/indice.md"
     # The server reads lines until the pipe closes, so the whole
     # conversation goes in at once and the answers come out in order.
     {
@@ -555,15 +559,17 @@ if [ -x "$MCP" ]; then
         printf '%s\n' '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search","arguments":{"query":"cardine"}}}'
         printf '%s\n' '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"read","arguments":{"path":"../fuori.md"}}}'
         printf '%s\n' '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"write","arguments":{"path":"relazione.md","text":"altro"}}}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"backlinks","arguments":{"path":"relazione.md"}}}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"frontmatter","arguments":{"path":"sotto/indice.md"}}}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"find_by_field","arguments":{"field":"stato","value":"aperto"}}}'
     } | "$MCP" --root "$MCP_ROOT" > "$WORK/mcp.out" 2> "$WORK/mcp.err"
 
     ok "risponde alla stretta di mano" \
         contains "$WORK/mcp.out" '"protocolVersion":"2025-06-18"'
     ok "si presenta col suo nome" \
         contains "$WORK/mcp.out" '"name":"macdownext-mcp"'
-    ok "dichiara i quattro arnesi" \
-        sh -c 'grep -c "\"name\":\"\(search\|read\|list\|outline\)\"" "$0" >/dev/null \
-               && [ "$(grep -o "\"name\":\"\(search\|read\|list\|outline\)\"" "$0" | sort -u | wc -l)" -eq 4 ]' \
+    ok "dichiara i sette arnesi" \
+        sh -c '[ "$(grep -o "\"name\":\"\(search\|read\|list\|outline\|backlinks\|frontmatter\|find_by_field\)\"" "$0" | sort -u | wc -l)" -eq 7 ]' \
         "$WORK/mcp.out"
     ok "trova una parola nei documenti della cartella" \
         contains "$WORK/mcp.out" "relazione.md"
@@ -574,6 +580,14 @@ if [ -x "$MCP" ]; then
         contains "$WORK/mcp.out" "there is no tool called write"
     ok "e non sporca il documento" \
         grep -q "parola cardine" "$MCP_ROOT/relazione.md"
+    # The three of phase two, in the same conversation: who cites a
+    # document, what a document declares, and which documents declare it.
+    ok "dice chi cita un documento, e da quale sottocartella" \
+        contains "$WORK/mcp.out" 'sotto/indice.md'
+    ok "legge il front matter come mappa" \
+        contains "$WORK/mcp.out" '\"stato\":\"aperto\"'
+    ok "trova i documenti che dichiarano un campo" \
+        contains "$WORK/mcp.out" '\"field\":\"stato\"'
 fi
 
 

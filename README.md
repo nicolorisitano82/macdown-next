@@ -250,7 +250,11 @@ Writing**.
 * **An MCP server over one folder.** `macdownext-mcp`, beside `macdownext`
   in `Contents/SharedSupport/bin`, hands a declared folder to Claude Code,
   Claude Desktop or any other MCP client over a pipe — **search**, **read**,
-  **list**, **outline**, and nothing else. No tool writes, renames or
+  **list**, **outline**, **backlinks** (who cites a document),
+  **frontmatter** and **find_by_field** (which documents declare one), and
+  nothing else. Citations and front matter are worked out by the code the
+  editor itself runs, so a document cannot be cited in one and uncited in
+  the other. No tool writes, renames or
   deletes; a path outside the folder is refused; a second `--root` is an
   error rather than a second permission; text only, 2 MB at most, a
   `.textbundle` counted as one document. The application does not have to be

@@ -148,7 +148,7 @@
 }
 
 
-#pragma mark - The four tools
+#pragma mark - Reading the folder
 
 - (void)testSearchSaysWhereAndWhat
 {
@@ -216,6 +216,138 @@
     NSString *refusal = nil;
     XCTAssertNil([self.tools run:@"delete" arguments:@{} error:&refusal]);
     XCTAssertTrue([refusal containsString:@"delete"]);
+}
+
+
+#pragma mark - The folder as a set of notes
+
+/// Everything in this section needs notes that cite each other and declare
+/// things, which the documents in setUp deliberately do not.
+- (void)writeTheNotes
+{
+    NSString *verbale = @"---\n"
+        @"title: Verbale di prova\n"
+        @"tags: [iso, qualità]\n"
+        @"stato: chiuso\n"
+        @"---\n\n"
+        @"# Verbale di prova\n\nIl testo.\n";
+    [self write:verbale to:@"note/verbale.md"];
+
+    NSString *indice = @"---\n"
+        @"tags:\n  - iso\n"
+        @"stato: aperto\n"
+        @"---\n\n"
+        @"# Indice\n\n"
+        @"Vedi [[verbale]] e anche [il verbale](verbale.md).\n\n"
+        @"Questo no: `[[verbale]]` sta dentro il codice.\n";
+    [self write:indice to:@"note/indice.md"];
+
+    [self write:@"# Nota\n\nCita [il verbale](../verbale.md) da sotto.\n"
+             to:@"note/sotto/nota.md"];
+}
+
+- (void)testBacklinksSayWhoCitesADocument
+{
+    [self writeTheNotes];
+    NSString *error = nil;
+    NSDictionary *answer = [self.tools run:@"backlinks"
+        arguments:@{@"path": @"note/verbale.md"} error:&error];
+    XCTAssertNil(error);
+
+    NSMutableSet<NSString *> *citing = [NSMutableSet set];
+    for (NSDictionary *one in answer[@"citations"])
+        [citing addObject:one[@"path"]];
+    NSSet *expected = [NSSet setWithArray:@[@"note/indice.md",
+                                            @"note/sotto/nota.md"]];
+    // Both kinds count — a [[wiki link]] and a Markdown link — and a
+    // destination written from a subfolder is the same file.
+    XCTAssertEqualObjects(citing, expected);
+    // The document does not cite itself, and what is inside backticks is
+    // not a citation: three references, not four, and none from itself.
+    XCTAssertEqualObjects(answer[@"found"], @3);
+}
+
+- (void)testAPathOutsideHasNoCitationsAndSaysWhy
+{
+    NSString *error = nil;
+    XCTAssertNil([self.tools run:@"backlinks"
+        arguments:@{@"path": @"/etc/hosts"} error:&error]);
+    XCTAssertTrue([error containsString:@"outside"]);
+}
+
+- (void)testFrontMatterComesBackAsAMap
+{
+    [self writeTheNotes];
+    NSString *error = nil;
+    NSDictionary *answer = [self.tools run:@"frontmatter"
+        arguments:@{@"path": @"note/verbale.md"} error:&error];
+    XCTAssertNil(error);
+    XCTAssertEqualObjects(answer[@"has"], @YES);
+    XCTAssertEqualObjects(answer[@"fields"][@"stato"], @"chiuso");
+    NSArray *tags = @[@"iso", @"qualità"];
+    XCTAssertEqualObjects(answer[@"fields"][@"tags"], tags);
+    // And it is JSON, whatever YAML handed over.
+    XCTAssertTrue([NSJSONSerialization isValidJSONObject:answer[@"fields"]]);
+}
+
+- (void)testADocumentWithoutFrontMatterSaysSoPlainly
+{
+    [self writeTheNotes];
+    NSString *error = nil;
+    NSDictionary *answer = [self.tools run:@"frontmatter"
+        arguments:@{@"path": @"note/sotto/nota.md"} error:&error];
+    XCTAssertNil(error);
+    XCTAssertEqualObjects(answer[@"has"], @NO);
+    XCTAssertEqual([answer[@"fields"] count], 0u);
+}
+
+- (void)testFindByFieldAnswersOnTheFieldAndOnItsValue
+{
+    [self writeTheNotes];
+    NSString *error = nil;
+
+    NSDictionary *declared = [self.tools run:@"find_by_field"
+        arguments:@{@"field": @"stato"} error:&error];
+    XCTAssertEqualObjects(declared[@"found"], @2);
+
+    NSDictionary *open = [self.tools run:@"find_by_field"
+        arguments:@{@"field": @"stato", @"value": @"APERTO"} error:&error];
+    // Case is not the question: the person writing the note and the one
+    // asking for it later are the same person on two different days.
+    XCTAssertEqualObjects(open[@"found"], @1);
+    XCTAssertEqualObjects(open[@"documents"][0][@"path"], @"note/indice.md");
+
+    // A field holding a list answers when any of its items does.
+    NSDictionary *tagged = [self.tools run:@"find_by_field"
+        arguments:@{@"field": @"tags", @"value": @"iso"} error:&error];
+    XCTAssertEqualObjects(tagged[@"found"], @2);
+
+    NSDictionary *none = [self.tools run:@"find_by_field"
+        arguments:@{@"field": @"relatore"} error:&error];
+    XCTAssertEqualObjects(none[@"found"], @0);
+}
+
+- (void)testFindByFieldNeedsAField
+{
+    NSString *error = nil;
+    XCTAssertNil([self.tools run:@"find_by_field" arguments:@{}
+                            error:&error]);
+    XCTAssertTrue([error containsString:@"field"]);
+}
+
+- (void)testADocumentInASubfolderKeepsItsFolder
+{
+    [self writeTheNotes];
+    NSString *error = nil;
+    NSDictionary *answer = [self.tools run:@"list" arguments:@{} error:&error];
+
+    NSMutableSet<NSString *> *paths = [NSMutableSet set];
+    for (NSDictionary *one in answer[@"files"])
+        [paths addObject:one[@"path"]];
+    // The temporary folder lives under /private, which standardizing a path
+    // takes off: for a while that made every answer about a document in a
+    // subfolder come back as a bare file name.
+    XCTAssertTrue([paths containsObject:@"note/sotto/nota.md"]);
 }
 
 
@@ -306,7 +438,9 @@
         XCTAssertNotNil(tool[@"description"]);
         XCTAssertEqualObjects(tool[@"inputSchema"][@"type"], @"object");
     }
-    XCTAssertEqualObjects(names, (@[@"search", @"read", @"list", @"outline"]));
+    NSArray *expected = @[@"search", @"read", @"list", @"outline",
+                          @"backlinks", @"frontmatter", @"find_by_field"];
+    XCTAssertEqualObjects(names, expected);
 }
 
 - (void)testACallComesBackAsTextAndAsStructure

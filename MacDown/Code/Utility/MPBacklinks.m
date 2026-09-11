@@ -4,7 +4,7 @@
 //
 
 #import "MPBacklinks.h"
-#import "MPUtilities.h"
+#import "MPMarkdownText.h"
 
 /// Big enough for any document written by a person.
 static const unsigned long long kMPBacklinkFileSizeLimit = 4 * 1024 * 1024;

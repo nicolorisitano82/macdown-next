@@ -8,7 +8,7 @@
 
 #import "NSString+Lookup.h"
 #import "YAMLSerialization.h"
-#import "MPUtilities.h"
+#import "MPMarkdownText.h"
 
 
 @implementation NSString (Lookup)

@@ -254,6 +254,23 @@ static BOOL MDPathIsUnder(NSString *path, NSString *folder)
 }
 
 
+- (NSString *)relativePathFor:(NSURL *)url
+{
+    if (!url.isFileURL || !self.root)
+        return url.lastPathComponent ?: @"";
+
+    NSString *path = [[[url URLByResolvingSymlinksInPath]
+        URLByStandardizingPath] path];
+    NSString *prefix = [self.root.path hasSuffix:@"/"] ? self.root.path
+        : [self.root.path stringByAppendingString:@"/"];
+    if ([path hasPrefix:prefix])
+        return [path substringFromIndex:prefix.length];
+    if ([path isEqualToString:self.root.path])
+        return @"";
+    return url.lastPathComponent;
+}
+
+
 - (NSArray<NSURL *> *)filesUnder:(NSURL *)folder
 {
     NSMutableArray<NSURL *> *found = [NSMutableArray array];

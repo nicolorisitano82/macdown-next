@@ -2,8 +2,15 @@
 //  MDMCPTools.h
 //  macdownext-mcp
 //
-//  The four things a reader can ask of a folder, in phase one: search it,
-//  read a file, list what is there, and see the shape of a document.
+//  What a reader can ask of a folder: search it, read a file, list what is
+//  there, see the shape of a document — and, since phase two, who cites a
+//  document, what its front matter declares, and which documents declare a
+//  field.
+//
+//  The last three are not written here: citations come from MPBacklinks and
+//  the front matter from NSString+Lookup, the same code the application
+//  runs, so that a document cannot be cited in the editor and uncited over
+//  the wire.
 //
 //  Each answers a dictionary ready to be turned into JSON, and each is a
 //  function of a perimeter and its arguments — no server, no protocol, no
