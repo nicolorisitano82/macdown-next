@@ -24,7 +24,20 @@ static const NSUInteger kMPCompareGutter = 6;
  * not what ⌘G means in a window whose whole subject is differences. Passed
  * on, it reaches the window controller, which walks them.
  */
+@protocol MPCompareTextViewDelegate <NSObject>
+/// A row was picked in one of the two columns: which row, which side, and
+/// whether it was a double click.
+- (void)rowPicked:(NSUInteger)row onTheLeft:(BOOL)left twice:(BOOL)twice;
+/// What the menu on a row should offer.
+- (NSMenu *)menuForRow:(NSUInteger)row onTheLeft:(BOOL)left;
+@end
+
+
 @interface MPCompareTextView : NSTextView
+@property (weak, nonatomic) id<MPCompareTextViewDelegate> rows;
+@property (nonatomic) BOOL isTheLeftSide;
+/// Where each row is in this column, to turn a click into a row number.
+@property (copy, nonatomic) NSArray<NSValue *> *rowRanges;
 @end
 
 @implementation MPCompareTextView
@@ -33,6 +46,131 @@ static const NSUInteger kMPCompareGutter = 6;
 {
     [[self nextResponder] tryToPerform:@selector(performFindPanelAction:)
                                   with:sender];
+}
+
+- (NSUInteger)rowAtPoint:(NSPoint)point
+{
+    NSUInteger at = [self characterIndexForInsertionAtPoint:
+        [self convertPoint:point fromView:nil]];
+    __block NSUInteger found = NSNotFound;
+    [self.rowRanges enumerateObjectsUsingBlock:^(NSValue *value, NSUInteger i,
+                                                 BOOL *stop) {
+        NSRange range = value.rangeValue;
+        if (at >= range.location && at <= NSMaxRange(range))
+        {
+            found = i;
+            *stop = YES;
+        }
+    }];
+    return found;
+}
+
+- (void)mouseDown:(NSEvent *)event
+{
+    [super mouseDown:event];            // the selection is still the reader's
+    NSUInteger row = [self rowAtPoint:event.locationInWindow];
+    if (row != NSNotFound)
+        [self.rows rowPicked:row onTheLeft:self.isTheLeftSide
+                       twice:(event.clickCount >= 2)];
+}
+
+- (NSMenu *)menuForEvent:(NSEvent *)event
+{
+    NSUInteger row = [self rowAtPoint:event.locationInWindow];
+    if (row == NSNotFound)
+        return [super menuForEvent:event];
+    return [self.rows menuForRow:row onTheLeft:self.isTheLeftSide]
+        ?: [super menuForEvent:event];
+}
+
+@end
+
+
+/** The strip down the side: where the differences are, in one glance.
+ *
+ * A long document scrolled from the top tells you nothing about whether the
+ * next change is two screens down or two hundred. One band per row, the
+ * colour of what it is, and a frame around what is on screen; clicking goes
+ * there.
+ */
+@interface MPCompareMapView : NSView
+@property (copy, nonatomic) NSArray<MPDiffRow *> *rows;
+/// Which rows are visible, as a fraction of the whole, for the frame.
+@property (nonatomic) CGFloat visibleFrom;
+@property (nonatomic) CGFloat visibleTo;
+@property (copy, nonatomic) void (^chosen)(NSUInteger row);
+- (void)setRows:(NSArray<MPDiffRow *> *)rows;
+@end
+
+@implementation MPCompareMapView
+
+- (void)setRows:(NSArray<MPDiffRow *> *)rows
+{
+    _rows = [rows copy];
+    self.needsDisplay = YES;
+}
+
+- (void)setVisibleFrom:(CGFloat)from
+{
+    _visibleFrom = from;
+    self.needsDisplay = YES;
+}
+
+- (void)setVisibleTo:(CGFloat)to
+{
+    _visibleTo = to;
+    self.needsDisplay = YES;
+}
+
+- (void)drawRect:(NSRect)dirty
+{
+    [[NSColor controlBackgroundColor] setFill];
+    NSRectFill(self.bounds);
+
+    NSUInteger count = self.rows.count;
+    if (!count)
+        return;
+
+    CGFloat height = self.bounds.size.height;
+    // At least a point tall, or a single changed line in a long document
+    // draws as nothing at all.
+    CGFloat band = MAX(height / (CGFloat)count, 1.0);
+    [self.rows enumerateObjectsUsingBlock:^(MPDiffRow *row, NSUInteger i,
+                                            BOOL *stop) {
+        if (row.kind == MPDiffEqual)
+            return;
+        NSColor *colour = [NSColor systemYellowColor];
+        if (row.kind == MPDiffAdded)
+            colour = [NSColor systemGreenColor];
+        else if (row.kind == MPDiffRemoved)
+            colour = [NSColor systemRedColor];
+        [[colour colorWithAlphaComponent:0.75] setFill];
+        CGFloat y = height - ((CGFloat)i / (CGFloat)count) * height - band;
+        NSRectFill(NSMakeRect(2.0, y, self.bounds.size.width - 4.0, band));
+    }];
+
+    if (self.visibleTo > self.visibleFrom)
+    {
+        NSRect frame = NSMakeRect(0.5,
+            height - self.visibleTo * height,
+            self.bounds.size.width - 1.0,
+            (self.visibleTo - self.visibleFrom) * height);
+        [[NSColor labelColor] setStroke];
+        NSBezierPath *path = [NSBezierPath bezierPathWithRect:frame];
+        path.lineWidth = 1.0;
+        [[[NSColor labelColor] colorWithAlphaComponent:0.35] setStroke];
+        [path stroke];
+    }
+}
+
+- (void)mouseDown:(NSEvent *)event
+{
+    if (!self.rows.count || !self.chosen)
+        return;
+    NSPoint where = [self convertPoint:event.locationInWindow fromView:nil];
+    CGFloat share = 1.0 - (where.y / MAX(self.bounds.size.height, 1.0));
+    NSUInteger row = (NSUInteger)(share * (CGFloat)self.rows.count);
+    self.chosen(MIN(row, self.rows.count - 1));
 }
 
 @end
@@ -51,7 +189,8 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
 }
 
 
-@interface MPCompareWindowController () <NSWindowDelegate>
+@interface MPCompareWindowController () <NSWindowDelegate,
+                                         MPCompareTextViewDelegate>
 
 @property (copy, nonatomic) NSString *leftText;
 @property (copy, nonatomic) NSString *rightText;
@@ -68,6 +207,7 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
 @property (strong, nonatomic) NSScrollView *leftScroll;
 @property (strong, nonatomic) NSScrollView *rightScroll;
 @property (strong, nonatomic) NSButton *foldButton;
+@property (strong, nonatomic) MPCompareMapView *map;
 @property (strong, nonatomic) NSSegmentedControl *grainControl;
 @property (strong, nonatomic) NSButton *spaceButton;
 @property (strong, nonatomic) NSButton *caseButton;
@@ -82,6 +222,9 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
 @property (copy, nonatomic) NSArray<NSValue *> *rightRowRanges;
 @property (copy, nonatomic) NSArray<NSNumber *> *differences;
 @property (nonatomic) NSInteger at;
+/// The row a click or a right-click landed on, and on which side.
+@property (nonatomic) NSUInteger pickedRow;
+@property (nonatomic) BOOL pickedOnTheLeft;
 /// One side is scrolling the other, and should not be scrolled back.
 @property (nonatomic) BOOL following;
 
@@ -221,9 +364,12 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
     NSButton *again = [NSButton buttonWithTitle:NSLocalizedString(
         @"Read the Files Again", @"Compare the files as they are now")
         target:self action:@selector(readAgain:)];
+    NSButton *save = [NSButton buttonWithTitle:NSLocalizedString(
+        @"Export…", @"Save the differences as a patch")
+        target:self action:@selector(exportDifferences:)];
 
     NSStackView *buttons = [NSStackView stackViewWithViews:
-        @[self.summary, previous, next, self.foldButton, swap, again]];
+        @[self.summary, previous, next, self.foldButton, swap, again, save]];
     buttons.orientation = NSUserInterfaceLayoutOrientationHorizontal;
     buttons.spacing = 8.0;
     [buttons setCustomSpacing:16.0 afterView:self.summary];
@@ -243,6 +389,7 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
 
     self.leftScroll = [self textPane:&_leftView];
     self.rightScroll = [self textPane:&_rightView];
+    ((MPCompareTextView *)self.leftView).isTheLeftSide = YES;
 
     NSStackView *leftColumn = [NSStackView stackViewWithViews:
         @[self.leftTitle, self.leftScroll]];
@@ -255,11 +402,23 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
     rightColumn.alignment = NSLayoutAttributeLeading;
     rightColumn.spacing = 6.0;
 
-    NSStackView *sides = [NSStackView stackViewWithViews:
+    self.map = [[MPCompareMapView alloc] initWithFrame:NSZeroRect];
+    self.map.translatesAutoresizingMaskIntoConstraints = NO;
+    __weak MPCompareWindowController *weakSelf = self;
+    self.map.chosen = ^(NSUInteger row) {
+        [weakSelf goToRow:row];
+    };
+    [self.map.widthAnchor constraintEqualToConstant:14.0].active = YES;
+
+    NSStackView *columns = [NSStackView stackViewWithViews:
         @[leftColumn, rightColumn]];
+    columns.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    columns.distribution = NSStackViewDistributionFillEqually;
+    columns.spacing = 10.0;
+
+    NSStackView *sides = [NSStackView stackViewWithViews:@[columns, self.map]];
     sides.orientation = NSUserInterfaceLayoutOrientationHorizontal;
-    sides.distribution = NSStackViewDistributionFillEqually;
-    sides.spacing = 10.0;
+    sides.spacing = 8.0;
 
     NSStackView *column = [NSStackView stackViewWithViews:
         @[buttons, options, sides]];
@@ -311,7 +470,9 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
     scroll.borderType = NSBezelBorder;
     scroll.translatesAutoresizingMaskIntoConstraints = NO;
 
-    NSTextView *text = [[NSTextView alloc] initWithFrame:NSZeroRect];
+    MPCompareTextView *text = [[MPCompareTextView alloc]
+        initWithFrame:NSZeroRect];
+    text.rows = self;
     text.editable = NO;
     text.richText = YES;
     text.drawsBackground = YES;
@@ -362,6 +523,7 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
     if (row >= ranges.count)
         return;
 
+    [self showWhatIsVisibleOnTheMap:row];
     NSRect rect = [self rectOfRange:ranges[row].rangeValue in:other];
     self.following = YES;
     NSPoint where = otherScroll.contentView.bounds.origin;
@@ -463,6 +625,7 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
             (unsigned long)removed];
     }
 
+    self.summary.textColor = [NSColor labelColor];
     // In the title too: the Window menu lists titles, and «Comparison»
     // three times over says nothing about which is which.
     self.window.title = [MPCompareWindowController titleForLeft:self.leftName
@@ -476,6 +639,9 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
         [self sideOf:NO ranges:rightRanges]];
     self.leftRowRanges = leftRanges;
     self.rightRowRanges = rightRanges;
+    ((MPCompareTextView *)self.leftView).rowRanges = leftRanges;
+    ((MPCompareTextView *)self.rightView).rowRanges = rightRanges;
+    [self.map setRows:self.shown];
 
     // A paragraph is too long to read sideways; a line is not, and keeping
     // it on one line is what lets two columns be read across.
@@ -633,6 +799,235 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
 }
 
 
+/// The frame on the map: which stretch of the comparison is on screen.
+- (void)showWhatIsVisibleOnTheMap:(NSUInteger)topRow
+{
+    NSUInteger count = self.shown.count;
+    if (!count)
+        return;
+    CGFloat height = self.leftScroll.contentView.bounds.size.height;
+    CGFloat rowHeight = MAX(self.leftView.frame.size.height
+                            / (CGFloat)count, 1.0);
+    NSUInteger rows = MAX((NSUInteger)(height / rowHeight), 1u);
+    self.map.visibleFrom = (CGFloat)topRow / (CGFloat)count;
+    self.map.visibleTo = MIN(1.0, (CGFloat)(topRow + rows) / (CGFloat)count);
+}
+
+
+#pragma mark - What a row is, and what can be done with it
+
+/// The rows walked by the map and by «go to this one» are the shown rows;
+/// this puts one of them on screen on both sides.
+- (void)goToRow:(NSUInteger)row
+{
+    if (row >= self.shown.count)
+        return;
+    self.at = [self.differences indexOfObject:@(row)];
+    if (self.at == (NSInteger)NSNotFound)
+        self.at = -1;
+    [self show:row in:self.leftView ranges:self.leftRowRanges
+        scroll:self.leftScroll];
+    [self show:row in:self.rightView ranges:self.rightRowRanges
+        scroll:self.rightScroll];
+}
+
+
+/// Where a row's text is in the *document* on that side — not in the column
+/// on screen, which carries line numbers and marks that are ours.
+- (NSRange)sourceRangeOf:(NSUInteger)row onTheLeft:(BOOL)left
+{
+    if (row >= self.shown.count)
+        return NSMakeRange(NSNotFound, 0);
+    NSString *text = left ? self.leftText : self.rightText;
+    NSUInteger first = left ? self.shown[row].leftLine
+                            : self.shown[row].rightLine;
+    if (!first || !text.length)
+        return NSMakeRange(NSNotFound, 0);
+
+    // From the first line of this row to the first line of the next row on
+    // the same side, which is what a paragraph spans.
+    NSUInteger nextFirst = 0;
+    for (NSUInteger i = row + 1; i < self.shown.count; i++)
+    {
+        NSUInteger line = left ? self.shown[i].leftLine
+                               : self.shown[i].rightLine;
+        if (line)
+        {
+            nextFirst = line;
+            break;
+        }
+    }
+
+    __block NSUInteger location = NSNotFound;
+    __block NSUInteger end = text.length;
+    __block NSUInteger number = 0;
+    [text enumerateSubstringsInRange:NSMakeRange(0, text.length)
+                             options:NSStringEnumerationByLines
+                                   | NSStringEnumerationSubstringNotRequired
+                          usingBlock:^(NSString *piece, NSRange range,
+                                       NSRange enclosing, BOOL *stop) {
+        number++;
+        if (number == first)
+            location = range.location;
+        if (nextFirst && number == nextFirst)
+        {
+            end = range.location;
+            *stop = YES;
+        }
+        else if (!nextFirst)
+        {
+            end = NSMaxRange(enclosing);
+        }
+    }];
+    if (location == NSNotFound || end < location)
+        return NSMakeRange(NSNotFound, 0);
+    return NSMakeRange(location, end - location);
+}
+
+
+- (NSString *)sourceTextOf:(NSUInteger)row onTheLeft:(BOOL)left
+{
+    NSRange range = [self sourceRangeOf:row onTheLeft:left];
+    if (range.location == NSNotFound)
+        return nil;
+    NSString *text = left ? self.leftText : self.rightText;
+    return [text substringWithRange:range];
+}
+
+
+#pragma mark - MPCompareTextViewDelegate
+
+- (void)rowPicked:(NSUInteger)row onTheLeft:(BOOL)left twice:(BOOL)twice
+{
+    self.pickedRow = row;
+    self.pickedOnTheLeft = left;
+    if (!twice || !left || !self.revealInEditor)
+        return;
+
+    // Double click on the left: the editor goes there. The left side is the
+    // editor's own text, so the range is the editor's range.
+    NSRange range = [self sourceRangeOf:row onTheLeft:YES];
+    if (range.location != NSNotFound)
+        self.revealInEditor(range);
+}
+
+
+- (NSMenu *)menuForRow:(NSUInteger)row onTheLeft:(BOOL)left
+{
+    self.pickedRow = row;
+    self.pickedOnTheLeft = left;
+
+    NSMenu *menu = [[NSMenu alloc] init];
+    NSMenuItem *copy = [menu addItemWithTitle:NSLocalizedString(
+        @"Copy This Difference", @"Comparison row menu")
+        action:@selector(copyPickedRow:) keyEquivalent:@""];
+    copy.target = self;
+
+    // Taking a version is offered only when the left side is a document
+    // somebody can change — and never after the sides have been swapped,
+    // because then the left is a file and there is nothing to write to.
+    if (self.replaceInEditor)
+    {
+        NSMenuItem *take = [menu addItemWithTitle:NSLocalizedString(
+            @"Take the Right Version", @"Comparison row menu")
+            action:@selector(takeRightVersion:) keyEquivalent:@""];
+        take.target = self;
+        take.enabled = (self.shown[row].kind != MPDiffEqual);
+    }
+    if (self.revealInEditor)
+    {
+        NSMenuItem *go = [menu addItemWithTitle:NSLocalizedString(
+            @"Show It in the Editor", @"Comparison row menu")
+            action:@selector(showPickedInEditor:) keyEquivalent:@""];
+        go.target = self;
+        go.enabled = (self.shown[row].leftLine > 0);
+    }
+    return menu;
+}
+
+
+- (void)copyPickedRow:(id)sender
+{
+    MPDiffRow *row = self.shown[self.pickedRow];
+    NSString *text = self.pickedOnTheLeft
+        ? [self sourceTextOf:self.pickedRow onTheLeft:YES]
+        : [self sourceTextOf:self.pickedRow onTheLeft:NO];
+    if (!text.length)
+        text = (self.pickedOnTheLeft ? row.left : row.right) ?: @"";
+
+    NSPasteboard *board = [NSPasteboard generalPasteboard];
+    [board clearContents];
+    [board setString:text forType:NSPasteboardTypeString];
+}
+
+
+- (void)showPickedInEditor:(id)sender
+{
+    if (!self.revealInEditor)
+        return;
+    NSRange range = [self sourceRangeOf:self.pickedRow onTheLeft:YES];
+    if (range.location != NSNotFound)
+        self.revealInEditor(range);
+}
+
+
+/// The right version put where the left one is, in the editor.
+- (void)takeRightVersion:(id)sender
+{
+    if (!self.replaceInEditor || self.pickedRow >= self.shown.count)
+        return;
+
+    MPDiffRow *row = self.shown[self.pickedRow];
+    NSString *theirs = [self sourceTextOf:self.pickedRow onTheLeft:NO] ?: @"";
+    NSRange mine = [self sourceRangeOf:self.pickedRow onTheLeft:YES];
+
+    if (mine.location == NSNotFound)
+    {
+        // Nothing on this side: what is on the right goes in where this row
+        // would have been, which is where the next row we do have starts.
+        NSUInteger where = self.leftText.length;
+        for (NSUInteger i = self.pickedRow + 1; i < self.shown.count; i++)
+        {
+            NSRange next = [self sourceRangeOf:i onTheLeft:YES];
+            if (next.location != NSNotFound)
+            {
+                where = next.location;
+                break;
+            }
+        }
+        mine = NSMakeRange(where, 0);
+    }
+
+    NSString *expected = mine.length
+        ? [self.leftText substringWithRange:mine] : @"";
+    if (!self.replaceInEditor(mine, expected, theirs))
+    {
+        [self say:NSLocalizedString(
+            @"The document has changed since this comparison was made. Read "
+            @"the files again.",
+            @"Shown when a version cannot be taken because the document moved "
+            @"on")];
+        return;
+    }
+
+    // The comparison now describes a document that no longer exists: it is
+    // made again, from the editor, rather than left looking right and being
+    // wrong.
+    NSMutableString *changed = [self.leftText mutableCopy];
+    [changed replaceCharactersInRange:mine withString:theirs];
+    self.leftText = changed;
+    [self showTheComparison];
+    (void)row;
+}
+
+
+- (void)say:(NSString *)something
+{
+    self.summary.stringValue = something;
+    self.summary.textColor = [NSColor systemOrangeColor];
+}
+
+
 #pragma mark - Walking the differences
 
 /// ⌘G and ⇧⌘G, which is what those keys mean everywhere else: the next one
@@ -707,6 +1102,44 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
     [scroll.contentView scrollToPoint:NSMakePoint(visible.origin.x, wanted)];
     [scroll reflectScrolledClipView:scroll.contentView];
     self.following = NO;
+}
+
+
+#pragma mark - Sending it to somebody else
+
+/// A unified diff, which every tool already reads, saved where they say.
+- (void)exportDifferences:(id)sender
+{
+    BOOL byParagraph = ([self options].grain == MPDiffByParagraphs);
+    NSString *patch = MPDiffUnifiedText(
+        MPDiffRowsBetweenWithOptions(self.leftText, self.rightText,
+                                     [self options]),
+        self.leftName, self.rightName, 3, byParagraph);
+    if (!patch.length)
+    {
+        [self say:NSLocalizedString(@"There is nothing to export: the two "
+                                    @"are the same.",
+                                    @"Shown when an export has no "
+                                    @"differences to write")];
+        return;
+    }
+
+    NSSavePanel *panel = [NSSavePanel savePanel];
+    panel.nameFieldStringValue = [NSString stringWithFormat:@"%@.diff",
+        self.leftName.stringByDeletingPathExtension.length
+            ? self.leftName.stringByDeletingPathExtension
+            : NSLocalizedString(@"differences",
+                                @"Name of an exported patch file")];
+    panel.allowedFileTypes = @[@"diff", @"patch", @"txt"];
+    panel.allowsOtherFileTypes = YES;
+
+    [panel beginSheetModalForWindow:self.window
+                  completionHandler:^(NSModalResponse answer) {
+        if (answer != NSModalResponseOK || !panel.URL)
+            return;
+        [patch writeToURL:panel.URL atomically:YES
+                 encoding:NSUTF8StringEncoding error:NULL];
+    }];
 }
 
 

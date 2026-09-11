@@ -30,6 +30,22 @@
                   named:(NSString *)rightName
                     url:(NSURL *)rightURL;
 
+/** What the left side can do when it is a living document.
+ *
+ * Set by whoever opened the comparison, and left nil when the left side is
+ * only a file: the panel then offers neither taking a version nor going to
+ * a line, rather than offering something that would quietly do nothing.
+ *
+ * `replaceInEditor` is given the range in the text the panel was handed,
+ * the text it believes is there, and what to put in its place; it answers
+ * NO when the document has moved on, and the panel says so rather than
+ * writing into the wrong place.
+ */
+@property (copy, nonatomic) BOOL (^replaceInEditor)(NSRange range,
+                                                    NSString *expected,
+                                                    NSString *replacement);
+@property (copy, nonatomic) BOOL (^revealInEditor)(NSRange range);
+
 /// What the window is called: the two names and how many differences.
 + (NSString *)titleForLeft:(NSString *)left right:(NSString *)right
                differences:(NSUInteger)differences;

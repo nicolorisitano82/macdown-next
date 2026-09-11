@@ -150,7 +150,11 @@ Writing**.
   the margin (`~`, `+`, `−`) for people who do not separate red from green,
   and scroll together by row. It can compare **by paragraph** instead of by
   line, and ignore spaces or case: a document that has only been re-wrapped
-  reads as 181 changed rows by line and 9 by paragraph. Differences only, next, previous, swap sides, and read
+  reads as 181 changed rows by line and 9 by paragraph. A right-click on a
+  row copies that difference, takes the right version into the editor (one
+  step of undo, refused if the document has moved on) or shows it there; a
+  strip down the side says where the differences are; Export writes a
+  unified diff. Differences only, next, previous, swap sides, and read
   the files again for when somebody else has just saved.
 
 ### Collecting

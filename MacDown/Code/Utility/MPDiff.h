@@ -118,6 +118,20 @@ extern void MPDiffWordRanges(NSString *left, NSString *right,
                              NSArray<NSValue *> **leftRanges,
                              NSArray<NSValue *> **rightRanges);
 
+/** The comparison as a unified diff, the way `diff -u` writes one.
+ *
+ * For sending to somebody who was not looking at the window: a format every
+ * tool already reads, with `context` unchanged lines around each run of
+ * differences. The two names go in the header lines.
+ *
+ * By paragraph the rows are paragraphs, so the patch is one of paragraphs —
+ * readable, and not something `patch` should be pointed at. That is said in
+ * the header rather than left to be discovered.
+ */
+extern NSString *MPDiffUnifiedText(NSArray<MPDiffRow *> *rows,
+                                   NSString *leftName, NSString *rightName,
+                                   NSUInteger context, BOOL byParagraph);
+
 /// How many rows of each kind, for the sentence at the top of the window.
 extern void MPDiffCounts(NSArray<MPDiffRow *> *rows, NSUInteger *added,
                          NSUInteger *removed, NSUInteger *changed);

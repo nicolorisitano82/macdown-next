@@ -83,6 +83,7 @@
 		1F0D9E0100000000000F7A /* MPAgentsPanelTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000F7 /* MPAgentsPanelTests.m */; };
 		1F0D9E0100000000000FEA /* MPDiffTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000FE /* MPDiffTests.m */; };
 		1F0D9E0100000000000111 /* MPDiagramPromptTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000110 /* MPDiagramPromptTests.m */; };
+		1F0D9E0100000000000121 /* MPCompareActionsTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000120 /* MPCompareActionsTests.m */; };
 		F55A342A5A01CEBCC9F60047 /* MPProseIssuesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310050 /* MPProseIssuesViewController.m */; };
 		F55A342A5A01CEBCC9F60048 /* MPPlugInsTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310051 /* MPPlugInsTests.m */; };
 		D1A0000000000000000000BA /* MDDrawioProgress.m in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000000D3 /* MDDrawioProgress.m */; };
@@ -436,6 +437,7 @@
 		1F0D9E01000000000000F7 /* MPAgentsPanelTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPAgentsPanelTests.m; sourceTree = "<group>"; };
 		1F0D9E01000000000000FE /* MPDiffTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPDiffTests.m; sourceTree = "<group>"; };
 		1F0D9E0100000000000110 /* MPDiagramPromptTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPDiagramPromptTests.m; sourceTree = "<group>"; };
+		1F0D9E0100000000000120 /* MPCompareActionsTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCompareActionsTests.m; sourceTree = "<group>"; };
 		7DA2311453239F0973310049 /* MPProseIssuesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPProseIssuesViewController.h; sourceTree = "<group>"; };
 		7DA2311453239F0973310050 /* MPProseIssuesViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPProseIssuesViewController.m; sourceTree = "<group>"; };
 		D1A0000000000000000000CF /* MDDrawioProgress.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MDDrawioProgress.h; sourceTree = "<group>"; };
@@ -1420,6 +1422,7 @@
 				1F0D9E01000000000000F7 /* MPAgentsPanelTests.m */,
 				1F0D9E01000000000000FE /* MPDiffTests.m */,
 				1F0D9E0100000000000110 /* MPDiagramPromptTests.m */,
+				1F0D9E0100000000000120 /* MPCompareActionsTests.m */,
 				7DA2311453239F0973310062 /* MPActionLogTests.m */,
 				7DA2311453239F0973310076 /* MPLinkPreviewTests.m */,
 				7DA2311453239F0973310070 /* MPWebClipperTests.m */,
@@ -2073,6 +2076,7 @@
 				1F0D9E0100000000000F7A /* MPAgentsPanelTests.m in Sources */,
 				1F0D9E0100000000000FEA /* MPDiffTests.m in Sources */,
 				1F0D9E0100000000000111 /* MPDiagramPromptTests.m in Sources */,
+				1F0D9E0100000000000121 /* MPCompareActionsTests.m in Sources */,
 				F55A342A5A01CEBCC9F60055 /* MPActionLogTests.m in Sources */,
 				F55A342A5A01CEBCC9F60065 /* MPLinkPreviewTests.m in Sources */,
 				F55A342A5A01CEBCC9F60061 /* MPWebClipperTests.m in Sources */,

@@ -599,3 +599,12 @@
 "no differences" = "nessuna differenza";
 "one difference" = "una differenza";
 "%@ — %lu differences" = "%@ — %lu differenze";
+
+/* Cosa si fa con una differenza */
+"Copy This Difference" = "Copia questa differenza";
+"Take the Right Version" = "Prendi la versione di destra";
+"Show It in the Editor" = "Mostralo nell'editor";
+"Export…" = "Esporta…";
+"The document has changed since this comparison was made. Read the files again." = "Il documento è cambiato da quando è stato fatto questo confronto. Rileggi i file.";
+"There is nothing to export: the two are the same." = "Non c'è niente da esportare: i due sono uguali.";
+"differences" = "differenze";

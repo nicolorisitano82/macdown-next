@@ -6548,8 +6548,48 @@ static BOOL MPActionEditsTheDocument(SEL action)
 
     MPNote(@"compare: %lu characters against %@",
            (unsigned long)mine.length, name);
-    [MPCompareWindowController compare:mine named:ours url:self.fileURL
-                                  with:theirs named:name url:url];
+    MPCompareWindowController *panel =
+        [MPCompareWindowController compare:mine named:ours url:self.fileURL
+                                      with:theirs named:name url:url];
+
+    // What the panel may do to this document, and nothing more: put the
+    // other side's text where a row is, and show a row. Both check that the
+    // document still says what the comparison was made from — somebody can
+    // type while a comparison is open, and writing into a range worked out
+    // from the text as it was would land anywhere.
+    __weak MPDocument *weakSelf = self;
+    panel.revealInEditor = ^BOOL (NSRange range) {
+        MPDocument *document = weakSelf;
+        if (!document || NSMaxRange(range) > document.editor.string.length)
+            return NO;
+        [document.editor.window makeKeyAndOrderFront:nil];
+        [document.editor setSelectedRange:range];
+        [document.editor scrollRangeToVisible:range];
+        [document.editor.window makeFirstResponder:document.editor];
+        return YES;
+    };
+    panel.replaceInEditor = ^BOOL (NSRange range, NSString *expected,
+                                   NSString *replacement) {
+        MPDocument *document = weakSelf;
+        if (!document)
+            return NO;
+        NSString *now = document.editor.string;
+        if (NSMaxRange(range) > now.length)
+            return NO;
+        if (![[now substringWithRange:range] isEqualToString:expected ?: @""])
+            return NO;
+
+        if (![document.editor shouldChangeTextInRange:range
+                                    replacementString:replacement])
+            return NO;
+        [document keepAVersionBefore:@"a version taken from a comparison"];
+        [document.editor.textStorage replaceCharactersInRange:range
+                                                   withString:replacement];
+        [document.editor didChangeText];
+        MPNote(@"compare: took %lu characters into the document",
+               (unsigned long)replacement.length);
+        return YES;
+    };
 }
 
 

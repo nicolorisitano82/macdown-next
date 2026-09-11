@@ -273,14 +273,55 @@ salvato due volte per avere le versioni; e nella suite, dove una voce di
 menu che punta a un selettore che nessuno implementa — invisibile finché
 qualcuno non ci clicca — viene ora cercata **sia nel nib sia nel binario**.
 
+## 12. Le fasi 3 e 4, com'è andata
+
+Fatte insieme, meno il testo reso che è stato scartato (sezione 2.C).
+
+**Dal leggere al fare.** Tasto destro su una riga del confronto:
+
+* **Copia questa differenza** — il testo della riga *nel documento*, non
+  quello che si vede: senza il numero di riga e senza il segno nel margine,
+  che sono nostri;
+* **Prendi la versione di destra** — quella riga sostituisce la sinistra
+  **nell'editor**, in un passo solo di annulla, con una versione tenuta
+  prima. Offerta solo quando a sinistra c'è un documento vivo: dopo uno
+  scambio dei lati la voce non c'è;
+* **Mostralo nell'editor** — e lo stesso lo fa il doppio clic a sinistra.
+
+Il pannello non tocca il documento da sé: gli vengono dati **due blocchi** e
+non ha altro modo di scrivere. Il blocco che sostituisce riceve anche
+*quello che il pannello crede ci sia*, e se il documento nel frattempo è
+cambiato risponde di no — il pannello lo dice, invece di scrivere in un
+punto calcolato su un testo che non esiste più.
+
+**La mappa** è una striscia a destra: una banda per riga, del colore di
+quello che è, con una cornice intorno a quello che è sullo schermo. Un clic
+ci porta. In un documento lungo è l'unico modo di sapere se la prossima
+differenza è due schermate più giù o duecento.
+
+**Esporta…** scrive un diff unificato — misurato carattere per carattere
+contro `diff -U2` sullo stesso paio di file: identico. Per paragrafi il
+diff lo dice in un commento, perché è roba da leggere e non da dare in pasto
+a `patch`.
+
+### Il difetto che ha tirato fuori
+
+Le due colonne erano diventate una sottoclasse di `NSTextView` (serve per
+lasciar passare ⌘G e per sapere su che riga si è cliccato), ma la riga che
+le crea non era stata cambiata: restavano `NSTextView`, e alla prima
+`setIsTheLeftSide:` partiva un'eccezione che AppKit **si mangia**. Effetto
+visibile: la voce di menu non faceva assolutamente niente. Adesso c'è una
+prova che apre la finestra e le chiede il titolo, che è il modo più corto di
+accorgersene.
+
 ### Cosa resta
 
-Il copiare e il prendere una versione, la mappa laterale, e — in fase 4 —
-andare alla riga nell'editor ed esportare le differenze. Il confronto del
-testo reso è stato scartato (sezione 2.C): il controllo del pannello resta
-a due, per righe e per paragrafi.
+Niente di questo studio: le quattro fasi sono fatte e il testo reso è
+scartato. Quello che resta è nella sezione 3 — le provenienze che aspettano
+la [sincronizzazione](progetto-sync.md): una copia in conflitto, una
+revisione git, le tre vie.
 
 ---
 
-*Fasi 1 e 2 fatte, l'11 e il 12 settembre 2026. Il resto di questo file è
-ancora studio: nessuna di quelle è promessa.*
+*Le quattro fasi sono fatte, l'11 e il 12 settembre 2026. Quello che resta
+aspetta la sincronizzazione.*

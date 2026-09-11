@@ -374,6 +374,17 @@ as after — and the window says so when the two are not the same thing.
 - The two sides scroll together, following rows rather than pixels: a
   paragraph wraps to a different height on each side, and what has to stay
   level is the comparison, not the geometry.
+- **Right-click a row**: copy that difference, **take the right version**
+  (which replaces it in the editor, as one step of undo, and refuses when
+  the document has moved on since the comparison was made), or show it in
+  the editor. **Double-click** a row on the left does the same showing.
+- A **strip down the right side** says where the differences are in the
+  whole document, with a frame around what is on screen; clicking it goes
+  there.
+- **Export…** writes the comparison as a unified diff — the format every
+  tool reads — for sending to somebody who was not looking at the window.
+  By paragraph, the patch says so in a comment: it is for reading, not for
+  feeding to `patch`.
 - The window is named after what is in it — `nota.md (in the editor, not
   saved) ↔ nota.md (on disk) — one difference` — so the Window menu is
   readable with three comparisons open.

@@ -512,6 +512,109 @@ NSArray<MPDiffRow *> *MPDiffRowsBetweenWithOptions(NSString *left,
 }
 
 
+NSString *MPDiffUnifiedText(NSArray<MPDiffRow *> *rows,
+                            NSString *leftName, NSString *rightName,
+                            NSUInteger context, BOOL byParagraph)
+{
+    if (!rows.count)
+        return @"";
+
+    // Which rows go in: every difference, and `context` rows either side.
+    NSMutableIndexSet *wanted = [NSMutableIndexSet indexSet];
+    [rows enumerateObjectsUsingBlock:^(MPDiffRow *row, NSUInteger i,
+                                       BOOL *stop) {
+        if (row.kind == MPDiffEqual)
+            return;
+        NSUInteger from = (i > context) ? i - context : 0;
+        NSUInteger to = MIN(i + context, rows.count - 1);
+        [wanted addIndexesInRange:NSMakeRange(from, to - from + 1)];
+    }];
+    if (!wanted.count)
+        return @"";
+
+    NSMutableString *out = [NSMutableString string];
+    [out appendFormat:@"--- %@\n", leftName.length ? leftName : @"a"];
+    [out appendFormat:@"+++ %@\n", rightName.length ? rightName : @"b"];
+    if (byParagraph)
+    {
+        // Said out loud: a patch whose units are paragraphs is for reading,
+        // not for feeding to `patch`.
+        [out appendString:@"# compared by paragraph, not by line\n"];
+    }
+
+    // One hunk per run of rows that were asked for.
+    __block NSUInteger runStart = NSNotFound;
+    __block NSUInteger runEnd = NSNotFound;
+    void (^flush)(void) = ^{
+        if (runStart == NSNotFound)
+            return;
+
+        NSUInteger leftFirst = 0, rightFirst = 0;
+        NSUInteger leftCount = 0, rightCount = 0;
+        for (NSUInteger i = runStart; i <= runEnd; i++)
+        {
+            MPDiffRow *row = rows[i];
+            if (row.leftLine)
+            {
+                if (!leftFirst)
+                    leftFirst = row.leftLine;
+                leftCount++;
+            }
+            if (row.rightLine)
+            {
+                if (!rightFirst)
+                    rightFirst = row.rightLine;
+                rightCount++;
+            }
+        }
+        [out appendFormat:@"@@ -%lu,%lu +%lu,%lu @@\n",
+            (unsigned long)(leftFirst ?: 1), (unsigned long)leftCount,
+            (unsigned long)(rightFirst ?: 1), (unsigned long)rightCount];
+
+        for (NSUInteger i = runStart; i <= runEnd; i++)
+        {
+            MPDiffRow *row = rows[i];
+            switch (row.kind)
+            {
+                case MPDiffEqual:
+                    [out appendFormat:@" %@\n", row.left ?: @""];
+                    break;
+                case MPDiffRemoved:
+                    [out appendFormat:@"-%@\n", row.left ?: @""];
+                    break;
+                case MPDiffAdded:
+                    [out appendFormat:@"+%@\n", row.right ?: @""];
+                    break;
+                case MPDiffChanged:
+                    // Two lines, as a unified diff says a change.
+                    [out appendFormat:@"-%@\n", row.left ?: @""];
+                    [out appendFormat:@"+%@\n", row.right ?: @""];
+                    break;
+            }
+        }
+        runStart = NSNotFound;
+        runEnd = NSNotFound;
+    };
+
+    __block NSUInteger previous = NSNotFound;
+    [wanted enumerateIndexesUsingBlock:^(NSUInteger i, BOOL *stop) {
+        if (runStart == NSNotFound)
+        {
+            runStart = i;
+        }
+        else if (previous != NSNotFound && i != previous + 1)
+        {
+            flush();
+            runStart = i;
+        }
+        runEnd = i;
+        previous = i;
+    }];
+    flush();
+    return out;
+}
+
+
 void MPDiffCounts(NSArray<MPDiffRow *> *rows, NSUInteger *added,
                   NSUInteger *removed, NSUInteger *changed)
 {

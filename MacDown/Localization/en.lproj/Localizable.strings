@@ -131,3 +131,12 @@
 "no differences" = "no differences";
 "one difference" = "one difference";
 "%@ — %lu differences" = "%@ — %lu differences";
+
+/* Doing something with a difference */
+"Copy This Difference" = "Copy This Difference";
+"Take the Right Version" = "Take the Right Version";
+"Show It in the Editor" = "Show It in the Editor";
+"Export…" = "Export…";
+"The document has changed since this comparison was made. Read the files again." = "The document has changed since this comparison was made. Read the files again.";
+"There is nothing to export: the two are the same." = "There is nothing to export: the two are the same.";
+"differences" = "differences";

@@ -262,6 +262,58 @@
     XCTAssertEqual(right.count, 0u);
 }
 
+#pragma mark - Sending it to somebody else
+
+- (void)testTheUnifiedDiffIsTheOneEveryToolReads
+{
+    NSString *before = @"uno\ndue\ntre\nquattro\ncinque\nsei\nsette\n";
+    NSString *after = @"uno\ndue\ntre e mezzo\nquattro\ncinque\nsei\nsette\notto\n";
+    NSString *patch = MPDiffUnifiedText(MPDiffRowsBetween(before, after),
+                                        @"a.md", @"b.md", 2, NO);
+
+    // Measured against diff -U2 on the same pair, which writes exactly this.
+    NSString *expected = @"--- a.md\n+++ b.md\n@@ -1,7 +1,8 @@\n uno\n due\n"
+        @"-tre\n+tre e mezzo\n quattro\n cinque\n sei\n sette\n+otto\n";
+    XCTAssertEqualObjects(patch, expected);
+}
+
+- (void)testAPatchOfParagraphsSaysSo
+{
+    MPDiffOptions byParagraph = MPDiffOptionsStrict;
+    byParagraph.grain = MPDiffByParagraphs;
+    NSArray<MPDiffRow *> *rows = MPDiffRowsBetweenWithOptions(
+        @"Una frase\nsu due righe.\n", @"Un'altra frase\nsu due righe.\n",
+        byParagraph);
+    NSString *patch = MPDiffUnifiedText(rows, @"a.md", @"b.md", 3, YES);
+    XCTAssertTrue([patch containsString:@"# compared by paragraph"]);
+    XCTAssertTrue([patch containsString:@"-Una frase su due righe."]);
+    XCTAssertTrue([patch containsString:@"+Un'altra frase su due righe."]);
+}
+
+- (void)testTwoDocumentsTheSameExportNothing
+{
+    NSString *same = @"uno\ndue\n";
+    XCTAssertEqual(MPDiffUnifiedText(MPDiffRowsBetween(same, same),
+                                     @"a", @"b", 3, NO).length, 0u);
+}
+
+- (void)testFarApartDifferencesAreTwoHunks
+{
+    NSMutableString *before = [NSMutableString string];
+    for (NSUInteger i = 0; i < 40; i++)
+        [before appendFormat:@"riga %lu\n", (unsigned long)i];
+    NSMutableString *after = [before mutableCopy];
+    [after replaceOccurrencesOfString:@"riga 2\n" withString:@"riga due\n"
+                              options:0 range:NSMakeRange(0, after.length)];
+    [after replaceOccurrencesOfString:@"riga 33\n" withString:@"riga trentatre\n"
+                              options:0 range:NSMakeRange(0, after.length)];
+    NSString *patch = MPDiffUnifiedText(MPDiffRowsBetween(before, after),
+                                        @"a", @"b", 3, NO);
+    NSUInteger hunks = [patch componentsSeparatedByString:@"@@ -"].count - 1;
+    XCTAssertEqual(hunks, 2u);
+}
+
+
 #pragma mark - What the window is called
 
 - (void)testTheTitleCarriesTheCountSoTheWindowMenuIsReadable
@@ -279,6 +331,21 @@
     XCTAssertNotEqualObjects(one, many);
     XCTAssertTrue([many containsString:@"9"]);
     XCTAssertFalse([one containsString:@"1 "]);
+}
+
+- (void)testAComparisonWindowOpensAndCarriesBothSides
+{
+    // The window is built in code, and a mistake in building it is an
+    // exception AppKit swallows: the menu item then does nothing at all,
+    // which is exactly how this test came to exist.
+    MPCompareWindowController *panel = [MPCompareWindowController
+        compare:@"uno\ndue\ntre\n" named:@"mio.md" url:nil
+           with:@"uno\ndue e mezzo\ntre\nquattro\n" named:@"loro.md"
+            url:nil];
+    XCTAssertNotNil(panel.window);
+    XCTAssertTrue([panel.window.title containsString:@"mio.md"]);
+    XCTAssertTrue([panel.window.title containsString:@"loro.md"]);
+    [panel close];
 }
 
 - (void)testATitleWithNothingToPutInIt
