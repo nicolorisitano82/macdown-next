@@ -730,6 +730,7 @@ up next: [the editor's text rendering](docs/wysiwyg-testo.md),
 [the two previews](docs/anteprime.md),
 [the selection the two panes share](docs/selezione.md),
 [where the work goes](docs/salvataggi.md),
+[the plan for an MCP server](docs/progetto-mcp.md),
 [the updater](docs/aggiornamenti.md),
 [the draw.io plug-in](docs/drawio.md),
 [code blocks](docs/blocchi-codice.md), and

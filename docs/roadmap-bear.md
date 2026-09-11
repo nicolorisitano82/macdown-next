@@ -102,6 +102,10 @@ già è il posto giusto dove farlo comparire. *Alta.*
 Prima tappa utile e piccola: portare `macdownext` da «apre file» a
 «cerca/leggi/aggiungi», che è la stessa base su cui il server poi si appoggia.
 
+**Il progetto adesso c'è**: [un server MCP sulla cartella](progetto-mcp.md) —
+perimetro, strumenti, livelli di scrittura, come si prova e in che ordine
+farlo. Da leggere prima di scrivere una riga.
+
 ---
 
 ## Fase 4 — accessori — **fatta** (ramo `fase4`)
