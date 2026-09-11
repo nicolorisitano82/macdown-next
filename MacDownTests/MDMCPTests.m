@@ -555,6 +555,152 @@
 }
 
 
+#pragma mark - What a caller can send that is not what was meant
+
+/// Everything in this section is a thing that took the whole server down,
+/// or let it out of its folder, before it was written down here.
+
+- (void)testAnArgumentOfTheWrongKindIsRefusedAndNothingFalls
+{
+    NSArray *wrong = @[
+        @[@"read", @{@"path": @42}],
+        @[@"read", @{@"path": [NSNull null]}],
+        @[@"outline", @{@"path": @{@"a": @1}}],
+        @[@"list", @{@"folder": @7}],
+        @[@"backlinks", @{@"path": @[@"a"]}],
+        @[@"frontmatter", @{@"path": @0.5}],
+        @[@"find_by_field", @{@"field": @"tags", @"value": @3}],
+    ];
+    for (NSArray *one in wrong)
+    {
+        NSString *error = nil;
+        XCTAssertNil([self.tools run:one[0] arguments:one[1] error:&error]);
+        XCTAssertTrue([error containsString:@"has to be text"], @"%@", one[0]);
+    }
+    // And the tools still work afterwards, which is the whole point.
+    NSString *error = nil;
+    XCTAssertNotNil([self.tools run:@"list" arguments:@{} error:&error]);
+}
+
+- (void)testALineRangeThatCannotExistIsRefused
+{
+    NSString *error = nil;
+    NSDictionary *backwards = @{@"path": @"verbale.md", @"from": @(-5),
+                                @"lines": @(-3)};
+    // -3 lines used to become eighteen quintillion, and the range built
+    // from it took the server with it.
+    XCTAssertNil([self.tools run:@"read" arguments:backwards error:&error]);
+    XCTAssertTrue([error containsString:@"negative"]);
+
+    NSDictionary *enormous = @{@"path": @"verbale.md",
+                               @"lines": @(NSUIntegerMax)};
+    NSDictionary *answer = [self.tools run:@"read" arguments:enormous
+                                     error:&error];
+    XCTAssertNotNil(answer);
+    XCTAssertEqualObjects(answer[@"lines"], answer[@"of"]);
+}
+
+- (void)testParametersThatAreNotAMapAreAnErrorAndNotAFall
+{
+    MDMCPServer *server = [self server];
+    NSDictionary *asList = @{@"jsonrpc": @"2.0", @"id": @1,
+                             @"method": @"tools/call", @"params": @[@1, @2]};
+    XCTAssertEqualObjects([server answerTo:asList][@"error"][@"code"],
+                          @(-32602));
+    NSDictionary *asText = @{@"jsonrpc": @"2.0", @"id": @2,
+                             @"method": @"initialize", @"params": @"ciao"};
+    // The handshake still answers: params nobody can read are no params.
+    XCTAssertNotNil([server answerTo:asText][@"result"][@"serverInfo"]);
+}
+
+- (void)testABundleWhoseTextPointsOutsideIsOutside
+{
+    NSURL *bundle = [self.root URLByAppendingPathComponent:@"trappola.textbundle"];
+    [[NSFileManager defaultManager] createDirectoryAtURL:bundle
+        withIntermediateDirectories:YES attributes:nil error:NULL];
+    NSString *info = @"{\"version\":2,\"type\":\"net.daringfireball.markdown\"}";
+    [info writeToURL:[bundle URLByAppendingPathComponent:@"info.json"]
+          atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+    [[NSFileManager defaultManager] createSymbolicLinkAtURL:
+        [bundle URLByAppendingPathComponent:@"text.markdown"]
+        withDestinationURL:[NSURL fileURLWithPath:@"/etc/hosts"] error:NULL];
+
+    // The bundle is inside the folder; its text is not, and that is what
+    // gets read. For a while this was a way out of the perimeter.
+    XCTAssertEqual([self.perimeter verdictForPath:@"trappola.textbundle"],
+                   MDMCPOutsideTheRoots);
+    NSString *error = nil;
+    XCTAssertNil([self.tools run:@"read"
+        arguments:@{@"path": @"trappola.textbundle"} error:&error]);
+
+    NSDictionary *found = [self.tools run:@"search"
+        arguments:@{@"query": @"localhost"} error:&error];
+    XCTAssertEqualObjects(found[@"found"], @0);
+    for (NSDictionary *file in [self.tools run:@"list" arguments:@{}
+                                          error:&error][@"files"])
+    {
+        XCTAssertFalse([file[@"path"] containsString:@"trappola"]);
+    }
+}
+
+- (void)testAFolderLeftAloneIsLeftAloneWhenWritingToo
+{
+    self.perimeter.excluded = @[@"bozze*"];
+    self.perimeter.writing = MDMCPFullWriting;
+    NSURL *folder = [self.root URLByAppendingPathComponent:@"bozze"];
+    [[NSFileManager defaultManager] createDirectoryAtURL:folder
+        withIntermediateDirectories:YES attributes:nil error:NULL];
+
+    NSString *error = nil;
+    NSDictionary *inside = @{@"path": @"bozze/nuova.md", @"text": @"x"};
+    XCTAssertNil([self.tools run:@"create" arguments:inside error:&error]);
+    XCTAssertTrue([error containsString:@"leaves alone"]);
+    // Otherwise the server writes a document into a folder it cannot then
+    // read, search or list.
+    XCTAssertFalse([[NSFileManager defaultManager] fileExistsAtPath:
+        [folder URLByAppendingPathComponent:@"nuova.md"].path]);
+}
+
+- (void)testListingABundleAnswersTheDocumentAndItsSize
+{
+    NSURL *bundle = [self.root URLByAppendingPathComponent:@"buono.textbundle"];
+    [[NSFileManager defaultManager] createDirectoryAtURL:bundle
+        withIntermediateDirectories:YES attributes:nil error:NULL];
+    NSString *info = @"{\"version\":2,\"type\":\"net.daringfireball.markdown\"}";
+    [info writeToURL:[bundle URLByAppendingPathComponent:@"info.json"]
+          atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+    [@"# Dentro\n" writeToURL:
+        [bundle URLByAppendingPathComponent:@"text.markdown"]
+        atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+
+    NSString *error = nil;
+    NSDictionary *answer = [self.tools run:@"list"
+        arguments:@{@"folder": @"buono.textbundle"} error:&error];
+    XCTAssertEqualObjects(answer[@"count"], @1);
+    XCTAssertEqualObjects(answer[@"files"][0][@"path"], @"buono.textbundle");
+    // The size of the text, not of the folder, which weighs nothing.
+    XCTAssertEqualObjects(answer[@"files"][0][@"bytes"], @9);
+}
+
+- (void)testAPathCannotWriteALineIntoTheDiary
+{
+    NSURL *log = [self.root URLByAppendingPathComponent:@"finta.log"];
+    self.tools.diary = [[MDMCPDiary alloc] initWithFile:log];
+    NSString *error = nil;
+    NSString *forged = @"vero.md\n2020-01-01T00:00:00Z  create  ok  FINTO";
+    [self.tools run:@"read" arguments:@{@"path": forged} error:&error];
+
+    NSString *written = [NSString stringWithContentsOfURL:log
+        encoding:NSUTF8StringEncoding error:NULL];
+    NSArray *lines = [[written stringByTrimmingCharactersInSet:
+        [NSCharacterSet newlineCharacterSet]]
+        componentsSeparatedByString:@"\n"];
+    // One call, one line — whatever the caller put in the path.
+    XCTAssertEqual(lines.count, 1u);
+    XCTAssertTrue([written containsString:@"FINTO"]);
+}
+
+
 #pragma mark - The index
 
 - (void)testTheSecondQuestionReadsNothing

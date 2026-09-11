@@ -261,9 +261,21 @@ static const NSUInteger kMPDiaryLines = 200;
     NSArray<NSString *> *levels = @[@"", @" --append", @" --write"];
     NSInteger level = MIN(MAX(self.preferences.agentsWritingLevel, 0), 2);
 
+    // A folder somebody named with a quote in it would otherwise produce a
+    // line that means something else once a shell has read it.
     return [NSString stringWithFormat:
         @"claude mcp add notes -- \"%@\" --root \"%@\"%@",
-        server, folder, levels[level]];
+        [self quoted:server], [self quoted:folder], levels[level]];
+}
+
+/// What a double quote and a backslash have to look like inside a quoted
+/// argument.
+- (NSString *)quoted:(NSString *)path
+{
+    NSString *escaped = [path stringByReplacingOccurrencesOfString:@"\\"
+                                                        withString:@"\\\\"];
+    return [escaped stringByReplacingOccurrencesOfString:@"\""
+                                             withString:@"\\\""];
 }
 
 - (void)showTheDiary

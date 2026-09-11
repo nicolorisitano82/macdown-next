@@ -12,9 +12,50 @@
 static const unsigned long long kMDDiaryLimit = 2 * 1024 * 1024;
 
 
+/// How much of a path or a reason a line carries. Past this it is cut:
+/// a diary is read by eye, and one line of it is one call.
+static const NSUInteger kMDDiaryFieldLimit = 300;
+
+
+/// One line per call, whatever the caller sent.
+///
+/// The path in a line comes from whoever made the call, so a path with a
+/// line ending in it used to write extra lines into the diary — a forged
+/// entry in the one file that says who touched what. Line endings and the
+/// other control characters become spaces, and a very long value is cut.
+static NSString *MDMCPOneLine(NSString *text)
+{
+    if (!text.length)
+        return @"";
+
+    NSMutableString *clean = [NSMutableString stringWithCapacity:text.length];
+    NSCharacterSet *controls = [NSCharacterSet controlCharacterSet];
+    [text enumerateSubstringsInRange:NSMakeRange(0, text.length)
+                             options:NSStringEnumerationByComposedCharacterSequences
+                          usingBlock:^(NSString *piece, NSRange r,
+                                       NSRange e, BOOL *stop) {
+        if (piece.length == 1
+                && [controls characterIsMember:[piece characterAtIndex:0]])
+        {
+            [clean appendString:@" "];
+            return;
+        }
+        [clean appendString:piece];
+    }];
+
+    if (clean.length > kMDDiaryFieldLimit)
+    {
+        return [[clean substringToIndex:kMDDiaryFieldLimit - 1]
+            stringByAppendingString:@"…"];
+    }
+    return clean;
+}
+
+
 /// Columns, so that a person reading the file can follow one of them down
-/// the page. Nothing is cut: a long path pushes its line out rather than
-/// losing the end of itself, which is the half that says which file.
+/// the page. Nothing is cut before the limit above: a long path pushes its
+/// line out rather than losing the end of itself, which is the half that
+/// says which file.
 static NSString *MDMCPPadded(NSString *text, NSUInteger width)
 {
     if (text.length >= width)
@@ -64,10 +105,13 @@ static NSString *MDMCPPadded(NSString *text, NSUInteger width)
     if (!self.file || !tool.length)
         return;
 
+    NSString *where = MDMCPOneLine(path);
     NSString *line = [NSString stringWithFormat:@"%@  %@ %@ %@ %@\n",
         [self.clock stringFromDate:[NSDate date]],
-        MDMCPPadded(tool, 14), MDMCPPadded(outcome, 8),
-        MDMCPPadded(path.length ? path : @"-", 36), detail ?: @""];
+        MDMCPPadded(MDMCPOneLine(tool), 14),
+        MDMCPPadded(MDMCPOneLine(outcome), 8),
+        MDMCPPadded(where.length ? where : @"-", 36),
+        MDMCPOneLine(detail)];
     [[self openHandle] writeData:
         [line dataUsingEncoding:NSUTF8StringEncoding]];
 }

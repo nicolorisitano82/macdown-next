@@ -507,9 +507,100 @@ un server rotto.
 Diciotto chiavi nuove, tutte in inglese nel codice e tradotte in italiano,
 con `Tools/check_translations.py` che torna a dire zero mancanti.
 
+## 12. Le prove d'attacco, e i sei difetti che hanno trovato
+
+Fasi finite non vuol dire finito. Una passata fatta apposta per rompere il
+server — argomenti del tipo sbagliato, numeri impossibili, link simbolici
+messi dove non li guardava nessuno — ha trovato **sei difetti**, uno dei
+quali era un buco nel perimetro. Tutti misurati prima e dopo, tutti con una
+prova che li tiene chiusi.
+
+### 1. Un pacchetto che leggeva fuori dalla cartella
+
+Un `.textbundle` è una cartella, e il perimetro controllava **la cartella**.
+Il file che si legge davvero è quello dentro, `text.markdown`, e quello
+nessuno lo risolveva:
+
+```
+appunti/trappola.textbundle/text.markdown → /etc/hosts
+```
+
+`read` restituiva `/etc/hosts`, e `search` lo trovava. Il server usciva
+dalla cartella che gli era stata data, che è l'unica cosa che aveva promesso
+di non fare. Ora il testo interno viene risolto e confrontato con la radice
+come qualunque altro percorso: fuori è fuori, e il pacchetto sparisce anche
+da `list` e dall'indice. (Sul lato scrittura il danno era diverso: `append`
+scriveva **sopra il link**, sostituendolo con un file vero, invece di
+scrivere fuori. Stessa causa, stessa correzione.)
+
+### 2. Un argomento del tipo sbagliato spegneva il server
+
+`{"path": 42}` — o `null`, o una lista, o una mappa — finiva in
+`-length`, che un `NSNumber` non risponde: eccezione, processo morto,
+sessione del client persa. Valeva per ogni strumento, `folder`, `find`,
+`with`, `field` compresi. Adesso i tipi si controllano **in un posto solo**,
+prima di scegliere lo strumento, e la risposta è una frase: «path has to be
+text». Uno strumento aggiunto domani è controllato senza fare niente.
+
+### 3. Un intervallo di righe impossibile
+
+`{"from": -5, "lines": -3}`: il meno tre diventava diciotto miliardi di
+miliardi, `first + count` girava su sé stesso, e l'intervallo che ne usciva
+portava via il processo. Adesso i numeri negativi sono un rifiuto, e il
+conto si fa per sottrazione — quanto resta — che non può girare.
+
+### 4. `params` che non è una mappa
+
+`"params": [1, 2]` sul protocollo: stessa morte, un gradino più su. Adesso
+params che non si legge vale params che non c'è.
+
+### 5. Righe false nel diario
+
+Il percorso lo scrive il chiamante, e il diario lo scriveva di seguito. Un
+percorso con un a capo dentro ci infilava **una riga inventata**:
+
+```
+2026-01-01T00:00:00Z  create  ok  FALSO  0 bytes
+```
+
+Nell'unico file che dice chi ha toccato cosa. Adesso ogni carattere di
+controllo diventa uno spazio e i campi troppo lunghi si tagliano: una
+chiamata, una riga, qualunque cosa arrivi.
+
+### 6. `--exclude` non valeva per chi scrive
+
+`--exclude 'bozze*'` fermava `read`, e `create` scriveva lì dentro
+tranquillo — un documento in una cartella che il server stesso non può poi
+né leggere né elencare. Le due regole erano scritte due volte; adesso sono
+una sola funzione, usata da chi legge e da chi crea.
+
+### E due cose più piccole
+
+* `list` dentro un `.textbundle` mostrava la sua idraulica (`text.markdown`)
+  invece del documento, e un pacchetto pesava **0 byte** perché quello pesa
+  una cartella. Ora un pacchetto è un documento anche quando lo si elenca, e
+  pesa quanto il suo testo.
+* Nel pannello, una cartella con una virgoletta nel nome produceva una riga
+  da incollare che una shell legge diversamente. Adesso è protetta.
+
+### Cosa invece ha retto
+
+Link simbolici che escono, `..` in ogni posizione, percorso assoluto fuori
+radice, JSON rotto, `method` numerico, `name` del tipo sbagliato, `id` come
+oggetto, riga da 200 000 caratteri, `lines` enorme (dà tutto il documento),
+`create` con percorso vuoto o che finisce con `/`, modifica dello stesso
+file di pari lunghezza nello stesso secondo (l'indice se ne accorge: le date
+hanno i nanosecondi).
+
+### Il conto
+
+**554 prove unitarie** e **74 controlli** nella suite; le otto prove nuove e
+i quattro controlli nuovi sono uno per difetto, più la domanda che conta
+dopo ognuno: *e adesso risponde ancora?*
+
 ---
 
-*Le quattro fasi sono fatte, l'11 settembre 2026, versione 0.33.0. Quello
-che resta è nella sezione 3 e non è una fase: `open_in_macdown`, la ricerca
-per espressione regolare, `.macdownignore`. Roba da aggiungere quando
-qualcuno la chiede, non prima.*
+*Le quattro fasi sono fatte, l'11 settembre 2026, versione 0.33.0, e la
+passata d'attacco pure. Quello che resta è nella sezione 3 e non è una fase:
+`open_in_macdown`, la ricerca per espressione regolare, `.macdownignore`.
+Roba da aggiungere quando qualcuno la chiede, non prima.*

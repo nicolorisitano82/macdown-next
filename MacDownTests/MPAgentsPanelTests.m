@@ -91,6 +91,16 @@
     XCTAssertFalse([line containsString:@"--root \"\""]);
 }
 
+- (void)testAFolderWithAQuoteInItDoesNotBreakTheLine
+{
+    MPPreferences *preferences = [MPPreferences sharedInstance];
+    preferences.agentsFolderPath = @"/Users/qualcuno/di \"prova\"";
+    NSString *line = [self.panel command];
+    // The quote is escaped rather than closing the argument early, which is
+    // what a shell would otherwise make of it.
+    XCTAssertTrue([line containsString:@"\\\"prova\\\""]);
+}
+
 - (void)testTheSwitchIsThePreference
 {
     MPPreferences *preferences = [MPPreferences sharedInstance];

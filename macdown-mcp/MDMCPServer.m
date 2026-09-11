@@ -56,9 +56,15 @@ static NSSet<NSString *> *MDKnownVersions(void)
     // "initialized" one every client sends after the handshake.
     BOOL wantsAnswer = identifier != nil && identifier != [NSNull null];
 
+    // Params are a set of names and values or they are nothing: asked with
+    // a list, this used to send -objectForKeyedSubscript: to an array and
+    // take the server down with the client's session.
+    NSDictionary *params = [message[@"params"]
+        isKindOfClass:[NSDictionary class]] ? message[@"params"] : @{};
+
     if ([method isEqualToString:@"initialize"])
     {
-        NSString *asked = message[@"params"][@"protocolVersion"];
+        NSString *asked = params[@"protocolVersion"];
         NSString *version = [MDKnownVersions() containsObject:asked]
             ? asked : MDMCPProtocolVersion;
         return [self result:@{
@@ -89,7 +95,6 @@ static NSSet<NSString *> *MDKnownVersions(void)
 
     if ([method isEqualToString:@"tools/call"])
     {
-        NSDictionary *params = message[@"params"];
         NSString *name = params[@"name"];
         NSDictionary *arguments = params[@"arguments"];
         if (![name isKindOfClass:[NSString class]])

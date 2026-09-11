@@ -18,6 +18,48 @@ static const NSUInteger kMDSearchLimit = 50;
 static const NSUInteger kMDReadLines = 500;
 
 
+/// The arguments whose value, when there is one, has to be text — and the
+/// ones that have to be a number that is not negative. JSON carries lists,
+/// maps, null and -1, and a tool asked with one of those used to take the
+/// whole server down: -length on a number is not a question NSNumber
+/// answers. Checked once, here, so that a tool added later is checked too.
+static NSArray<NSString *> *MDMCPTextArguments(void)
+{
+    return @[@"path", @"folder", @"query", @"text", @"find", @"with",
+             @"field", @"value"];
+}
+
+static NSArray<NSString *> *MDMCPCountArguments(void)
+{
+    return @[@"from", @"lines", @"limit", @"count"];
+}
+
+/// The sentence for an argument that is not what it has to be, or nil when
+/// everything is in order.
+static NSString *MDMCPWrongArgument(NSDictionary *arguments)
+{
+    for (NSString *name in MDMCPTextArguments())
+    {
+        id value = arguments[name];
+        if (value && ![value isKindOfClass:[NSString class]])
+            return [NSString stringWithFormat:@"%@ has to be text", name];
+    }
+    for (NSString *name in MDMCPCountArguments())
+    {
+        id value = arguments[name];
+        if (!value)
+            continue;
+        if (![value isKindOfClass:[NSNumber class]]
+                || [value compare:@0] == NSOrderedAscending)
+        {
+            return [NSString stringWithFormat:
+                @"%@ has to be a number, and not a negative one", name];
+        }
+    }
+    return nil;
+}
+
+
 /// How many lines a text has, counting the last one whether or not it ends
 /// with a line ending.
 static NSUInteger MDMCPLineCount(NSString *text)
@@ -318,9 +360,11 @@ NSArray<NSDictionary *> *MDMCPOutlineOfMarkdown(NSString *text)
                                    error:&refusal];
     // Every call, not only the ones that changed something: the question
     // the day after is as often «did it read that» as «who wrote this».
+    NSString *where = [arguments isKindOfClass:[NSDictionary class]]
+            && [arguments[@"path"] isKindOfClass:[NSString class]]
+        ? arguments[@"path"] : nil;
     [self.diary noteTool:tool outcome:answer ? @"ok" : @"refused"
-                    path:[arguments[@"path"] isKindOfClass:[NSString class]]
-                             ? arguments[@"path"] : nil
+                    path:where
                   detail:answer ? MDMCPDetailOf(answer) : refusal];
     if (!answer && error)
         *error = refusal;
@@ -332,6 +376,20 @@ NSArray<NSDictionary *> *MDMCPOutlineOfMarkdown(NSString *text)
                 arguments:(NSDictionary *)arguments
                     error:(NSString **)error
 {
+    if (arguments && ![arguments isKindOfClass:[NSDictionary class]])
+    {
+        if (error)
+            *error = @"the arguments of a call are names and values";
+        return nil;
+    }
+    NSString *wrong = MDMCPWrongArgument(arguments);
+    if (wrong)
+    {
+        if (error)
+            *error = wrong;
+        return nil;
+    }
+
     if ([tool isEqualToString:@"search"])
         return [self searchFor:arguments[@"query"]
                          limit:[arguments[@"limit"] unsignedIntegerValue]
@@ -435,7 +493,10 @@ NSArray<NSDictionary *> *MDMCPOutlineOfMarkdown(NSString *text)
     if (first > all.count)
         first = all.count;
     NSUInteger count = wanted ?: kMDReadLines;
-    if (first + count > all.count)
+    // What is left, never first + count: a number a caller chose can be
+    // large enough for that sum to wrap round to nothing, and the range
+    // that came out of it took the server with it.
+    if (count > all.count - first)
         count = all.count - first;
 
     NSArray<NSString *> *piece = [all subarrayWithRange:
@@ -470,9 +531,14 @@ NSArray<NSDictionary *> *MDMCPOutlineOfMarkdown(NSString *text)
     {
         NSNumber *size = nil;
         NSDate *changed = nil;
-        [file getResourceValue:&size forKey:NSURLFileSizeKey error:NULL];
-        [file getResourceValue:&changed forKey:NSURLContentModificationDateKey
-                         error:NULL];
+        // For a textbundle the file that matters is its text: the folder
+        // itself weighs nothing, and answering zero bytes for a document
+        // somebody can read is a number that means nothing.
+        NSURL *measured = [MDMCPPerimeter textFileFor:file] ?: file;
+        [measured getResourceValue:&size forKey:NSURLFileSizeKey error:NULL];
+        [measured getResourceValue:&changed
+                            forKey:NSURLContentModificationDateKey
+                             error:NULL];
         [files addObject:@{@"path": [self relative:file],
                            @"bytes": size ?: @0,
                            @"modified": changed

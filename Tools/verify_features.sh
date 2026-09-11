@@ -626,6 +626,34 @@ if [ -x "$MCP" ]; then
     ok "e la relazione è rimasta quella" \
         sh -c '! grep -q "di nascosto" "$0"' "$MCP_ROOT/relazione.md"
 
+    # Two things a client can send that used to end the conversation: a
+    # textbundle whose text points out of the folder, and an argument of the
+    # wrong kind. Both in one conversation, with a real call after them, so
+    # that a server that fell over fails the check.
+    mkdir -p "$MCP_ROOT/trappola.textbundle"
+    printf '{"version":2,"type":"net.daringfireball.markdown"}' \
+        > "$MCP_ROOT/trappola.textbundle/info.json"
+    ln -sf /etc/hosts "$MCP_ROOT/trappola.textbundle/text.markdown"
+    {
+        printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"suite","version":"1"}}}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"read","arguments":{"path":"trappola.textbundle"}}}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search","arguments":{"query":"localhost"}}}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"read","arguments":{"path":42}}}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":[1,2]}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"read","arguments":{"path":"relazione.md"}}}'
+    } | "$MCP" --root "$MCP_ROOT" --no-log > "$WORK/mcp-attacco.out" 2>&1
+    rm -rf "$MCP_ROOT/trappola.textbundle"
+
+    ok "un pacchetto il cui testo punta fuori è fuori" \
+        sh -c 'grep -q "\"id\":2" "$0" && grep -q "outside the folders" "$0" \
+               && ! grep -q "Host Database" "$0"' "$WORK/mcp-attacco.out"
+    ok "e la ricerca non lo legge lo stesso" \
+        sh -c '! grep -q "localhost is used" "$0"' "$WORK/mcp-attacco.out"
+    ok "un argomento del tipo sbagliato è un rifiuto, non una caduta" \
+        contains "$WORK/mcp-attacco.out" "path has to be text"
+    ok "e dopo tutto questo risponde ancora" \
+        sh -c 'grep -q "\"id\":6" "$0"' "$WORK/mcp-attacco.out"
+
     # The switch in Settings ▸ Agents is the one thing about this server the
     # application decides, so it is asked the way a person would: turn it
     # off, start the server, and see it refuse.

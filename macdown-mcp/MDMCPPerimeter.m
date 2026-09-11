@@ -131,29 +131,11 @@ static BOOL MDPathIsUnder(NSString *path, NSString *folder)
         if (verdict != MDMCPAllowed)
             break;
 
-        // A pattern is matched against the path as the caller would write
-        // it and against every name in it, so "bozze*" excludes the folder
-        // and everything under it.
-        NSString *relative = resolved.path;
-        NSString *prefix = [self.root.path stringByAppendingString:@"/"];
-        if ([relative hasPrefix:prefix])
-            relative = [relative substringFromIndex:prefix.length];
-
-        for (NSString *pattern in self.excluded)
+        if ([self isExcludedByPattern:resolved])
         {
-            NSPredicate *glob = [NSPredicate predicateWithFormat:
-                @"SELF LIKE %@", pattern];
-            BOOL hit = [glob evaluateWithObject:relative];
-            for (NSString *component in relative.pathComponents)
-                hit = hit || [glob evaluateWithObject:component];
-            if (hit)
-            {
-                verdict = MDMCPExcluded;
-                break;
-            }
-        }
-        if (verdict != MDMCPAllowed)
+            verdict = MDMCPExcluded;
             break;
+        }
 
         NSNumber *directory = nil;
         [resolved getResourceValue:&directory forKey:NSURLIsDirectoryKey
@@ -170,6 +152,17 @@ static BOOL MDPathIsUnder(NSString *path, NSString *folder)
             if (!text)
             {
                 verdict = MDMCPNotText;
+                break;
+            }
+            // The bundle being inside the folder is not the same as its
+            // text being inside it: a text.markdown that is a symbolic link
+            // to /etc/hosts was, for a while, a way to have this server
+            // read a file it had never been given.
+            NSURL *inside = [[text URLByResolvingSymlinksInPath]
+                URLByStandardizingPath];
+            if (!MDPathIsUnder(inside.path, self.root.path))
+            {
+                verdict = MDMCPOutsideTheRoots;
                 break;
             }
             NSNumber *size = nil;
@@ -205,6 +198,40 @@ static BOOL MDPathIsUnder(NSString *path, NSString *folder)
     if (outVerdict)
         *outVerdict = verdict;
     return verdict == MDMCPAllowed ? answer : nil;
+}
+
+
+/** Whether one of the patterns given with --exclude covers that path.
+ *
+ * A pattern is matched against the path as the caller would write it and
+ * against every name in it, so "bozze*" excludes the folder and everything
+ * under it — for reading and for making a file both. They used to be two
+ * different rules, which meant a server could be told to leave a folder
+ * alone and still write a document into it that it then could not see.
+ */
+- (BOOL)isExcludedByPattern:(NSURL *)url
+{
+    if (!self.excluded.count)
+        return NO;
+
+    NSString *relative = url.path;
+    NSString *prefix = [self.root.path stringByAppendingString:@"/"];
+    if ([relative hasPrefix:prefix])
+        relative = [relative substringFromIndex:prefix.length];
+
+    for (NSString *pattern in self.excluded)
+    {
+        NSPredicate *glob = [NSPredicate predicateWithFormat:
+            @"SELF LIKE %@", pattern];
+        if ([glob evaluateWithObject:relative])
+            return YES;
+        for (NSString *component in relative.pathComponents)
+        {
+            if ([glob evaluateWithObject:component])
+                return YES;
+        }
+    }
+    return NO;
 }
 
 
@@ -251,6 +278,11 @@ static BOOL MDPathIsUnder(NSString *path, NSString *folder)
         }
         if (verdict != MDMCPAllowed)
             break;
+        if ([self isExcludedByPattern:wanted])
+        {
+            verdict = MDMCPExcluded;
+            break;
+        }
         if (![MDTextExtensions() containsObject:
                 wanted.pathExtension.lowercaseString])
         {
@@ -364,6 +396,15 @@ static BOOL MDPathIsUnder(NSString *path, NSString *folder)
     NSURL *start = folder ?: self.root;
     if (!start)
         return found;
+
+    // Asked for a textbundle itself, the answer is that one document:
+    // walking into it would list the plumbing this counts as one file.
+    if ([MDMCPPerimeter isTextBundle:start])
+    {
+        if ([self verdictForPath:start.path] == MDMCPAllowed)
+            [found addObject:start];
+        return found;
+    }
 
     NSDirectoryEnumerator<NSURL *> *walker = [[NSFileManager defaultManager]
         enumeratorAtURL:start
