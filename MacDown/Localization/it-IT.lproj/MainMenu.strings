@@ -394,6 +394,9 @@
 /* Class = "NSMenuItem"; title = "Send to ChatGPT"; ObjectID = "snd-gp-Itm"; */
 "snd-gp-Itm.title" = "Manda a ChatGPT";
 
+/* Class = "NSMenuItem"; title = "Draw a Diagram from a Description…"; ObjectID = "dgm-01-itm"; */
+"dgm-01-itm.title" = "Disegna un diagramma da una descrizione…";
+
 /* Class = "NSMenuItem"; title = "Compare with…"; ObjectID = "cmp-01-itm"; */
 "cmp-01-itm.title" = "Confronta con…";
 

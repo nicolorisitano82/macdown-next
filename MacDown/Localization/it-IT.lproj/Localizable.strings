@@ -557,3 +557,27 @@
 "Choose the two documents to compare" = "Scegli i due documenti da confrontare";
 "That file is not text this application can read" = "Quel file non è testo che questa applicazione sappia leggere";
 "%@ (in the editor, not saved)" = "%@ (nell'editor, non salvato)";
+
+/* Il diagramma disegnato da una descrizione */
+"Draw a Diagram from a Description…" = "Disegna un diagramma da una descrizione…";
+"Describe the diagram, in whatever language you write in. The labels come back in that language." = "Descrivi il diagramma, nella lingua in cui scrivi. Le etichette tornano in quella lingua.";
+"Draw:" = "Disegna:";
+"What the model wrote — you can correct it here:" = "Quello che ha scritto il modello — puoi correggerlo qui:";
+"Draw It" = "Disegnalo";
+"Put It in the Document" = "Mettilo nel documento";
+"The model is drawing…" = "Il modello sta disegnando…";
+"Stopped." = "Fermato.";
+"That was not a diagram. Try again, or say it differently." = "Quello non era un diagramma. Riprova, o dillo in un altro modo.";
+"Opening the diagram box…" = "Apro la finestra del diagramma…";
+"whatever fits" = "quello che ci sta";
+"a flowchart" = "un diagramma di flusso";
+"a sequence diagram" = "un diagramma di sequenza";
+"a state diagram" = "un diagramma di stati";
+"a class diagram" = "un diagramma delle classi";
+"an entity relationship diagram" = "un diagramma entità-relazioni";
+"a gantt chart" = "un diagramma di Gantt";
+"a mind map" = "una mappa mentale";
+"a pie chart" = "un grafico a torta";
+
+/* Quando il modello scrive if ed else nelle etichette */
+"The model wrote if, else or endif inside the labels: Mermaid draws those as words, not as a branch. Ask again, or correct the source below." = "Il modello ha scritto if, else o endif dentro le etichette: Mermaid le disegna come parole, non come un ramo. Chiedi di nuovo, o correggi il sorgente qui sotto.";

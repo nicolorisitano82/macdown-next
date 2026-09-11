@@ -34,6 +34,7 @@ deliberately does not do.
 - [The preview](#the-preview)
 - [Diagrams and maths](#diagrams-and-maths)
 - [Moving around a folder](#moving-around-a-folder)
+- [A diagram from a description](#a-diagram-from-a-description)
 - [Comparing two documents](#comparing-two-documents)
 - [The prose checker](#the-prose-checker)
 - [Writing help that runs on your Mac](#writing-help-that-runs-on-your-mac)
@@ -306,6 +307,30 @@ cell.
   `[relative](links.md)` alike. Clicking one opens that document at that
   line. A link says where it goes and nothing said what points here, so this
   question used to be a `grep`.
+
+---
+
+## A diagram from a description
+
+With a model installed (**Preferences ▸ Models**), right-click in the editor
+— or **Format ▸ Draw a Diagram from a Description…**, ⌃⌥⌘G — and describe
+what you want drawn, **in whatever language you write in**. The model writes
+the Mermaid; the labels come back in your language.
+
+- **Draw:** picks the kind — a flowchart, a sequence diagram, states,
+  classes, entities, a gantt chart, a mind map, a pie chart — or *whatever
+  fits*, which lets the model choose.
+- What it wrote appears as source **you can correct**, with the diagram
+  drawn beside it as you type, by the same Mermaid the preview pane uses.
+- **Put It in the Document** is only offered once the diagram has actually
+  drawn. A source Mermaid refuses shows its complaint instead, and never
+  reaches the document.
+- Small models make two mistakes often enough to be worth naming: they write
+  `if` and `endif` inside the labels instead of drawing a branch — the panel
+  says so in orange when it sees that — and they answer a process that has a
+  condition in it with a sequence diagram, where a condition has no shape.
+  Asking for *a flowchart* rather than *whatever fits* settles the second.
+- Nothing leaves your Mac: the model runs here.
 
 ---
 
@@ -604,6 +629,7 @@ the list is read, and again before the download starts.
 | ⌃⌥⌘P | List what the prose checker counted |
 | ⌃⌥⌘B | Which documents link to this one |
 | ⌃⌥⌘D | Compare this document with another |
+| ⌃⌥⌘G | Draw a diagram from a description |
 | ⌥⌘C | Copy the rendered HTML |
 
 ### Exporting

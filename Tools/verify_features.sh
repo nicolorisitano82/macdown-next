@@ -535,6 +535,22 @@ else
 fi
 
 
+# --------------------------------------------- a diagram from a description
+
+# The sheet draws what the model wrote with the application's own copy of
+# mermaid, and refuses to put a diagram in the document until it has drawn.
+# Both halves are checked here: the library is where the sheet looks for it,
+# and the preview pane's copy is the same one.
+
+say "Il diagramma da una descrizione"
+
+ok "mermaid viaggia nell'app, dove il pannello lo cerca" \
+    test -f "$APP/Contents/Resources/Extensions/mermaid.min.js"
+ok "ed è la stessa copia che disegna l'anteprima" \
+    cmp -s "$APP/Contents/Resources/Extensions/mermaid.min.js" \
+        MacDown/Resources/Extensions/mermaid.min.js
+
+
 # ------------------------------------------------------- comparing two files
 
 # The window cannot be driven from a script, but what it draws comes from

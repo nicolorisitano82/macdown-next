@@ -615,6 +615,13 @@
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="mdw-sep-1"/>
+                            <menuItem title="Draw a Diagram from a Description…" id="dgm-01-itm">
+                                <modifierMask key="keyEquivalentModifierMask" control="YES" option="YES" command="YES"/>
+                                <string key="keyEquivalent">g</string>
+                                <connections>
+                                    <action selector="generateDiagram:" target="-1" id="dgm-01-act"/>
+                                </connections>
+                            </menuItem>
                             <menuItem title="Writing Help" id="mdw-help-menu">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <menu key="submenu" title="Writing Help" id="mdw-help-submenu">

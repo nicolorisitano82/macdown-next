@@ -730,6 +730,20 @@ NS_INLINE BOOL MPAreRectsEqual(NSRect r1, NSRect r2)
         [menu insertItem:[NSMenuItem separatorItem] atIndex:1];
     }
 
+    /* A diagram described in words, where the diagram is going to go.
+     *
+     * At the top, because a right-click is where somebody looks for «do
+     * something here», and with the target left nil so the document — which
+     * knows whether there is a model at all — decides whether it is offered.
+     */
+    NSMenuItem *diagram = [[NSMenuItem alloc] initWithTitle:
+        NSLocalizedString(@"Draw a Diagram from a Description…",
+                          @"Editor context menu")
+        action:@selector(generateDiagram:) keyEquivalent:@""];
+    diagram.target = nil;
+    [menu insertItem:diagram atIndex:0];
+    [menu insertItem:[NSMenuItem separatorItem] atIndex:1];
+
     NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
     NSUInteger index = [self characterIndexForInsertionAtPoint:point];
     if (index == NSNotFound || index > self.string.length)

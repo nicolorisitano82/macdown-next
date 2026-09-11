@@ -87,3 +87,28 @@
 "Choose the two documents to compare" = "Choose the two documents to compare";
 "That file is not text this application can read" = "That file is not text this application can read";
 "%@ (in the editor, not saved)" = "%@ (in the editor, not saved)";
+
+/* Drawing a diagram from a description */
+"Draw a Diagram from a Description…" = "Draw a Diagram from a Description…";
+"Describe the diagram, in whatever language you write in. The labels come back in that language." = "Describe the diagram, in whatever language you write in. The labels come back in that language.";
+"Draw:" = "Draw:";
+"What the model wrote — you can correct it here:" = "What the model wrote — you can correct it here:";
+"Draw It" = "Draw It";
+"Stop" = "Stop";
+"Put It in the Document" = "Put It in the Document";
+"The model is drawing…" = "The model is drawing…";
+"Stopped." = "Stopped.";
+"That was not a diagram. Try again, or say it differently." = "That was not a diagram. Try again, or say it differently.";
+"Opening the diagram box…" = "Opening the diagram box…";
+"whatever fits" = "whatever fits";
+"a flowchart" = "a flowchart";
+"a sequence diagram" = "a sequence diagram";
+"a state diagram" = "a state diagram";
+"a class diagram" = "a class diagram";
+"an entity relationship diagram" = "an entity relationship diagram";
+"a gantt chart" = "a gantt chart";
+"a mind map" = "a mind map";
+"a pie chart" = "a pie chart";
+
+/* When the model writes control words into labels */
+"The model wrote if, else or endif inside the labels: Mermaid draws those as words, not as a branch. Ask again, or correct the source below." = "The model wrote if, else or endif inside the labels: Mermaid draws those as words, not as a branch. Ask again, or correct the source below.";

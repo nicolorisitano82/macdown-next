@@ -129,6 +129,17 @@ Writing**.
   As** hands it to a spreadsheet, a form or a page: tab-separated,
   comma-separated or HTML.
 
+### Drawing
+
+* **Draw a Diagram from a Description…** (⌃⌥⌘G, or the editor's context
+  menu): describe a flow, a sequence or a structure in your own language and
+  the model on your Mac writes the Mermaid for it, with the labels in that
+  language. The source comes back editable, drawn beside it as you type by
+  the same Mermaid the preview uses, and it can only go into the document
+  once it has actually drawn — a source Mermaid refuses shows its complaint
+  instead. It also says so when the model writes `if` and `endif` into the
+  labels, which is what a small model does instead of drawing a branch.
+
 ### Comparing
 
 * **Compare with…** (⌃⌥⌘D) shows the document beside another file, with what

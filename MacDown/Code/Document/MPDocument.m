@@ -47,6 +47,8 @@
 #import "MPBacklinksViewController.h"
 #import "MPBacklinks.h"
 #import "MPCompareWindowController.h"
+#import "MPDiagramPrompt.h"
+#import "MPDiagramSheetController.h"
 #import "MPLinkPreview.h"
 #import "MPLinkPreviewViewController.h"
 #import "MPWebClipper.h"
@@ -1954,6 +1956,13 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
         return range.location != NSNotFound && range.length > 0
             && [MPModelStore sharedStore].selectedModel != nil
             && !self.writingAssistant.isWorking;
+    }
+    if (action == @selector(generateDiagram:))
+    {
+        // The same two conditions as the writing commands, minus the
+        // selection: a diagram is described, not rewritten from something.
+        return self.preferences.editorWritingHelp
+            && [MPModelStore sharedStore].selectedModel != nil;
     }
     if (action == @selector(linkToNewMarkdownFile:))
         return self.fileURL != nil && self.editor.selectedRange.length > 0;
@@ -5186,6 +5195,66 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
             [document hideWritingStatus];
     }];
 }
+
+/** A diagram described in words, drawn by the model on this Mac.
+ *
+ * The description is the reader's, in their language; what comes back is
+ * Mermaid, which the preview already draws. Nothing reaches the document
+ * until they have seen the source and said yes: a model that answers badly
+ * should cost a second, not an undo.
+ */
+- (IBAction)generateDiagram:(id)sender
+{
+    MPModelStore *store = [MPModelStore sharedStore];
+    [self showWritingStatus:store.isGeneratorLoaded
+        ? NSLocalizedString(@"Opening the diagram box…", @"Diagram help")
+        : NSLocalizedString(@"Opening the model…", @"Writing help")];
+
+    __weak MPDocument *weakSelf = self;
+    [store generatorWithCompletion:
+        ^(id<MPTextGenerator> generator, NSError *error) {
+        MPDocument *document = weakSelf;
+        if (!document)
+            return;
+        [document hideWritingStatus];
+        if (!generator)
+        {
+            [document presentWritingError:error];
+            return;
+        }
+
+        MPDiagramSheetController *sheet = [[MPDiagramSheetController alloc]
+            initWithGenerator:generator insert:^(NSString *code) {
+            [document insertDiagramBlock:code];
+        }];
+        [sheet beginOn:document.windowForSheet];
+    }];
+}
+
+
+/// The fenced block where the caret is, as one step of undo, with the
+/// blank lines a block needs around it to be a block at all.
+- (void)insertDiagramBlock:(NSString *)code
+{
+    NSRange where = self.editor.selectedRange;
+    NSString *insertion = MPDiagramInsertionForCode(code, self.editor.string,
+                                                    where);
+    if (!insertion.length)
+        return;
+
+    if (![self.editor shouldChangeTextInRange:where
+                            replacementString:insertion])
+        return;
+    [self keepAVersionBefore:@"a drawn diagram"];
+    [self.editor.textStorage replaceCharactersInRange:where
+                                           withString:insertion];
+    [self.editor didChangeText];
+    self.editor.selectedRange =
+        NSMakeRange(where.location + insertion.length, 0);
+    MPNote(@"diagram: %lu characters of Mermaid put in",
+           (unsigned long)code.length);
+}
+
 
 - (void)presentWritingError:(NSError *)error
 {

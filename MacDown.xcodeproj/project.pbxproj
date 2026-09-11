@@ -75,11 +75,14 @@
 		F55A342A5A01CEBCC9F60055 /* MPActionLogTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310062 /* MPActionLogTests.m */; };
 		F55A342A5A01CEBCC9F60049 /* MPBacklinks.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310053 /* MPBacklinks.m */; };
 		1F0D9E0100000000000FBA /* MPDiff.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000FB /* MPDiff.m */; };
+		1F0D9E010000000000010E /* MPDiagramPrompt.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E010000000000010B /* MPDiagramPrompt.m */; };
+		1F0D9E010000000000010F /* MPDiagramSheetController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E010000000000010D /* MPDiagramSheetController.m */; };
 		1F0D9E0100000000000FDA /* MPCompareWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000FD /* MPCompareWindowController.m */; };
 		F55A342A5A01CEBCC9F60050 /* MPBacklinksViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310055 /* MPBacklinksViewController.m */; };
 		F55A342A5A01CEBCC9F60051 /* MPBacklinkTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310056 /* MPBacklinkTests.m */; };
 		1F0D9E0100000000000F7A /* MPAgentsPanelTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000F7 /* MPAgentsPanelTests.m */; };
 		1F0D9E0100000000000FEA /* MPDiffTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000FE /* MPDiffTests.m */; };
+		1F0D9E0100000000000111 /* MPDiagramPromptTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000110 /* MPDiagramPromptTests.m */; };
 		F55A342A5A01CEBCC9F60047 /* MPProseIssuesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310050 /* MPProseIssuesViewController.m */; };
 		F55A342A5A01CEBCC9F60048 /* MPPlugInsTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310051 /* MPPlugInsTests.m */; };
 		D1A0000000000000000000BA /* MDDrawioProgress.m in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000000D3 /* MDDrawioProgress.m */; };
@@ -421,13 +424,18 @@
 		7DA2311453239F0973310053 /* MPBacklinks.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPBacklinks.m; sourceTree = "<group>"; };
 		1F0D9E01000000000000FA /* MPDiff.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPDiff.h; sourceTree = "<group>"; };
 		1F0D9E01000000000000FB /* MPDiff.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPDiff.m; sourceTree = "<group>"; };
+		1F0D9E010000000000010A /* MPDiagramPrompt.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPDiagramPrompt.h; sourceTree = "<group>"; };
+		1F0D9E010000000000010B /* MPDiagramPrompt.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPDiagramPrompt.m; sourceTree = "<group>"; };
 		7DA2311453239F0973310054 /* MPBacklinksViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPBacklinksViewController.h; sourceTree = "<group>"; };
 		7DA2311453239F0973310055 /* MPBacklinksViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPBacklinksViewController.m; sourceTree = "<group>"; };
 		1F0D9E01000000000000FC /* MPCompareWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPCompareWindowController.h; sourceTree = "<group>"; };
 		1F0D9E01000000000000FD /* MPCompareWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCompareWindowController.m; sourceTree = "<group>"; };
+		1F0D9E010000000000010C /* MPDiagramSheetController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPDiagramSheetController.h; sourceTree = "<group>"; };
+		1F0D9E010000000000010D /* MPDiagramSheetController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPDiagramSheetController.m; sourceTree = "<group>"; };
 		7DA2311453239F0973310056 /* MPBacklinkTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPBacklinkTests.m; sourceTree = "<group>"; };
 		1F0D9E01000000000000F7 /* MPAgentsPanelTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPAgentsPanelTests.m; sourceTree = "<group>"; };
 		1F0D9E01000000000000FE /* MPDiffTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPDiffTests.m; sourceTree = "<group>"; };
+		1F0D9E0100000000000110 /* MPDiagramPromptTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPDiagramPromptTests.m; sourceTree = "<group>"; };
 		7DA2311453239F0973310049 /* MPProseIssuesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPProseIssuesViewController.h; sourceTree = "<group>"; };
 		7DA2311453239F0973310050 /* MPProseIssuesViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPProseIssuesViewController.m; sourceTree = "<group>"; };
 		D1A0000000000000000000CF /* MDDrawioProgress.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MDDrawioProgress.h; sourceTree = "<group>"; };
@@ -1075,6 +1083,8 @@
 				D2B0000000000000000000E9 /* MPQuickLookExtension.m */,
 				1F0D9E01000000000000FA /* MPDiff.h */,
 				1F0D9E01000000000000FB /* MPDiff.m */,
+				1F0D9E010000000000010A /* MPDiagramPrompt.h */,
+				1F0D9E010000000000010B /* MPDiagramPrompt.m */,
 				7DA2311453239F0973310052 /* MPBacklinks.h */,
 				7DA2311453239F0973310053 /* MPBacklinks.m */,
 				7DA2311453239F0973310072 /* MPLinkPreview.h */,
@@ -1167,6 +1177,8 @@
 				7DA2311453239F0973310050 /* MPProseIssuesViewController.m */,
 				1F0D9E01000000000000FC /* MPCompareWindowController.h */,
 				1F0D9E01000000000000FD /* MPCompareWindowController.m */,
+				1F0D9E010000000000010C /* MPDiagramSheetController.h */,
+				1F0D9E010000000000010D /* MPDiagramSheetController.m */,
 				7DA2311453239F0973310054 /* MPBacklinksViewController.h */,
 				D2C000000000000000000050 /* MPInstructionsViewController.h */,
 				D2C000000000000000000051 /* MPInstructionsViewController.m */,
@@ -1407,6 +1419,7 @@
 				7DA2311453239F0973310056 /* MPBacklinkTests.m */,
 				1F0D9E01000000000000F7 /* MPAgentsPanelTests.m */,
 				1F0D9E01000000000000FE /* MPDiffTests.m */,
+				1F0D9E0100000000000110 /* MPDiagramPromptTests.m */,
 				7DA2311453239F0973310062 /* MPActionLogTests.m */,
 				7DA2311453239F0973310076 /* MPLinkPreviewTests.m */,
 				7DA2311453239F0973310070 /* MPWebClipperTests.m */,
@@ -1962,6 +1975,8 @@
 				F55A342A5A01CEBCC9F60042 /* MPCodeLanguages.m in Sources */,
 				F55A342A5A01CEBCC9F60049 /* MPBacklinks.m in Sources */,
 				1F0D9E0100000000000FBA /* MPDiff.m in Sources */,
+				1F0D9E010000000000010E /* MPDiagramPrompt.m in Sources */,
+				1F0D9E010000000000010F /* MPDiagramSheetController.m in Sources */,
 				1F0D9E0100000000000FDA /* MPCompareWindowController.m in Sources */,
 				F55A342A5A01CEBCC9F60063 /* MPLinkPreview.m in Sources */,
 				D2C000000000000000000052 /* MPInstructionsViewController.m in Sources */,
@@ -2057,6 +2072,7 @@
 				F55A342A5A01CEBCC9F60051 /* MPBacklinkTests.m in Sources */,
 				1F0D9E0100000000000F7A /* MPAgentsPanelTests.m in Sources */,
 				1F0D9E0100000000000FEA /* MPDiffTests.m in Sources */,
+				1F0D9E0100000000000111 /* MPDiagramPromptTests.m in Sources */,
 				F55A342A5A01CEBCC9F60055 /* MPActionLogTests.m in Sources */,
 				F55A342A5A01CEBCC9F60065 /* MPLinkPreviewTests.m in Sources */,
 				F55A342A5A01CEBCC9F60061 /* MPWebClipperTests.m in Sources */,
