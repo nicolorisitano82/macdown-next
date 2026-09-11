@@ -588,6 +588,21 @@ BOOL MPFileIsMissing(NSURL *fileURL)
 }
 
 
+MPExternalChange MPExternalChangeFor(NSString *onDisk, NSString *inEditor,
+                                     BOOL edited, BOOL missing)
+{
+    if (missing)
+        return MPExternalChangeGone;
+    // Unreadable is not the same as changed: a file being written to right
+    // now reads as nothing, and a moment later reads as itself.
+    if (!onDisk)
+        return MPExternalChangeNothing;
+    if ([onDisk isEqualToString:inEditor ?: @""])
+        return MPExternalChangeNothing;
+    return edited ? MPExternalChangeAsk : MPExternalChangeReload;
+}
+
+
 NSArray<NSValue *> *MPMarkdownCodeRanges(NSString *text)
 {
     NSMutableArray *ranges = [NSMutableArray array];

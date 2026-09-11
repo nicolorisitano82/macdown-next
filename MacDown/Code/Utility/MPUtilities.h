@@ -145,3 +145,27 @@ NSArray<NSValue *> *MPMarkdownCodeRanges(NSString *text);
  * why.
  */
 BOOL MPFileIsMissing(NSURL *fileURL);
+
+
+/// What to do about a file that has changed while the document was open.
+typedef NS_ENUM(NSUInteger, MPExternalChange) {
+    /// The file says what the document says: our own save, or a touch.
+    MPExternalChangeNothing,
+    /// The file has changed and there is nothing of the reader's to lose.
+    MPExternalChangeReload,
+    /// It has changed and so has the document: only the reader can choose.
+    MPExternalChangeAsk,
+    /// There is no file there any more.
+    MPExternalChangeGone,
+};
+
+/** Which of those four a change is.
+ *
+ * A document is open while `git` checks out a branch, a script rewrites a
+ * table, another window of another application saves over it. Reloading
+ * silently is right when the reader has nothing in hand and wrong when they
+ * have; the rule is small enough to be read in one go, and it is here
+ * rather than in the document so that it can be.
+ */
+MPExternalChange MPExternalChangeFor(NSString *onDisk, NSString *inEditor,
+                                     BOOL edited, BOOL missing);

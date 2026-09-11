@@ -44,7 +44,7 @@ deliberately does not do.
 - [Preferences, pane by pane](#preferences-pane-by-pane)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [The command line](#the-command-line)
-- [When something does not work](#when-something-does-not-work)
+- [When the file changes underneath](#when-the-file-changes-underneath)\n- [When something does not work](#when-something-does-not-work)
 - [What leaves your Mac](#what-leaves-your-mac)
 - [Building from source](#building-from-source)
 - [Credits and licence](#credits-and-licence)
@@ -597,6 +597,29 @@ cat note.md | macdownext    # open what is piped in
 ```
 
 ---
+
+## When the file changes underneath
+
+Documents do not sit still any more: `git` checks out a branch, a script
+rewrites a table, an agent saves over the file you have open. MacDown Next
+notices.
+
+- **With nothing of yours in hand it reloads** — quietly, keeping the caret
+  where it was, and saying so in the action log. The alternative is showing
+  a document that no longer exists and writing it back over the file on the
+  next save.
+- **With unsaved changes it asks once**: *Reload from the File* or *Keep
+  What I Have*. Both sides have something the other has not, and that is
+  not a decision an editor should take for you.
+- **If the file has gone** — moved by something that does not coordinate,
+  or deleted — it says so, with the path, and offers **Save As…**. Revert
+  says the same rather than failing as a save, which is what macOS reports
+  when the last saved version cannot be written back to a path that holds
+  nothing.
+
+A file that reads as nothing is not a file that changed: one being written
+to at this instant reads empty for a moment, and answering "reload" to that
+would empty the document.
 
 ## When something does not work
 

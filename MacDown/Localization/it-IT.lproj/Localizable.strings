@@ -515,3 +515,11 @@
 "The file is not where this document left it" = "Il file non è più dove il documento lo aveva lasciato";
 "Nothing is at %@ any more, so there is no saved version to go back to. What is on screen is all there is: save it somewhere it can live." = "In %@ non c'è più niente, quindi non esiste una versione salvata a cui tornare. Quello che vedi è tutto quello che c'è: salvalo da qualche parte dove possa stare.";
 "Save As…" = "Salva con nome…";
+
+/* Quando il file cambia sotto il documento */
+"This file has changed outside MacDown Next" = "Questo file è cambiato fuori da MacDown Next";
+"You have changes here that are not in the file, and the file now says something else. Only you know which to keep." = "Qui hai modifiche che nel file non ci sono, e il file adesso dice un'altra cosa. Quale tenere lo sai solo tu.";
+"This file is not there any more" = "Questo file non c'è più";
+"Nothing is at %@ any more. What is on screen is all there is: save it somewhere it can live." = "In %@ non c'è più niente. Quello che vedi è tutto quello che c'è: salvalo da qualche parte dove possa stare.";
+"Reload from the File" = "Ricarica dal file";
+"Keep What I Have" = "Tieni quello che ho";

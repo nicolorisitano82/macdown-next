@@ -85,6 +85,49 @@
 }
 
 
+#pragma mark - A file that changed while the document was open
+
+- (void)testOurOwnSaveComingBackIsNotAChange
+{
+    // The file says what the document says: this is the save we just made,
+    // arriving as a notification.
+    XCTAssertEqual(MPExternalChangeFor(@"# Verbale\n", @"# Verbale\n",
+                                       NO, NO), MPExternalChangeNothing);
+    XCTAssertEqual(MPExternalChangeFor(@"# Verbale\n", @"# Verbale\n",
+                                       YES, NO), MPExternalChangeNothing);
+}
+
+- (void)testAChangeWithNothingOfOursToLoseIsReloaded
+{
+    XCTAssertEqual(MPExternalChangeFor(@"# Nuovo\n", @"# Vecchio\n",
+                                       NO, NO), MPExternalChangeReload);
+}
+
+- (void)testAChangeOverUnsavedWorkIsAQuestion
+{
+    // Both sides have something the other has not, and only the reader
+    // knows which to keep.
+    XCTAssertEqual(MPExternalChangeFor(@"# Nuovo\n", @"# Mio\n",
+                                       YES, NO), MPExternalChangeAsk);
+}
+
+- (void)testAFileBeingWrittenRightNowIsNotAChange
+{
+    // A file half-written reads as nothing, and a moment later reads as
+    // itself: answering "reload" to that would empty the document.
+    XCTAssertEqual(MPExternalChangeFor(nil, @"# Verbale\n", NO, NO),
+                   MPExternalChangeNothing);
+}
+
+- (void)testAFileThatWentAwayIsNeitherOfThose
+{
+    XCTAssertEqual(MPExternalChangeFor(nil, @"# Verbale\n", NO, YES),
+                   MPExternalChangeGone);
+    XCTAssertEqual(MPExternalChangeFor(@"# Verbale\n", @"# Verbale\n",
+                                       YES, YES), MPExternalChangeGone);
+}
+
+
 #pragma mark - What the menu offers
 
 - (void)testRevertIsNotOfferedForADocumentThatHasNoFile

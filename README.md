@@ -194,6 +194,19 @@ Writing**.
   somebody still holding shift is not finished — and delete pressed on a
   preview selection takes those words out of the source.
 
+### When the file changes underneath
+
+* **A file rewritten while it is open is noticed.** With nothing of yours in
+  hand the document reloads, keeping the caret where it was; with unsaved
+  changes it asks once — *Ricarica dal file* or *Tieni quello che ho* —
+  because both sides then have something the other has not. `git` checking
+  out a branch and an agent saving over a document are the same event as far
+  as an editor is concerned, and until now it was silent about both.
+* **A file that has gone says so**, with the path, and offers *Salva con
+  nome…*. Reverting says it too, instead of letting macOS report it as a
+  failure to save: nothing was being saved, and "could not be saved in the
+  folder docs" is a true sentence that explains nothing.
+
 ### When something does not work
 
 * **Help › Record What I Do.** Off unless you switch it on, and then every

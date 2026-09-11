@@ -213,6 +213,9 @@ NS_INLINE NSString *MPRectStringForAutosaveName(NSString *name)
  */
 @property (nonatomic) BOOL selectionCameFromPreview;
 
+/// True while the reader is being asked about a file that changed outside.
+@property (nonatomic) BOOL askingAboutTheFile;
+
 /** Whether this document is being read rather than written.
  *
  * Per document and not remembered: a verbale that has been signed is read
@@ -1518,6 +1521,162 @@ static NSString * const kMPScrollReporterSource =
 
     [super close];
 }
+
+#pragma mark - The file underneath
+
+/** The file changed while the document was open.
+ *
+ * `git` checks out a branch, a script rewrites a table, an agent saves over
+ * it: the document then shows something that is no longer what is on disk,
+ * and the next save writes the stale copy back without a word. Two answers
+ * are right and they depend on one thing — whether the reader has anything
+ * of their own in hand.
+ *
+ * The notification arrives on the presenter's queue and may arrive several
+ * times for one save, so the work is done on the main queue and begins by
+ * comparing: a file that says what the document says is our own save coming
+ * back, and nothing is said about it.
+ */
+- (void)presentedItemDidChange
+{
+    [super presentedItemDidChange];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self fileChangedOutside];
+    });
+}
+
+
+- (void)accommodatePresentedItemDeletionWithCompletionHandler:
+    (void (^)(NSError *))completionHandler
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self fileChangedOutside];
+    });
+    completionHandler(nil);
+}
+
+
+- (void)fileChangedOutside
+{
+    NSURL *url = self.fileURL;
+    if (!url.isFileURL || self.askingAboutTheFile)
+        return;
+
+    NSString *onDisk = [NSString stringWithContentsOfURL:url
+                                                encoding:NSUTF8StringEncoding
+                                                   error:NULL];
+    MPExternalChange what = MPExternalChangeFor(
+        onDisk, self.editor.string, self.isDocumentEdited,
+        MPFileIsMissing(url));
+
+    switch (what)
+    {
+        case MPExternalChangeNothing:
+            return;
+
+        case MPExternalChangeReload:
+        {
+            // Nothing of the reader's to lose, so nothing to ask. The caret
+            // stays where it was, which is what tells this from closing the
+            // document and opening it again.
+            NSRange selection = self.editor.selectedRange;
+            NSError *error = nil;
+            if (![self revertToContentsOfURL:url
+                                      ofType:self.fileType error:&error])
+            {
+                MPNote(@"  not reloaded: %@", error.localizedDescription);
+                return;
+            }
+            NSUInteger length = self.editor.textStorage.length;
+            self.editor.selectedRange = NSMakeRange(
+                MIN(selection.location, length),
+                MIN(selection.length, length - MIN(selection.location,
+                                                   length)));
+            MPNote(@"reloaded: %@ changed outside", url.lastPathComponent);
+            return;
+        }
+
+        case MPExternalChangeAsk:
+            [self askAboutTheFile:NSLocalizedString(
+                @"This file has changed outside MacDown Next",
+                @"The file under an edited document was rewritten")
+                     informative:NSLocalizedString(
+                @"You have changes here that are not in the file, and the "
+                @"file now says something else. Only you know which to "
+                @"keep.", @"Why the document cannot choose")
+                          reload:YES];
+            return;
+
+        case MPExternalChangeGone:
+            [self askAboutTheFile:NSLocalizedString(
+                @"This file is not there any more",
+                @"The file under an open document was deleted or moved")
+                     informative:[NSString stringWithFormat:NSLocalizedString(
+                @"Nothing is at %@ any more. What is on screen is all there "
+                @"is: save it somewhere it can live.",
+                @"Why the document has nothing under it"), url.path]
+                          reload:NO];
+            return;
+    }
+}
+
+
+/** The one question, asked once.
+ *
+ * With `reload`, the choice is between the file and the document; without
+ * it there is no file left to choose, and the only useful answer is saving
+ * the text somewhere else.
+ */
+- (void)askAboutTheFile:(NSString *)title
+            informative:(NSString *)informative
+                 reload:(BOOL)canReload
+{
+    self.askingAboutTheFile = YES;
+    MPNote(@"file changed outside: %@", self.fileURL.lastPathComponent);
+
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = title;
+    alert.informativeText = informative;
+    if (canReload)
+    {
+        [alert addButtonWithTitle:NSLocalizedString(@"Reload from the File",
+            @"Throw away what is here and read the file again")];
+        [alert addButtonWithTitle:NSLocalizedString(@"Keep What I Have",
+            @"Leave the document as it is")];
+    }
+    else
+    {
+        [alert addButtonWithTitle:NSLocalizedString(@"Save As…", @"")];
+        [alert addButtonWithTitle:NSLocalizedString(@"Keep What I Have", @"")];
+    }
+
+    void (^answered)(NSModalResponse) = ^(NSModalResponse response) {
+        self.askingAboutTheFile = NO;
+        if (response != NSAlertFirstButtonReturn)
+        {
+            MPNote(@"  kept what was open");
+            return;
+        }
+        if (!canReload)
+        {
+            [self saveDocumentAs:nil];
+            return;
+        }
+        NSError *error = nil;
+        if ([self revertToContentsOfURL:self.fileURL ofType:self.fileType
+                                  error:&error])
+            MPNote(@"  reloaded from the file");
+        else
+            MPNote(@"  not reloaded: %@", error.localizedDescription);
+    };
+
+    NSWindow *window = self.windowForSheet;
+    if (window)
+        [alert beginSheetModalForWindow:window completionHandler:answered];
+    else
+        answered([alert runModal]);
+}
+
 
 /** Going back to the last saved version, when there is one.
  *
