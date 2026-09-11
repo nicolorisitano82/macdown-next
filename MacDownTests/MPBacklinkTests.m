@@ -136,6 +136,22 @@
     XCTAssertEqualObjects(MPBacklinksInText(text, from, other), @[]);
 }
 
+- (void)testADocumentThatExplainsFencesIsNotAllCode
+{
+    // Four backticks quoting three is how a document about Markdown shows a
+    // fence it does not mean. Taken for a fence it opened a code block that
+    // never closed, and every citation after that line stopped counting —
+    // found while writing the comparison by paragraph, which was cut into
+    // lines by the same mistake.
+    NSString *text = @"# Note\n\n"
+        @"Un recinto ````` ```mermaid ````` si scrive con quattro apici.\n\n"
+        @"E questo cita [[verbale]] dopo di esso.\n";
+    NSURL *from = [self.folder URLByAppendingPathComponent:@"note.md"];
+    NSURL *target = [self.folder URLByAppendingPathComponent:@"verbale.md"];
+    NSArray<MPBacklink *> *found = MPBacklinksInText(text, from, target);
+    XCTAssertEqual(found.count, 1u);
+}
+
 - (void)testTheFirstHeadingIsTheTitle
 {
     XCTAssertEqualObjects(MPFirstHeadingOfText(@"## Collaudo\ntesto"),

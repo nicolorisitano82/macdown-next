@@ -63,6 +63,15 @@ NSArray<NSValue *> *MPMarkdownCodeRanges(NSString *text)
                     run++;
                 if (run < 3)
                     run = 0;
+                // What follows a backtick fence cannot contain a backtick:
+                // that is the rule that tells an opening fence from a line
+                // of prose showing one — ```` ```mermaid ```` written with
+                // four of them to quote three. Without it, a document that
+                // explains fences is code from there to the end.
+                if (run && character == '`'
+                        && [[trimmed substringFromIndex:run]
+                            rangeOfString:@"`"].location != NSNotFound)
+                    run = 0;
             }
         }
 

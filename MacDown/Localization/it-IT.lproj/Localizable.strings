@@ -581,3 +581,10 @@
 
 /* Quando il modello scrive if ed else nelle etichette */
 "The model wrote if, else or endif inside the labels: Mermaid draws those as words, not as a branch. Ask again, or correct the source below." = "Il modello ha scritto if, else o endif dentro le etichette: Mermaid le disegna come parole, non come un ramo. Chiedi di nuovo, o correggi il sorgente qui sotto.";
+
+/* Come si confrontano due documenti */
+"Compare:" = "Confronta:";
+"by line" = "per righe";
+"by paragraph" = "per paragrafi";
+"ignore spaces" = "ignora gli spazi";
+"ignore case" = "ignora maiuscole e minuscole";

@@ -6,6 +6,12 @@
 //      diff_probe <a.md> <b.md>            the shape, row by row
 //      diff_probe <a.md> <b.md> --counts   how many changed, added, taken
 //
+//  and the three things the panel can be told to ignore:
+//
+//      --paragraphs     compare paragraph against paragraph
+//      --ignore-space   indentation and runs of spaces
+//      --ignore-case
+//
 //  The shape is one character per row — = same, ~ changed, + added, - taken
 //  away — which is a thing a check can compare with a string.
 //
@@ -33,11 +39,26 @@ int main(int argc, const char *argv[])
             return 3;
         }
 
-        NSArray<MPDiffRow *> *rows = MPDiffRowsBetween(left, right);
+        MPDiffOptions options = MPDiffOptionsStrict;
+        BOOL counting = NO;
+        for (int i = 3; i < argc; i++)
+        {
+            if (strcmp(argv[i], "--counts") == 0)
+                counting = YES;
+            else if (strcmp(argv[i], "--paragraphs") == 0)
+                options.grain = MPDiffByParagraphs;
+            else if (strcmp(argv[i], "--ignore-space") == 0)
+                options.ignoringSpace = YES;
+            else if (strcmp(argv[i], "--ignore-case") == 0)
+                options.ignoringCase = YES;
+        }
+
+        NSArray<MPDiffRow *> *rows =
+            MPDiffRowsBetweenWithOptions(left, right, options);
         NSUInteger added = 0, removed = 0, changed = 0;
         MPDiffCounts(rows, &added, &removed, &changed);
 
-        if (argc > 3 && strcmp(argv[3], "--counts") == 0)
+        if (counting)
         {
             printf("%lu cambiate, %lu aggiunte, %lu tolte\n",
                    (unsigned long)changed, (unsigned long)added,

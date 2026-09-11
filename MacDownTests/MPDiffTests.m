@@ -142,6 +142,93 @@
     XCTAssertLessThan([[NSDate date] timeIntervalSinceDate:started], 10.0);
 }
 
+#pragma mark - By paragraph, and what can be ignored
+
+- (void)testAReWrappedDocumentIsNotAChangedDocument
+{
+    NSString *before = @"# Nota\n\n"
+        @"Una frase lunga che sta\nsu due righe.\n\n"
+        @"E un secondo paragrafo,\nanche questo su due.\n";
+    NSString *after = @"# Nota\n\n"
+        @"Una frase lunga\nche sta su due\nrighe.\n\n"
+        @"E un secondo\nparagrafo, anche questo\nsu due.\n";
+
+    // The measurement this whole grain exists for: by line, a document that
+    // has only been re-wrapped reads as changed nearly everywhere.
+    NSUInteger changed = 0, added = 0, removed = 0;
+    MPDiffCounts(MPDiffRowsBetween(before, after), &added, &removed, &changed);
+    XCTAssertGreaterThan(changed + added + removed, 3u);
+
+    MPDiffOptions byParagraph = MPDiffOptionsStrict;
+    byParagraph.grain = MPDiffByParagraphs;
+    NSArray<MPDiffRow *> *rows =
+        MPDiffRowsBetweenWithOptions(before, after, byParagraph);
+    XCTAssertEqualObjects([self shapeOf:rows], @"=====");
+}
+
+- (void)testByParagraphAWordIsStillAWord
+{
+    NSString *before = @"Una frase lunga che sta\nsu due righe.\n";
+    NSString *after = @"Una frase corta\nche sta su due righe.\n";
+    MPDiffOptions byParagraph = MPDiffOptionsStrict;
+    byParagraph.grain = MPDiffByParagraphs;
+    NSArray<MPDiffRow *> *rows =
+        MPDiffRowsBetweenWithOptions(before, after, byParagraph);
+    XCTAssertEqualObjects([self shapeOf:rows], @"~");
+    // And the row says which line the paragraph starts on, not which line
+    // the difference is on: a paragraph has one beginning.
+    XCTAssertEqual(rows[0].leftLine, 1u);
+}
+
+- (void)testWhatIsNotProseKeepsItsOwnLines
+{
+    NSString *text = @"# Titolo\n\n- primo\n- secondo\n\n| a | b |\n"
+                     @"|---|---|\n\n```\nuno\ndue\n```\n\nProsa che\ncontinua.\n";
+    NSArray<NSString *> *units = MPDiffUnitsOfText(text, MPDiffByParagraphs);
+    // Everything above stands on its own line; only the last two lines are
+    // one paragraph.
+    XCTAssertEqualObjects(units.lastObject, @"Prosa che continua.");
+    XCTAssertTrue([units containsObject:@"- primo"]);
+    XCTAssertTrue([units containsObject:@"| a | b |"]);
+    XCTAssertTrue([units containsObject:@"uno"]);   // inside a fence
+}
+
+- (void)testADocumentThatShowsAFenceIsNotAllCode
+{
+    // Four backticks quoting three, which is how a document about Markdown
+    // shows a fence. Taken for one, every paragraph after it stopped being
+    // a paragraph — and the comparison by paragraph became a comparison by
+    // line without saying so.
+    NSString *text = @"Un recinto ```` ```mermaid ```` si scrive cosi.\n\n"
+                     @"Prosa che\ncontinua su due righe.\n";
+    NSArray<NSString *> *units = MPDiffUnitsOfText(text, MPDiffByParagraphs);
+    XCTAssertEqualObjects(units.lastObject, @"Prosa che continua su due righe.");
+}
+
+- (void)testIgnoringSpacesAndCase
+{
+    NSString *before = @"  Una riga  con   spazi\nSECONDA\n";
+    NSString *after = @"Una riga con spazi\nseconda\n";
+
+    MPDiffOptions space = MPDiffOptionsStrict;
+    space.ignoringSpace = YES;
+    XCTAssertEqualObjects([self shapeOf:
+        MPDiffRowsBetweenWithOptions(before, after, space)], @"=~");
+
+    MPDiffOptions both = space;
+    both.ignoringCase = YES;
+    XCTAssertEqualObjects([self shapeOf:
+        MPDiffRowsBetweenWithOptions(before, after, both)], @"==");
+
+    // What is shown is what was written: ignoring case is not lowercasing
+    // somebody's document.
+    NSArray<MPDiffRow *> *rows =
+        MPDiffRowsBetweenWithOptions(before, after, both);
+    XCTAssertEqualObjects(rows[1].left, @"SECONDA");
+    XCTAssertEqualObjects(rows[1].right, @"seconda");
+}
+
+
 - (void)testTheWordsThatDifferInsideALine
 {
     NSArray<NSValue *> *left = nil;

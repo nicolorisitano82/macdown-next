@@ -581,6 +581,28 @@ then
     ok "un file che non è testo si rifiuta invece di rispondere" \
         sh -c '! "$0" "$1" /bin/ls >/dev/null 2>&1' \
         "$DIFF_PROBE" "$DIFF_A"
+
+    # The measurement the paragraph grain exists for: the same words, gone
+    # to the line in another place.
+    printf '# Nota\n\nUna frase lunga che sta\nsu due righe intere.\n' \
+        > "$WORK/w-a.md"
+    printf '# Nota\n\nUna frase lunga\nche sta su due\nrighe intere.\n' \
+        > "$WORK/w-b.md"
+    ok "riavvolgere un documento, per righe, lo cambia tutto" \
+        sh -c '[ "$("$0" "$1" "$2" --counts)" != "0 cambiate, 0 aggiunte, 0 tolte" ]' \
+        "$DIFF_PROBE" "$WORK/w-a.md" "$WORK/w-b.md"
+    ok "e per paragrafi non lo cambia affatto" \
+        sh -c '[ "$("$0" "$1" "$2" --counts --paragraphs)" = "0 cambiate, 0 aggiunte, 0 tolte" ]' \
+        "$DIFF_PROBE" "$WORK/w-a.md" "$WORK/w-b.md"
+
+    printf 'Una riga  con   spazi\nSECONDA\n' > "$WORK/s-a.md"
+    printf '  Una riga con spazi\nseconda\n' > "$WORK/s-b.md"
+    ok "gli spazi si possono ignorare" \
+        sh -c '[ "$("$0" "$1" "$2" --counts --ignore-space)" = "1 cambiate, 0 aggiunte, 0 tolte" ]' \
+        "$DIFF_PROBE" "$WORK/s-a.md" "$WORK/s-b.md"
+    ok "e le maiuscole pure" \
+        sh -c '[ "$("$0" "$1" "$2" --counts --ignore-space --ignore-case)" = "0 cambiate, 0 aggiunte, 0 tolte" ]' \
+        "$DIFF_PROBE" "$WORK/s-a.md" "$WORK/s-b.md"
 else
     skip "il banco del confronto non si è compilato — $WORK/diff.log"
 fi

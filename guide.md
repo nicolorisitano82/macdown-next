@@ -354,7 +354,20 @@ same thing.
   Sides** turns the comparison round; **Read the Files Again** compares the
   files as they are now, which is the button for *somebody else has just
   saved this*.
-- The two sides scroll together.
+- **Compare: by line · by paragraph**, and two switches for **ignore spaces**
+  and **ignore case**. By paragraph is the answer to a document that has
+  been re-wrapped: the same words gone to the line somewhere else read as
+  changed from top to bottom otherwise. Measured on one of the journals
+  here — one word changed in a re-wrapped document is 181 changed rows by
+  line and 9 by paragraph. What is not prose keeps its own lines either way:
+  headings, list items, table rows, anything inside a fence, where the line
+  ending is the content.
+- A mark in the margin beside each line number — `~` changed, `+` added,
+  `−` taken away — because red and green are not something everybody
+  separates.
+- The two sides scroll together, following rows rather than pixels: a
+  paragraph wraps to a different height on each side, and what has to stay
+  level is the comparison, not the geometry.
 
 With no document open the same menu item asks for two files instead.
 

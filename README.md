@@ -145,8 +145,11 @@ Writing**.
 * **Compare with…** (⌃⌥⌘D) shows the document beside another file, with what
   differs marked. The left side is what is in the editor, unsaved changes
   included. A changed line is one row carrying both versions, with the words
-  that differ marked inside it; the columns keep their own line numbers and
-  scroll together. Differences only, next, previous, swap sides, and read
+  that differ marked inside it; the columns keep their own line numbers, mark
+  the margin (`~`, `+`, `−`) for people who do not separate red from green,
+  and scroll together by row. It can compare **by paragraph** instead of by
+  line, and ignore spaces or case: a document that has only been re-wrapped
+  reads as 181 changed rows by line and 9 by paragraph. Differences only, next, previous, swap sides, and read
   the files again for when somebody else has just saved.
 
 ### Collecting

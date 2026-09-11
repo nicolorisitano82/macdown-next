@@ -1,8 +1,8 @@
 # Studio: cosa serve al pannello Confronta
 
-Studio, non progetto: il pannello è appena stato scritto e funziona; questo
-serve a decidere **cosa aggiungerci e in che ordine**, con una misura in
-testa invece di un elenco di desideri.
+Studio, e in fondo (sezione 10) il diario della prima fase, che è stata
+scritta. Serviva a decidere **cosa aggiungere al pannello e in che ordine**,
+con una misura in testa invece di un elenco di desideri.
 
 Oggi il pannello fa questo: mette il documento accanto a un altro file — a
 sinistra quello che sta **nell'editor**, non quello sul disco — segna in una
@@ -29,9 +29,9 @@ un agente che ha riscritto un file — trasforma **una** differenza in
 centottanta, e il pannello diventa inservibile proprio nel caso in cui
 serviva.
 
-Lo stesso confronto fatto **per paragrafi** invece che per righe: 6 cambiati
-e 11 aggiunti, cioè le modifiche vere più le liste che il mio riavvolgimento
-grezzo ha spostato. Un ordine di grandezza meno rumore.
+Lo stesso confronto fatto **per paragrafi** invece che per righe: 9 righe in
+tutto, cioè le modifiche vere più le liste che il mio riavvolgimento grezzo
+ha spostato davvero. Un ordine di grandezza meno rumore.
 
 Da qui in poi l'ordine è deciso: **il rumore prima di tutto il resto.**
 
@@ -175,5 +175,65 @@ Due cose che oggi mancano e che si notano solo quando mancano:
 
 ---
 
-*Questo è uno studio: nessuna di queste è promessa. Quando la fase 1 sarà
-scritta, diventerà un diario, con i numeri veri invece delle intenzioni.*
+## 10. La fase 1, com'è andata
+
+Scritta. Il pannello ha tre controlli in più — **per righe / per paragrafi**,
+**ignora gli spazi**, **ignora maiuscole e minuscole** — e un segno nel
+margine accanto al numero di riga: `~` cambiata, `+` aggiunta, `−` tolta,
+per chi il verde dal rosso non lo separa.
+
+Per paragrafi, di serie no: le righe restano il modo normale di confrontare,
+come chiedeva la risposta alla domanda 1. Quello che non è prosa resta una
+riga anche a paragrafi — titoli, voci di elenco, righe di tabella, tutto
+quello che sta dentro un recinto — perché lì il ritorno a capo **è** il
+contenuto.
+
+### I numeri, sullo stesso documento dello studio
+
+| Confronto | Righe toccate |
+|---|---|
+| Per righe | 166 cambiate, 14 aggiunte, 1 tolta |
+| **Per paragrafi** | **4 cambiate, 1 aggiunta, 4 tolte** |
+| Una parola cambiata, per paragrafi | 1 cambiata |
+
+Centottantuno differenze diventano nove, e le nove che restano sono le
+liste che il riavvolgimento ha spostato davvero.
+
+### Il difetto che ha tirato fuori
+
+Il primo tentativo dava 107 differenze anche per paragrafi: i paragrafi non
+venivano uniti affatto, da metà documento in poi. La causa era una riga che
+dice come si scrive un recinto:
+
+```
+Un recinto ```` ```mermaid ```` in anteprima era codice
+```
+
+Quattro apici per citarne tre. Presa per un recinto, apre un blocco di
+codice che non si chiude più, e da lì in giù ogni riga «sta per conto suo».
+La regola giusta è di CommonMark e stava scritta lì: **dopo un recinto di
+apici non ci sono apici**.
+
+Lo stesso errore stava in `MPMarkdownCodeRanges`, la funzione che l'intera
+applicazione usa per sapere cosa è codice — quindi in questo documento i
+backlink dopo quella riga non venivano contati, e nemmeno gli import dei
+file di istruzioni. Corretta lì, con la sua prova.
+
+### Come scorre adesso
+
+Un paragrafo va a capo da solo, e le due colonne non sono più alte uguali:
+lo scorrimento non insegue più i punti ma **le righe**. Chi muove una parte
+mette in cima all'altra *la stessa riga del confronto*, qualunque altezza
+abbia. Lo stesso vale per «differenza successiva», che adesso tiene la riga
+a un terzo dall'alto invece che appiccicata in cima.
+
+### Cosa resta della fase 2 in poi
+
+Le provenienze (la copia sul disco, una versione di macOS), ⌘G, il
+conteggio nel titolo; poi il copiare e il prendere una versione, la mappa
+laterale, il testo reso. L'ordine della sezione 8 non è cambiato.
+
+---
+
+*Fase 1 fatta l'11 settembre 2026. Il resto di questo file è ancora studio:
+nessuna di quelle è promessa.*

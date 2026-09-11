@@ -34,6 +34,11 @@ static const NSUInteger kMPDiffEffortLimit = 20000;
 @end
 
 
+const MPDiffOptions MPDiffOptionsStrict = {
+    .grain = MPDiffByLines, .ignoringSpace = NO, .ignoringCase = NO,
+};
+
+
 NSArray<NSString *> *MPDiffLinesOfText(NSString *text)
 {
     if (!text.length)
@@ -44,6 +49,201 @@ NSArray<NSString *> *MPDiffLinesOfText(NSString *text)
         [lines addObject:line];
     }];
     return lines;
+}
+
+
+/// Whether a line is a fence, and not a line of prose showing one.
+///
+/// ```` ```mermaid ```` — four backticks quoting three — is how a document
+/// about Markdown writes a fence it does not mean. Taken for a fence it
+/// opens a code block that never closes, and every paragraph after it stops
+/// being a paragraph. What follows a real backtick fence carries no
+/// backtick at all, which is exactly the rule that tells them apart.
+static BOOL MPDiffLineOpensAFence(NSString *trimmed)
+{
+    if (trimmed.length < 3)
+        return NO;
+    unichar first = [trimmed characterAtIndex:0];
+    if (first != '`' && first != '~')
+        return NO;
+
+    NSUInteger run = 0;
+    while (run < trimmed.length && [trimmed characterAtIndex:run] == first)
+        run++;
+    if (run < 3)
+        return NO;
+    if (first == '`'
+            && [[trimmed substringFromIndex:run]
+                rangeOfString:@"`"].location != NSNotFound)
+        return NO;
+    return YES;
+}
+
+
+/// Whether a line is prose that runs on, or something whose line ending is
+/// part of what it says: a heading, a list item, a table row, a quotation,
+/// an indented block, a fence — or the blank line between two paragraphs.
+///
+/// The rules are exact on purpose. A first version took any line starting
+/// with a backtick or a dash as a block, and a paragraph that happened to
+/// wrap onto «`markdown`, `txt`; …» was cut in two on one side and not on
+/// the other — which put back the false differences this whole grain
+/// exists to remove.
+static BOOL MPDiffLineStandsAlone(NSString *line)
+{
+    NSString *trimmed = [line stringByTrimmingCharactersInSet:
+        [NSCharacterSet whitespaceCharacterSet]];
+    if (!trimmed.length)
+        return YES;                            // the gap between paragraphs
+    if ([line hasPrefix:@"    "] || [line hasPrefix:@"\t"])
+        return YES;                            // code, by indentation
+    if ([trimmed hasPrefix:@"|"])
+        return YES;                            // a table row
+    if (MPDiffLineOpensAFence(trimmed))
+        return YES;                            // a fence
+    if ([trimmed hasPrefix:@">"])
+        return YES;                            // a quotation
+
+    // A heading is hashes and then a space: «#tag» is a word.
+    NSUInteger hashes = 0;
+    while (hashes < trimmed.length && [trimmed characterAtIndex:hashes] == '#')
+        hashes++;
+    if (hashes > 0 && hashes <= 6 && hashes < trimmed.length
+            && [trimmed characterAtIndex:hashes] == ' ')
+        return YES;
+
+    // A list item is a marker and then a space: «- questo» is a list,
+    // «- 5 gradi» in the middle of a sentence is not, but it is also not
+    // how anybody writes one.
+    unichar first = [trimmed characterAtIndex:0];
+    if ((first == '-' || first == '*' || first == '+')
+            && trimmed.length > 1 && [trimmed characterAtIndex:1] == ' ')
+        return YES;
+
+    // A rule, or the underline of a setext heading: three or more of the
+    // same, and nothing else.
+    if (first == '-' || first == '=' || first == '_')
+    {
+        NSUInteger run = 0;
+        while (run < trimmed.length && [trimmed characterAtIndex:run] == first)
+            run++;
+        if (run >= 3 && run == trimmed.length)
+            return YES;
+    }
+
+    // "1. " and "12) ", which are list items and not sentences.
+    NSScanner *scanner = [NSScanner scannerWithString:trimmed];
+    NSInteger number = 0;
+    if ([scanner scanInteger:&number] && scanner.scanLocation < trimmed.length)
+    {
+        unichar after = [trimmed characterAtIndex:scanner.scanLocation];
+        if ((after == '.' || after == ')')
+                && scanner.scanLocation + 1 < trimmed.length
+                && [trimmed characterAtIndex:scanner.scanLocation + 1] == ' ')
+            return YES;
+    }
+    return NO;
+}
+
+
+/// The units, and the line each one starts on, in one pass — the two
+/// answers come from the same walk and must not disagree.
+static void MPDiffWalkUnits(NSString *text, MPDiffGrain grain,
+                            NSMutableArray<NSString *> *units,
+                            NSMutableArray<NSNumber *> *firstLines)
+{
+    NSArray<NSString *> *lines = MPDiffLinesOfText(text);
+    if (grain == MPDiffByLines)
+    {
+        [lines enumerateObjectsUsingBlock:^(NSString *line, NSUInteger i,
+                                            BOOL *stop) {
+            [units addObject:line];
+            [firstLines addObject:@(i + 1)];
+        }];
+        return;
+    }
+
+    NSMutableArray<NSString *> *paragraph = [NSMutableArray array];
+    __block NSUInteger paragraphStarts = 0;
+    void (^flush)(void) = ^{
+        if (!paragraph.count)
+            return;
+        [units addObject:[paragraph componentsJoinedByString:@" "]];
+        [firstLines addObject:@(paragraphStarts)];
+        [paragraph removeAllObjects];
+    };
+
+    __block BOOL inFence = NO;
+    [lines enumerateObjectsUsingBlock:^(NSString *line, NSUInteger i,
+                                        BOOL *stop) {
+        NSString *trimmed = [line stringByTrimmingCharactersInSet:
+            [NSCharacterSet whitespaceCharacterSet]];
+        BOOL fence = MPDiffLineOpensAFence(trimmed);
+
+        // Inside a fence every line stands alone, whatever it looks like:
+        // it is code, and its line endings are its own.
+        if (inFence || fence || MPDiffLineStandsAlone(line))
+        {
+            flush();
+            [units addObject:line];
+            [firstLines addObject:@(i + 1)];
+            if (fence)
+                inFence = !inFence;
+            return;
+        }
+
+        if (!paragraph.count)
+            paragraphStarts = i + 1;
+        [paragraph addObject:[line stringByTrimmingCharactersInSet:
+            [NSCharacterSet whitespaceCharacterSet]]];
+    }];
+    flush();
+}
+
+
+NSArray<NSString *> *MPDiffUnitsOfText(NSString *text, MPDiffGrain grain)
+{
+    NSMutableArray<NSString *> *units = [NSMutableArray array];
+    NSMutableArray<NSNumber *> *lines = [NSMutableArray array];
+    MPDiffWalkUnits(text, grain, units, lines);
+    return units;
+}
+
+
+NSArray<NSNumber *> *MPDiffFirstLinesOfUnits(NSString *text,
+                                             MPDiffGrain grain)
+{
+    NSMutableArray<NSString *> *units = [NSMutableArray array];
+    NSMutableArray<NSNumber *> *lines = [NSMutableArray array];
+    MPDiffWalkUnits(text, grain, units, lines);
+    return lines;
+}
+
+
+/// What two units are compared by. Never what is shown: ignoring case does
+/// not mean showing the text in lower case.
+static NSString *MPDiffKeyOf(NSString *unit, MPDiffOptions options)
+{
+    NSString *key = unit;
+    if (options.ignoringSpace)
+    {
+        // Every run of blanks becomes one space, and the ends are trimmed:
+        // indentation, double spaces after a full stop, a space left at the
+        // end of a line.
+        static NSRegularExpression *runs = nil;
+        static dispatch_once_t once;
+        dispatch_once(&once, ^{
+            runs = [[NSRegularExpression alloc] initWithPattern:@"[ \\t]+"
+                                                        options:0 error:NULL];
+        });
+        key = [runs stringByReplacingMatchesInString:key options:0
+                range:NSMakeRange(0, key.length) withTemplate:@" "];
+        key = [key stringByTrimmingCharactersInSet:
+            [NSCharacterSet whitespaceCharacterSet]];
+    }
+    if (options.ignoringCase)
+        key = key.localizedLowercaseString;
+    return key;
 }
 
 
@@ -266,8 +466,49 @@ NSArray<MPDiffRow *> *MPDiffRowsBetweenLines(NSArray<NSString *> *left,
 
 NSArray<MPDiffRow *> *MPDiffRowsBetween(NSString *left, NSString *right)
 {
-    return MPDiffRowsBetweenLines(MPDiffLinesOfText(left),
-                                  MPDiffLinesOfText(right));
+    return MPDiffRowsBetweenWithOptions(left, right, MPDiffOptionsStrict);
+}
+
+
+NSArray<MPDiffRow *> *MPDiffRowsBetweenWithOptions(NSString *left,
+                                                   NSString *right,
+                                                   MPDiffOptions options)
+{
+    NSMutableArray<NSString *> *leftUnits = [NSMutableArray array];
+    NSMutableArray<NSNumber *> *leftLines = [NSMutableArray array];
+    MPDiffWalkUnits(left, options.grain, leftUnits, leftLines);
+    NSMutableArray<NSString *> *rightUnits = [NSMutableArray array];
+    NSMutableArray<NSNumber *> *rightLines = [NSMutableArray array];
+    MPDiffWalkUnits(right, options.grain, rightUnits, rightLines);
+
+    // Compared by the key, shown as it was written. The rows come back
+    // against the keys and are then filled in with the real text, which is
+    // what keeps «ignore case» from lowercasing somebody\'s document on
+    // screen.
+    NSMutableArray<NSString *> *leftKeys = [NSMutableArray array];
+    for (NSString *unit in leftUnits)
+        [leftKeys addObject:MPDiffKeyOf(unit, options)];
+    NSMutableArray<NSString *> *rightKeys = [NSMutableArray array];
+    for (NSString *unit in rightUnits)
+        [rightKeys addObject:MPDiffKeyOf(unit, options)];
+
+    NSArray<MPDiffRow *> *rows = MPDiffRowsBetweenLines(leftKeys, rightKeys);
+    for (MPDiffRow *row in rows)
+    {
+        if (row.leftLine)
+        {
+            NSUInteger at = row.leftLine - 1;
+            row.left = leftUnits[at];
+            row.leftLine = leftLines[at].unsignedIntegerValue;
+        }
+        if (row.rightLine)
+        {
+            NSUInteger at = row.rightLine - 1;
+            row.right = rightUnits[at];
+            row.rightLine = rightLines[at].unsignedIntegerValue;
+        }
+    }
+    return rows;
 }
 
 

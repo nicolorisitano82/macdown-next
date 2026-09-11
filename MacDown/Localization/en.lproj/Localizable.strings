@@ -112,3 +112,10 @@
 
 /* When the model writes control words into labels */
 "The model wrote if, else or endif inside the labels: Mermaid draws those as words, not as a branch. Ask again, or correct the source below." = "The model wrote if, else or endif inside the labels: Mermaid draws those as words, not as a branch. Ask again, or correct the source below.";
+
+/* How two documents are compared */
+"Compare:" = "Compare:";
+"by line" = "by line";
+"by paragraph" = "by paragraph";
+"ignore spaces" = "ignore spaces";
+"ignore case" = "ignore case";

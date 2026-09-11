@@ -45,9 +45,59 @@ typedef NS_ENUM(NSUInteger, MPDiffKind) {
 @end
 
 
-/// The rows between two texts.
+/// What counts as a unit, and what counts as a difference.
+typedef NS_ENUM(NSUInteger, MPDiffGrain) {
+    /// Line against line, which is what a `diff` does.
+    MPDiffByLines,
+    /** Paragraph against paragraph, which is what a reader does.
+     *
+     * Measured on a document of 298 lines: one word changed is one changed
+     * row; the same word changed in a document that has *also* been
+     * re-wrapped at 72 columns is 166 changed rows, 14 added and one taken
+     * away — the real difference lost among a hundred and eighty false
+     * ones. By paragraph, the same pair gives six.
+     *
+     * What is not prose stays a line of its own: a heading, a table row, a
+     * list item, a line inside a fence. There the line ending *is* the
+     * content.
+     */
+    MPDiffByParagraphs,
+};
+
+/// How two units are compared. The text shown is always the original: what
+/// these change is only whether two units count as the same.
+typedef struct {
+    MPDiffGrain grain;
+    /// Indentation, runs of spaces and the space at the end of a line.
+    BOOL ignoringSpace;
+    /// Upper and lower case.
+    BOOL ignoringCase;
+} MPDiffOptions;
+
+/// Line by line, everything significant: what the panel started as.
+extern const MPDiffOptions MPDiffOptionsStrict;
+
+/// The rows between two texts, line by line.
 extern NSArray<MPDiffRow *> *MPDiffRowsBetween(NSString *left,
                                                NSString *right);
+
+/// The rows between two texts, compared as `options` says.
+extern NSArray<MPDiffRow *> *MPDiffRowsBetweenWithOptions(
+    NSString *left, NSString *right, MPDiffOptions options);
+
+/** The units of a text: its lines, or its paragraphs.
+ *
+ * Answers one string per unit; a paragraph is its lines joined with single
+ * spaces, so that what is compared is the words and not where they happened
+ * to break.
+ */
+extern NSArray<NSString *> *MPDiffUnitsOfText(NSString *text,
+                                              MPDiffGrain grain);
+
+/// The line each unit starts on, counting from one — what the panel shows
+/// in its margin, and what «go to this line» would need.
+extern NSArray<NSNumber *> *MPDiffFirstLinesOfUnits(NSString *text,
+                                                    MPDiffGrain grain);
 
 /// The same, given the lines already split — which is how the tests ask.
 extern NSArray<MPDiffRow *> *MPDiffRowsBetweenLines(

@@ -46,10 +46,18 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
 @property (strong, nonatomic) NSScrollView *leftScroll;
 @property (strong, nonatomic) NSScrollView *rightScroll;
 @property (strong, nonatomic) NSButton *foldButton;
+@property (strong, nonatomic) NSSegmentedControl *grainControl;
+@property (strong, nonatomic) NSButton *spaceButton;
+@property (strong, nonatomic) NSButton *caseButton;
 
 /// The rows as they are shown, and which of them are differences: the two
 /// buttons walk this list, and both sides are on the same row number.
 @property (copy, nonatomic) NSArray<MPDiffRow *> *shown;
+/// Where each row is in each side's text, so that scrolling one side can
+/// put the *same row* at the top of the other — which is the only way the
+/// two stay together once a row can be a whole paragraph and wrap.
+@property (copy, nonatomic) NSArray<NSValue *> *leftRowRanges;
+@property (copy, nonatomic) NSArray<NSValue *> *rightRowRanges;
 @property (copy, nonatomic) NSArray<NSNumber *> *differences;
 @property (nonatomic) NSInteger at;
 /// One side is scrolling the other, and should not be scrolled back.
@@ -134,6 +142,26 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
         @"Differences only", @"Hide the lines that are the same")
         target:self action:@selector(toggleFolding:)];
 
+    // What counts as one thing to compare. Lines to start with, because
+    // that is what a comparison has always meant; paragraphs because a
+    // document that has been re-wrapped otherwise reads as changed from top
+    // to bottom.
+    self.grainControl = [NSSegmentedControl
+        segmentedControlWithLabels:@[NSLocalizedString(@"by line",
+                                        @"Comparison grain"),
+                                     NSLocalizedString(@"by paragraph",
+                                        @"Comparison grain")]
+                      trackingMode:NSSegmentSwitchTrackingSelectOne
+                            target:self action:@selector(changeGrain:)];
+    [self.grainControl setSelectedSegment:0];
+
+    self.spaceButton = [NSButton checkboxWithTitle:NSLocalizedString(
+        @"ignore spaces", @"Comparison option")
+        target:self action:@selector(changeGrain:)];
+    self.caseButton = [NSButton checkboxWithTitle:NSLocalizedString(
+        @"ignore case", @"Comparison option")
+        target:self action:@selector(changeGrain:)];
+
     NSButton *swap = [NSButton buttonWithTitle:NSLocalizedString(
         @"Swap Sides", @"Put the right document on the left")
         target:self action:@selector(swapSides:)];
@@ -146,6 +174,14 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
     buttons.orientation = NSUserInterfaceLayoutOrientationHorizontal;
     buttons.spacing = 8.0;
     [buttons setCustomSpacing:16.0 afterView:self.summary];
+
+    NSTextField *compareTitle = [NSTextField labelWithString:
+        NSLocalizedString(@"Compare:", @"Label of the comparison options")];
+    compareTitle.textColor = [NSColor secondaryLabelColor];
+    NSStackView *options = [NSStackView stackViewWithViews:
+        @[compareTitle, self.grainControl, self.spaceButton, self.caseButton]];
+    options.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    options.spacing = 10.0;
     [buttons setHuggingPriority:NSLayoutPriorityDefaultLow
                  forOrientation:NSLayoutConstraintOrientationHorizontal];
 
@@ -172,7 +208,8 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
     sides.distribution = NSStackViewDistributionFillEqually;
     sides.spacing = 10.0;
 
-    NSStackView *column = [NSStackView stackViewWithViews:@[buttons, sides]];
+    NSStackView *column = [NSStackView stackViewWithViews:
+        @[buttons, options, sides]];
     column.orientation = NSUserInterfaceLayoutOrientationVertical;
     column.alignment = NSLayoutAttributeLeading;
     column.spacing = 12.0;
@@ -192,6 +229,7 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
         [sides.trailingAnchor constraintEqualToAnchor:column.trailingAnchor],
         [buttons.leadingAnchor constraintEqualToAnchor:column.leadingAnchor],
         [buttons.trailingAnchor constraintEqualToAnchor:column.trailingAnchor],
+        [options.leadingAnchor constraintEqualToAnchor:column.leadingAnchor],
         [self.leftScroll.widthAnchor
             constraintEqualToAnchor:leftColumn.widthAnchor],
         [self.rightScroll.widthAnchor
@@ -250,28 +288,94 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
     if (self.following)
         return;
     NSClipView *moved = note.object;
-    NSClipView *other = (moved == self.leftScroll.contentView)
-        ? self.rightScroll.contentView : self.leftScroll.contentView;
-    if (!other || moved == other)
+    BOOL fromTheLeft = (moved == self.leftScroll.contentView);
+    NSTextView *mover = fromTheLeft ? self.leftView : self.rightView;
+    NSScrollView *otherScroll = fromTheLeft ? self.rightScroll
+                                            : self.leftScroll;
+    NSTextView *other = fromTheLeft ? self.rightView : self.leftView;
+    if (!other || !self.shown.count)
         return;
 
+    // Which row is at the top of the side that moved, and the same row put
+    // at the top of the other. By row and not by pixel: a row can be a whole
+    // paragraph, which wraps to a different height on each side.
+    NSUInteger row = [self rowAtTopOf:mover
+                               ranges:fromTheLeft ? self.leftRowRanges
+                                                  : self.rightRowRanges
+                               scroll:fromTheLeft ? self.leftScroll
+                                                  : self.rightScroll];
+    NSArray<NSValue *> *ranges = fromTheLeft ? self.rightRowRanges
+                                             : self.leftRowRanges;
+    if (row >= ranges.count)
+        return;
+
+    NSRect rect = [self rectOfRange:ranges[row].rangeValue in:other];
     self.following = YES;
-    NSPoint where = moved.bounds.origin;
-    NSPoint mine = other.bounds.origin;
-    // Only the vertical is shared: the two sides have lines of different
-    // lengths, and dragging one sideways should not drag the other.
-    [other scrollToPoint:NSMakePoint(mine.x, where.y)];
-    [(NSScrollView *)other.superview reflectScrolledClipView:other];
+    NSPoint where = otherScroll.contentView.bounds.origin;
+    [otherScroll.contentView scrollToPoint:
+        NSMakePoint(where.x, MAX(0.0, NSMinY(rect) - 4.0))];
+    [otherScroll reflectScrolledClipView:otherScroll.contentView];
     self.following = NO;
+}
+
+
+/// The first row whose text reaches the top of what is visible.
+- (NSUInteger)rowAtTopOf:(NSTextView *)view
+                  ranges:(NSArray<NSValue *> *)ranges
+                  scroll:(NSScrollView *)scroll
+{
+    CGFloat top = NSMinY(scroll.contentView.bounds);
+    NSUInteger low = 0;
+    NSUInteger high = ranges.count;
+    while (low + 1 < high)
+    {
+        NSUInteger middle = (low + high) / 2;
+        NSRect rect = [self rectOfRange:ranges[middle].rangeValue in:view];
+        if (NSMinY(rect) <= top)
+            low = middle;
+        else
+            high = middle;
+    }
+    return low;
+}
+
+
+- (NSRect)rectOfRange:(NSRange)range in:(NSTextView *)view
+{
+    NSLayoutManager *layout = view.layoutManager;
+    NSRange glyphs = [layout glyphRangeForCharacterRange:range
+                                   actualCharacterRange:NULL];
+    NSRect rect = [layout boundingRectForGlyphRange:glyphs
+                                    inTextContainer:view.textContainer];
+    rect.origin.y += view.textContainerInset.height;
+    return rect;
 }
 
 
 #pragma mark - Showing it
 
+/// What the three controls say, as the comparison understands it.
+- (MPDiffOptions)options
+{
+    MPDiffOptions options = MPDiffOptionsStrict;
+    options.grain = (self.grainControl.selectedSegment == 1)
+        ? MPDiffByParagraphs : MPDiffByLines;
+    options.ignoringSpace = (self.spaceButton.state == NSControlStateValueOn);
+    options.ignoringCase = (self.caseButton.state == NSControlStateValueOn);
+    return options;
+}
+
+
+- (void)changeGrain:(id)sender
+{
+    [self showTheComparison];
+}
+
+
 - (void)showTheComparison
 {
-    NSArray<MPDiffRow *> *rows = MPDiffRowsBetween(self.leftText,
-                                                   self.rightText);
+    NSArray<MPDiffRow *> *rows = MPDiffRowsBetweenWithOptions(
+        self.leftText, self.rightText, [self options]);
     NSUInteger added = 0, removed = 0, changed = 0;
     MPDiffCounts(rows, &added, &removed, &changed);
 
@@ -306,8 +410,20 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
             (unsigned long)removed];
     }
 
-    [self.leftView.textStorage setAttributedString:[self sideOf:YES]];
-    [self.rightView.textStorage setAttributedString:[self sideOf:NO]];
+    NSMutableArray<NSValue *> *leftRanges = [NSMutableArray array];
+    NSMutableArray<NSValue *> *rightRanges = [NSMutableArray array];
+    [self.leftView.textStorage setAttributedString:
+        [self sideOf:YES ranges:leftRanges]];
+    [self.rightView.textStorage setAttributedString:
+        [self sideOf:NO ranges:rightRanges]];
+    self.leftRowRanges = leftRanges;
+    self.rightRowRanges = rightRanges;
+
+    // A paragraph is too long to read sideways; a line is not, and keeping
+    // it on one line is what lets two columns be read across.
+    BOOL wrapping = ([self options].grain == MPDiffByParagraphs);
+    [self setWrapping:wrapping in:self.leftView scroll:self.leftScroll];
+    [self setWrapping:wrapping in:self.rightView scroll:self.rightScroll];
 }
 
 
@@ -327,7 +443,32 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
 }
 
 
+/// Wrapped, a row is as tall as it needs to be and the two sides no longer
+/// line up by pixel — which is why the scrolling follows rows and not
+/// points.
+- (void)setWrapping:(BOOL)wrapping in:(NSTextView *)view
+             scroll:(NSScrollView *)scroll
+{
+    scroll.hasHorizontalScroller = !wrapping;
+    view.horizontallyResizable = !wrapping;
+    view.textContainer.widthTracksTextView = wrapping;
+    if (wrapping)
+    {
+        NSSize size = NSMakeSize(scroll.contentSize.width, CGFLOAT_MAX);
+        view.textContainer.containerSize = size;
+        [view setFrameSize:NSMakeSize(scroll.contentSize.width,
+                                      view.frame.size.height)];
+    }
+    else
+    {
+        view.textContainer.containerSize = NSMakeSize(CGFLOAT_MAX,
+                                                      CGFLOAT_MAX);
+    }
+}
+
+
 - (NSAttributedString *)sideOf:(BOOL)left
+                        ranges:(NSMutableArray<NSValue *> *)ranges
 {
     NSFont *font = [NSFont monospacedSystemFontOfSize:12.0
                                                weight:NSFontWeightRegular];
@@ -347,8 +488,20 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
                              withString:@" " startingAtIndex:0]
             : [@"" stringByPaddingToLength:kMPCompareGutter - 1
                                 withString:@" " startingAtIndex:0];
-        NSString *line = [NSString stringWithFormat:@"%@ %@\n", gutter,
-                          text ?: @""];
+        // The mark before the number: red and green are not something
+        // everybody separates, and a sign in the margin is.
+        NSString *mark = @" ";
+        if (row.kind == MPDiffChanged)
+            mark = @"~";
+        else if (row.kind == MPDiffAdded)
+            mark = text ? @"+" : @" ";
+        else if (row.kind == MPDiffRemoved)
+            mark = text ? @"\u2212" : @" ";
+        NSString *line = [NSString stringWithFormat:@"%@%@ %@\n", mark,
+                          gutter, text ?: @""];
+
+        [ranges addObject:[NSValue valueWithRange:
+            NSMakeRange(whole.length, line.length)]];
 
         NSMutableAttributedString *piece =
             [[NSMutableAttributedString alloc] initWithString:line];
@@ -358,7 +511,7 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
                       value:[NSColor labelColor] range:all];
         [piece addAttribute:NSForegroundColorAttributeName
                       value:[NSColor tertiaryLabelColor]
-                      range:NSMakeRange(0, kMPCompareGutter)];
+                      range:NSMakeRange(0, kMPCompareGutter + 1)];
 
         NSColor *background = [self colourFor:row.kind
                                      thisSide:left
@@ -377,7 +530,7 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
             for (NSValue *value in (left ? leftRanges : rightRanges))
             {
                 NSRange range = value.rangeValue;
-                range.location += kMPCompareGutter;
+                range.location += kMPCompareGutter + 2;
                 if (NSMaxRange(range) <= piece.length)
                     [piece addAttribute:NSBackgroundColorAttributeName
                                   value:strong range:range];
@@ -444,31 +597,36 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
 - (void)showDifference
 {
     NSUInteger row = self.differences[(NSUInteger)self.at].unsignedIntegerValue;
-    [self show:row in:self.leftView];
-    [self show:row in:self.rightView];
+    [self show:row in:self.leftView ranges:self.leftRowRanges
+        scroll:self.leftScroll];
+    [self show:row in:self.rightView ranges:self.rightRowRanges
+        scroll:self.rightScroll];
 }
+
 
 /// The row is the same number on both sides, which is the whole point of
 /// building the two texts row by row.
 - (void)show:(NSUInteger)row in:(NSTextView *)view
+      ranges:(NSArray<NSValue *> *)ranges scroll:(NSScrollView *)scroll
 {
-    NSString *text = view.string;
-    NSUInteger at = 0;
-    NSUInteger start = 0;
-    NSUInteger end = text.length;
-    for (NSUInteger line = 0; line <= row && start < text.length; line++)
-    {
-        NSRange found = [text rangeOfString:@"\n"
-                                    options:0
-                                      range:NSMakeRange(at, text.length - at)];
-        start = at;
-        end = (found.location == NSNotFound) ? text.length : found.location;
-        at = (found.location == NSNotFound) ? text.length
-                                            : NSMaxRange(found);
-    }
-    NSRange range = NSMakeRange(start, end - start);
+    if (row >= ranges.count)
+        return;
+    NSRange range = ranges[row].rangeValue;
+    if (range.length > 0)
+        range.length -= 1;              // without the line ending
+    if (NSMaxRange(range) > view.string.length)
+        return;
+
+    self.following = YES;
     [view setSelectedRange:range];
-    [view scrollRangeToVisible:range];
+    NSRect rect = [self rectOfRange:range in:view];
+    NSRect visible = scroll.contentView.bounds;
+    // Kept a third of the way down rather than scrolled to the very top:
+    // a difference with nothing above it has lost its context.
+    CGFloat wanted = MAX(0.0, NSMinY(rect) - visible.size.height / 3.0);
+    [scroll.contentView scrollToPoint:NSMakePoint(visible.origin.x, wanted)];
+    [scroll reflectScrolledClipView:scroll.contentView];
+    self.following = NO;
 }
 
 
