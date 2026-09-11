@@ -18,6 +18,7 @@
 		1F0D9E0100000000000000B1 /* MPPreviewSelection.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000000B3 /* MPPreviewSelection.m */; };
 		1F0D9E0100000000000000C1 /* MPDocumentController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000000C3 /* MPDocumentController.m */; };
 		1F0D9E0100000000000000B2 /* MPPreviewSelectionTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000000B5 /* MPPreviewSelectionTests.m */; };
+		1F0D9E0100000000000000D1 /* MPMissingFileTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000000D2 /* MPMissingFileTests.m */; };
 		1F0D9E0100000000000000A2 /* MPTextBundleTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000000A5 /* MPTextBundleTests.m */; };
 		D2C000000000000000000014 /* MPRichExportTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C000000000000000000013 /* MPRichExportTests.m */; };
 		D2C000000000000000000004 /* MPHeadingFixTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C000000000000000000003 /* MPHeadingFixTests.m */; };
@@ -308,6 +309,7 @@
 		1F0D9E0100000000000000C3 /* MPDocumentController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MPDocumentController.m; path = Code/Application/MPDocumentController.m; sourceTree = "<group>"; };
 		1F0D9E0100000000000000B4 /* MPPreviewSelection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPPreviewSelection.h; sourceTree = "<group>"; };
 		1F0D9E0100000000000000B5 /* MPPreviewSelectionTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPPreviewSelectionTests.m; sourceTree = "<group>"; };
+		1F0D9E0100000000000000D2 /* MPMissingFileTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPMissingFileTests.m; sourceTree = "<group>"; };
 		1F0D9E0100000000000000A4 /* MPTextBundle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPTextBundle.h; sourceTree = "<group>"; };
 		1F0D9E0100000000000000A5 /* MPTextBundleTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPTextBundleTests.m; sourceTree = "<group>"; };
 		D2C000000000000000000013 /* MPRichExportTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPRichExportTests.m; sourceTree = "<group>"; };
@@ -1316,6 +1318,7 @@
 				D2C000000000000000000013 /* MPRichExportTests.m */,
 				1F0D9E0100000000000000A5 /* MPTextBundleTests.m */,
 				1F0D9E0100000000000000B5 /* MPPreviewSelectionTests.m */,
+				1F0D9E0100000000000000D2 /* MPMissingFileTests.m */,
 				D2C000000000000000000003 /* MPHeadingFixTests.m */,
 				D2C000000000000000000001 /* MPHeadingSpaceTests.m */,
 				D2B0000000000000000000FD /* MPUpdateTests.m */,
@@ -1916,6 +1919,7 @@
 				D2C000000000000000000014 /* MPRichExportTests.m in Sources */,
 				1F0D9E0100000000000000A2 /* MPTextBundleTests.m in Sources */,
 				1F0D9E0100000000000000B2 /* MPPreviewSelectionTests.m in Sources */,
+				1F0D9E0100000000000000D1 /* MPMissingFileTests.m in Sources */,
 				D2C000000000000000000004 /* MPHeadingFixTests.m in Sources */,
 				D2C000000000000000000002 /* MPHeadingSpaceTests.m in Sources */,
 				D2B0000000000000000000FE /* MPUpdateTests.m in Sources */,

@@ -1519,6 +1519,53 @@ static NSString * const kMPScrollReporterSource =
     [super close];
 }
 
+/** Going back to the last saved version, when there is one.
+ *
+ * Reverting an autosaved document means writing the last saved version back
+ * over the file. If the file has gone — moved by `git` or by a script while
+ * the application was not running, or removed by something that does not
+ * coordinate — the write fails, and macOS says "could not be saved", which
+ * is true and useless: nothing was being saved, and the reason is that the
+ * document is pointing at a path that holds nothing.
+ *
+ * Said plainly instead, with the one thing that helps offered beside it:
+ * saving the text somewhere it can live.
+ */
+- (IBAction)revertDocumentToSaved:(id)sender
+{
+    if (!MPFileIsMissing(self.fileURL))
+    {
+        [super revertDocumentToSaved:sender];
+        return;
+    }
+
+    MPNote(@"revert refused: %@ is not there", self.fileURL.path);
+
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = NSLocalizedString(
+        @"The file is not where this document left it",
+        @"Reverting a document whose file has gone");
+    alert.informativeText = [NSString stringWithFormat:NSLocalizedString(
+        @"Nothing is at %@ any more, so there is no saved version to go "
+        @"back to. What is on screen is all there is: save it somewhere it "
+        @"can live.",
+        @"Why the document cannot be reverted"), self.fileURL.path];
+    [alert addButtonWithTitle:NSLocalizedString(@"Save As…",
+        @"Save the text of a document whose file has gone")];
+    [alert addButtonWithTitle:NSLocalizedString(@"Cancel", @"")];
+
+    NSWindow *window = self.windowForSheet;
+    void (^answered)(NSModalResponse) = ^(NSModalResponse response) {
+        if (response == NSAlertFirstButtonReturn)
+            [self saveDocumentAs:sender];
+    };
+    if (window)
+        [alert beginSheetModalForWindow:window completionHandler:answered];
+    else
+        answered([alert runModal]);
+}
+
+
 + (BOOL)autosavesInPlace
 {
     return YES;
@@ -1717,6 +1764,11 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
     }
     if (action == @selector(linkToNewMarkdownFile:))
         return self.fileURL != nil && self.editor.selectedRange.length > 0;
+
+    // There is nothing to go back to when the file has gone: the command
+    // stays offered, and says so rather than failing as a save.
+    if (action == @selector(revertDocumentToSaved:))
+        return self.fileURL != nil;
 
     // The count comes from the tally, which is worked out when the text
     // changes: running the checker to decide whether a menu item is

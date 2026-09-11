@@ -578,6 +578,16 @@ id MPGetObjectFromJavaScript(NSString *code, NSString *variableName)
 }
 
 
+BOOL MPFileIsMissing(NSURL *fileURL)
+{
+    // A document that was never saved is not missing anything: it has no
+    // file to lose.
+    if (!fileURL.isFileURL)
+        return NO;
+    return ![[NSFileManager defaultManager] fileExistsAtPath:fileURL.path];
+}
+
+
 NSArray<NSValue *> *MPMarkdownCodeRanges(NSString *text)
 {
     NSMutableArray *ranges = [NSMutableArray array];

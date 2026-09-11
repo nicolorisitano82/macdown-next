@@ -135,3 +135,13 @@ static void (^MPDocumentOpenCompletionEmpty)(
  * has to leave code alone, and every one of them was writing this again.
  */
 NSArray<NSValue *> *MPMarkdownCodeRanges(NSString *text);
+
+/** Whether a document's file has gone from where the document thinks it is.
+ *
+ * A file moved with the Finder is followed; one moved by `git`, by a script
+ * or by another program while the application was not running is not, and
+ * the document then points at a path that holds nothing. Every write fails
+ * from there on, with a system alert about saving that says nothing about
+ * why.
+ */
+BOOL MPFileIsMissing(NSURL *fileURL);
