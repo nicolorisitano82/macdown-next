@@ -202,6 +202,12 @@ Writing**.
   because both sides then have something the other has not. `git` checking
   out a branch and an agent saving over a document are the same event as far
   as an editor is concerned, and until now it was silent about both.
+* **A version is kept before the machine rewrites your words.** The writing
+  commands, a prose fix and moving done tasks to the end save the document
+  first, so File ▸ Revert To ▸ Browse All Versions has a point just before
+  the change — ⌘Z does not survive closing the window. Nothing new holds
+  those versions: they are the system's, in its own store, read from its
+  own menu.
 * **A file that has gone says so**, with the path, and offers *Salva con
   nome…*. Reverting says it too, instead of letting macOS report it as a
   failure to save: nothing was being saved, and "could not be saved in the
@@ -368,7 +374,8 @@ The following editor themes and CSS files are extracted from [Mou](http://mouapp
 Journals of the work, in Italian: [the editor's text rendering](docs/wysiwyg-testo.md),
 [the local writing help](docs/ai-locale.md) and
 [the two previews](docs/anteprime.md) — the card under the pointer and the
-one Finder draws — [the selection the two panes share](docs/selezione.md)
+one Finder draws — [the selection the two panes share](docs/selezione.md),
+[where the work goes](docs/salvataggi.md)
 and [the updater](docs/aggiornamenti.md). There is also a
 study, not a plan: [what a Claude and GPT integration could
 be](docs/studio-claude-gpt.md), and which parts of it are worth having. They are written for whoever picks a piece of this up

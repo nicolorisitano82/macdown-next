@@ -621,6 +621,27 @@ A file that reads as nothing is not a file that changed: one being written
 to at this instant reads empty for a moment, and answering "reload" to that
 would empty the document.
 
+### Saving, and getting work back
+
+Nothing here invents a place to keep your work: macOS already has three,
+and the application uses all three.
+
+- **A document with a file saves into the file**, by itself, while you
+  write. Measured by killing the process outright: the text typed twenty
+  seconds earlier was already on disk.
+- **A document with no file yet** is kept by the system in
+  `~/Library/Autosave Information/` and comes back when the application is
+  opened again — measured the same way.
+- **Every version is kept**: File ▸ Revert To ▸ **Browse All Versions…** is
+  the Time Machine view of that one file.
+
+What was missing was a version *just before the machine rewrites your
+words*, which is the change most likely to be regretted — and ⌘Z does not
+survive closing the window. The writing commands, a prose fix and moving
+done tasks to the end now save the document first, so the version browser
+has a "before" to go back to. The bytes are taken before the rewrite
+starts; the rewrite cannot get into the version.
+
 ## When something does not work
 
 **Help › Record What I Do.** Off unless you switch it on, and then every
@@ -708,6 +729,7 @@ up next: [the editor's text rendering](docs/wysiwyg-testo.md),
 [the local writing help](docs/ai-locale.md),
 [the two previews](docs/anteprime.md),
 [the selection the two panes share](docs/selezione.md),
+[where the work goes](docs/salvataggi.md),
 [the updater](docs/aggiornamenti.md),
 [the draw.io plug-in](docs/drawio.md),
 [code blocks](docs/blocchi-codice.md), and

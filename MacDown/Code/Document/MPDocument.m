@@ -1522,6 +1522,39 @@ static NSString * const kMPScrollReporterSource =
     [super close];
 }
 
+/** Puts the text as it stands into the record, before something rewrites it.
+ *
+ * macOS keeps versions of a document it saves in place — File ▸ Revert To ▸
+ * Browse All Versions is the Time Machine view of this file — and every
+ * explicit save is one of them. What is missing from that record is a point
+ * just before the machine changed somebody's words: the writing commands,
+ * a prose fix, the finished items moved to the end of a list. Those are the
+ * changes a reader is most likely to want undone tomorrow, and ⌘Z does not
+ * survive closing the window.
+ *
+ * So the document saves itself first, and the version browser then has a
+ * "before" to go back to. Nothing is invented to hold it: the versions are
+ * the system's, in the system's own store, visible from the system's own
+ * menu.
+ */
+- (void)keepAVersionBefore:(NSString *)what
+{
+    if (!self.fileURL.isFileURL || MPFileIsMissing(self.fileURL))
+        return;         // nothing on disk to keep a version of
+
+    // The bytes are taken now, on this thread, and only the writing is
+    // left to itself: the rewrite that follows cannot get into the version.
+    [self saveToURL:self.fileURL ofType:self.fileType
+   forSaveOperation:NSSaveOperation completionHandler:^(NSError *error) {
+        if (error)
+            MPNote(@"  no version kept before %@: %@", what,
+                   error.localizedDescription);
+        else
+            MPNote(@"version kept before %@", what);
+    }];
+}
+
+
 #pragma mark - The file underneath
 
 /** The file changed while the document was open.
@@ -5129,6 +5162,10 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
         [document showWritingStatus:
             [document workingTitleForCommand:command]];
 
+        // What a model rewrites is the change a reader is most likely to
+        // want back tomorrow, and undo does not outlive the window.
+        [document keepAVersionBefore:@"the writing help"];
+
         if (document.writingAssistant.generator != generator)
         {
             document.writingAssistant =
@@ -5793,6 +5830,8 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
     if (!issue.replacement.length || !issue.text.length)
         return;
 
+    [self keepAVersionBefore:@"a prose fix"];
+
     NSRange range = issue.range;
     NSString *text = self.editor.string;
     if (NSMaxRange(range) > text.length
@@ -6116,6 +6155,8 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
  */
 - (IBAction)moveDoneTasksToEnd:(id)sender
 {
+    [self keepAVersionBefore:@"moving the done tasks"];
+
     NSRange replaced = NSMakeRange(NSNotFound, 0);
     NSString *sorted = MPTasksMovedToEnd(self.editor.string ?: @"",
         self.editor.selectedRange.location, &replaced);
