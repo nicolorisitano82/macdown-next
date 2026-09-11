@@ -14,7 +14,11 @@ set -o pipefail
 
 APP="${1:?percorso del bundle .app}"
 VERSION="${2:?versione}"
-BACKGROUND="${3:-}"
+# The picture that shows where to drag is the one in Tools/ unless another
+# is named. It used to be the third argument and nothing else: two releases
+# went out with a blank disk image because whoever built them — me — simply
+# forgot to pass it.
+BACKGROUND="${3:-$(cd "$(dirname "$0")" && pwd)/dmg-background.png}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # Taken from the bundle rather than written here, so a rename of the
@@ -44,7 +48,14 @@ echo "note: staging $NAME.app"
 cp -R "$APP" "$STAGE/$NAME.app"
 ln -s /Applications "$STAGE/Applications"
 
-if [ -n "$BACKGROUND" ] && [ -f "$BACKGROUND" ]; then
+if [ ! -f "$BACKGROUND" ]; then
+    # Said out loud rather than skipped quietly: a disk image with no
+    # background is one nobody notices until it is downloaded.
+    echo "attenzione: sfondo non trovato — $BACKGROUND" >&2
+    echo "            l'immagine verrà senza. Se è voluto, passa /dev/null" >&2
+fi
+
+if [ -f "$BACKGROUND" ]; then
     mkdir -p "$STAGE/.background"
     sips -s format png -z "$((HEIGHT))" "$((WIDTH))" "$BACKGROUND" \
         --out "$STAGE/.background/background.png" > /dev/null
