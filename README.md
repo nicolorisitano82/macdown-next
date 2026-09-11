@@ -247,6 +247,14 @@ Writing**.
   that leads nowhere, one that closes a circle, one past the fourth hop
   where the loader stops, a file too long to be read well, an `AGENTS.md`
   that nothing imports.
+* **An MCP server over one folder.** `macdownext-mcp`, beside `macdownext`
+  in `Contents/SharedSupport/bin`, hands a declared folder to Claude Code,
+  Claude Desktop or any other MCP client over a pipe — **search**, **read**,
+  **list**, **outline**, and nothing else. No tool writes, renames or
+  deletes; a path outside the folder is refused; a second `--root` is an
+  error rather than a second permission; text only, 2 MB at most, a
+  `.textbundle` counted as one document. The application does not have to be
+  running, because what it reads is the folder.
 
 ### In the Finder
 
@@ -376,7 +384,8 @@ Journals of the work, in Italian: [the editor's text rendering](docs/wysiwyg-tes
 [the two previews](docs/anteprime.md) — the card under the pointer and the
 one Finder draws — [the selection the two panes share](docs/selezione.md),
 [where the work goes](docs/salvataggi.md)
-and [the plan for an MCP server over a folder](docs/progetto-mcp.md)
+and [the MCP server over a folder](docs/progetto-mcp.md), which reads it
+for an assistant and can do nothing else,
 and [the updater](docs/aggiornamenti.md). There is also a
 study, not a plan: [what a Claude and GPT integration could
 be](docs/studio-claude-gpt.md), and which parts of it are worth having. They are written for whoever picks a piece of this up

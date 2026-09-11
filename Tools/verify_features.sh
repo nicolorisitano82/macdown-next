@@ -530,6 +530,53 @@ else
 fi
 
 
+# ----------------------------------------------------------- the MCP server
+
+# The unit tests talk to the server's classes; this talks to the binary the
+# way an assistant would — one pipe, one conversation — and asks it the two
+# questions that matter outside the code: does it travel inside the app, and
+# does it say no to a path outside the folder it was given.
+
+say "Il server MCP"
+
+MCP="$APP/Contents/SharedSupport/bin/macdownext-mcp"
+ok "il server viaggia nell'app" test -x "$MCP"
+
+if [ -x "$MCP" ]; then
+    MCP_ROOT="$WORK/note"
+    mkdir -p "$MCP_ROOT"
+    printf '# Relazione\n\nUna riga con la parola cardine.\n' \
+        > "$MCP_ROOT/relazione.md"
+    # The server reads lines until the pipe closes, so the whole
+    # conversation goes in at once and the answers come out in order.
+    {
+        printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"suite","version":"1"}}}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search","arguments":{"query":"cardine"}}}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"read","arguments":{"path":"../fuori.md"}}}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"write","arguments":{"path":"relazione.md","text":"altro"}}}'
+    } | "$MCP" --root "$MCP_ROOT" > "$WORK/mcp.out" 2> "$WORK/mcp.err"
+
+    ok "risponde alla stretta di mano" \
+        contains "$WORK/mcp.out" '"protocolVersion":"2025-06-18"'
+    ok "si presenta col suo nome" \
+        contains "$WORK/mcp.out" '"name":"macdownext-mcp"'
+    ok "dichiara i quattro arnesi" \
+        sh -c 'grep -c "\"name\":\"\(search\|read\|list\|outline\)\"" "$0" >/dev/null \
+               && [ "$(grep -o "\"name\":\"\(search\|read\|list\|outline\)\"" "$0" | sort -u | wc -l)" -eq 4 ]' \
+        "$WORK/mcp.out"
+    ok "trova una parola nei documenti della cartella" \
+        contains "$WORK/mcp.out" "relazione.md"
+    ok "rifiuta un percorso fuori dalla radice" \
+        contains "$WORK/mcp.out" \
+        "that path is outside the folders this server was given"
+    ok "non ha alcun arnese che scriva" \
+        contains "$WORK/mcp.out" "there is no tool called write"
+    ok "e non sporca il documento" \
+        grep -q "parola cardine" "$MCP_ROOT/relazione.md"
+fi
+
+
 # ------------------------------------------------------------------ Italian
 
 # A string with no translation shows the reader the key, and a nib object

@@ -44,7 +44,9 @@ deliberately does not do.
 - [Preferences, pane by pane](#preferences-pane-by-pane)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [The command line](#the-command-line)
-- [When the file changes underneath](#when-the-file-changes-underneath)\n- [When something does not work](#when-something-does-not-work)
+- [A folder an assistant can read](#a-folder-an-assistant-can-read)
+- [When the file changes underneath](#when-the-file-changes-underneath)
+- [When something does not work](#when-something-does-not-work)
 - [What leaves your Mac](#what-leaves-your-mac)
 - [Building from source](#building-from-source)
 - [Credits and licence](#credits-and-licence)
@@ -598,6 +600,48 @@ cat note.md | macdownext    # open what is piped in
 
 ---
 
+## A folder an assistant can read
+
+Inside the application there is a second command, `macdownext-mcp`: an
+**MCP server** that hands one folder of Markdown to Claude Code, Claude
+Desktop, or anything else that speaks the protocol. The client starts it,
+talks to it over a pipe and stops it; MacDown Next does not have to be
+running, because what the server reads is the folder.
+
+It can do four things — **search** the folder, **read** a file, **list**
+what is there, give a document's **outline** — and nothing else. There is no
+tool that writes, none that renames, none that deletes. The folder is
+declared, never guessed:
+
+```bash
+claude mcp add notes -- \
+    "/Applications/MacDown Next.app/Contents/SharedSupport/bin/macdownext-mcp" \
+    --root ~/Notes
+```
+
+For a client that reads a configuration file instead:
+
+```json
+{"mcpServers": {"notes": {
+    "command": "/Applications/MacDown Next.app/Contents/SharedSupport/bin/macdownext-mcp",
+    "args": ["--root", "/Users/you/Notes"]}}}
+```
+
+- **One folder.** A second `--root` is an error, not a second permission.
+- **Nothing leaves it.** A `..`, an absolute path, a symbolic link pointing
+  outside: refused, and the answer says so in words the assistant can pass
+  on to you.
+- **Text only**, and a file over 2 MB is refused with its size. A
+  `.textbundle` counts as one document, not as a folder to walk into.
+- `--exclude <glob>` leaves more out; `.git`, `node_modules`, `.build` and
+  dot-files are left out already.
+
+Without `--root` it does not start. The design, the measurements and what
+the next phases will add are in
+[the journal](docs/progetto-mcp.md).
+
+---
+
 ## When the file changes underneath
 
 Documents do not sit still any more: `git` checks out a branch, a script
@@ -679,6 +723,11 @@ bundled), the draw.io plug-in (viewer and shapes are inside it), the link
 cards in the preview (an address is taken apart, not visited), the Finder
 preview (it cannot reach the network at all), and the action log.
 
+`macdownext-mcp` touches no network either: it reads the folder and writes
+to a pipe. What happens after that is the assistant's business — a client
+that sends what it read to a model on the web is sending your documents
+there, which is the reason the folder is declared one at a time.
+
 ---
 
 ## Building from source
@@ -730,7 +779,7 @@ up next: [the editor's text rendering](docs/wysiwyg-testo.md),
 [the two previews](docs/anteprime.md),
 [the selection the two panes share](docs/selezione.md),
 [where the work goes](docs/salvataggi.md),
-[the plan for an MCP server](docs/progetto-mcp.md),
+[the MCP server over a folder](docs/progetto-mcp.md),
 [the updater](docs/aggiornamenti.md),
 [the draw.io plug-in](docs/drawio.md),
 [code blocks](docs/blocchi-codice.md), and
