@@ -119,3 +119,15 @@
 "by paragraph" = "by paragraph";
 "ignore spaces" = "ignore spaces";
 "ignore case" = "ignore case";
+
+/* Comparing with the disk and with a version */
+"%@ (on disk)" = "%@ (on disk)";
+"There are no earlier versions of this document" = "There are no earlier versions of this document";
+"macOS keeps a version when you save, and this application keeps one before anything rewrites the document by itself." = "macOS keeps a version when you save, and this application keeps one before anything rewrites the document by itself.";
+"Which version?" = "Which version?";
+"The document as it is now stays on the left; the version you pick goes on the right. Nothing is restored." = "The document as it is now stays on the left; the version you pick goes on the right. Nothing is restored.";
+"Compare" = "Compare";
+"Cancel" = "Cancel";
+"no differences" = "no differences";
+"one difference" = "one difference";
+"%@ — %lu differences" = "%@ — %lu differences";

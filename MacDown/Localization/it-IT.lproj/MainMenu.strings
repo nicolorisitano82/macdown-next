@@ -397,8 +397,20 @@
 /* Class = "NSMenuItem"; title = "Draw a Diagram from a Description…"; ObjectID = "dgm-01-itm"; */
 "dgm-01-itm.title" = "Disegna un diagramma da una descrizione…";
 
-/* Class = "NSMenuItem"; title = "Compare with…"; ObjectID = "cmp-01-itm"; */
-"cmp-01-itm.title" = "Confronta con…";
+/* Class = "NSMenuItem"; title = "Compare"; ObjectID = "cmp-00-sub"; */
+"cmp-00-sub.title" = "Confronta";
+
+/* Class = "NSMenu"; title = "Compare"; ObjectID = "cmp-00-menu"; */
+"cmp-00-menu.title" = "Confronta";
+
+/* Class = "NSMenuItem"; title = "With a File…"; ObjectID = "cmp-01-itm"; */
+"cmp-01-itm.title" = "Con un file…";
+
+/* Class = "NSMenuItem"; title = "With the Copy on Disk"; ObjectID = "cmp-02-itm"; */
+"cmp-02-itm.title" = "Con la copia sul disco";
+
+/* Class = "NSMenuItem"; title = "With a Version…"; ObjectID = "cmp-03-itm"; */
+"cmp-03-itm.title" = "Con una versione…";
 
 /* Class = "NSMenuItem"; title = "Instruction Files…"; ObjectID = "ins-fl-Itm"; */
 "ins-fl-Itm.title" = "File di istruzioni…";

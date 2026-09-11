@@ -30,4 +30,8 @@
                   named:(NSString *)rightName
                     url:(NSURL *)rightURL;
 
+/// What the window is called: the two names and how many differences.
++ (NSString *)titleForLeft:(NSString *)left right:(NSString *)right
+               differences:(NSUInteger)differences;
+
 @end

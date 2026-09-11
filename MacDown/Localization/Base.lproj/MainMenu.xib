@@ -117,12 +117,31 @@
                                     <action selector="revertDocumentToSaved:" target="-1" id="iJ3-Pv-kwq"/>
                                 </connections>
                             </menuItem>
-                            <menuItem title="Compare with…" id="cmp-01-itm">
-                                <modifierMask key="keyEquivalentModifierMask" control="YES" option="YES" command="YES"/>
-                                <string key="keyEquivalent">d</string>
-                                <connections>
-                                    <action selector="compareWithFile:" target="-1" id="cmp-01-act"/>
-                                </connections>
+                            <menuItem title="Compare" id="cmp-00-sub">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <menu key="submenu" title="Compare" id="cmp-00-menu">
+                                    <items>
+                                        <menuItem title="With a File…" id="cmp-01-itm">
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES" option="YES" command="YES"/>
+                                            <string key="keyEquivalent">d</string>
+                                            <connections>
+                                                <action selector="compareWithFile:" target="-1" id="cmp-01-act"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="With the Copy on Disk" id="cmp-02-itm">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="compareWithSavedFile:" target="-1" id="cmp-02-act"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="With a Version…" id="cmp-03-itm">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="compareWithVersion:" target="-1" id="cmp-03-act"/>
+                                            </connections>
+                                        </menuItem>
+                                    </items>
+                                </menu>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="oOV-6A-wGe"/>
                             <menuItem title="Export" tag="9002" id="5mp-ev-1el">

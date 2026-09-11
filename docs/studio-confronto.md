@@ -227,13 +227,49 @@ mette in cima all'altra *la stessa riga del confronto*, qualunque altezza
 abbia. Lo stesso vale per «differenza successiva», che adesso tiene la riga
 a un terzo dall'alto invece che appiccicata in cima.
 
-### Cosa resta della fase 2 in poi
+## 11. La fase 2, com'è andata
 
-Le provenienze (la copia sul disco, una versione di macOS), ⌘G, il
-conteggio nel titolo; poi il copiare e il prendere una versione, la mappa
-laterale, il testo reso. L'ordine della sezione 8 non è cambiato.
+Le provenienze che esistevano già da qualche altra parte, e i tasti che
+tutti hanno nelle dita.
+
+**Archivio ▸ Confronta** è adesso un sottomenu di tre voci:
+
+| Voce | Con cosa |
+|---|---|
+| **Con un file…** (⌃⌥⌘D) | quello di prima |
+| **Con la copia sul disco** | quello che è stato salvato — *cosa ho cambiato da quando ho aperto*, che lo studio dava per la voce più usata di tutte |
+| **Con una versione…** | una delle versioni che tiene macOS, comprese quelle che l'applicazione tiene **prima** che l'aiuto alla scrittura o un file cambiato sotto riscrivano qualcosa |
+
+La scelta della versione è un elenco con la data — «oggi 00:16» — e dice in
+chiaro che non si ripristina niente: la versione va a destra e si legge.
+
+**⌘G e ⇧⌘G** camminano le differenze. Con questa finestra davanti «Trova
+successivo» nel menu è spento, quindi il tasto arriva ai due bottoni; ma il
+pannello risponde anche a `performFindPanelAction:`, perché le due colonne
+sono viste di testo e una vista di testo, quel messaggio, se lo prenderebbe
+per sé — «trova la prossima occorrenza in questa colonna» non è quello che
+⌘G vuol dire in una finestra che parla di differenze.
+
+**Il titolo dice cosa c'è dentro**:
+
+```
+nota.md (nell'editor, non salvato) ↔ nota.md (sul disco) — una differenza
+```
+
+Il menu Finestra con tre confronti aperti torna leggibile, e «una
+differenza» non è «1 differenze».
+
+Provato: nell'applicazione vera, con un documento modificato e non salvato,
+salvato due volte per avere le versioni; e nella suite, dove una voce di
+menu che punta a un selettore che nessuno implementa — invisibile finché
+qualcuno non ci clicca — viene ora cercata **sia nel nib sia nel binario**.
+
+### Cosa resta
+
+Il copiare e il prendere una versione, la mappa laterale, il testo reso.
+L'ordine della sezione 8 non è cambiato.
 
 ---
 
-*Fase 1 fatta l'11 settembre 2026. Il resto di questo file è ancora studio:
-nessuna di quelle è promessa.*
+*Fasi 1 e 2 fatte, l'11 e il 12 settembre 2026. Il resto di questo file è
+ancora studio: nessuna di quelle è promessa.*

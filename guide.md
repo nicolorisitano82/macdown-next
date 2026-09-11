@@ -336,11 +336,16 @@ the Mermaid; the labels come back in your language.
 
 ## Comparing two documents
 
-**File ▸ Compare with…** (⌃⌥⌘D) puts the document beside another one and
-marks what differs. The left side is **what is in the editor**, not what is
-on the disk — the question *what did I change* is asked before saving at
-least as often as after — and the window says so when the two are not the
-same thing.
+**File ▸ Compare** puts the document beside something else and marks what
+differs. The left side is **what is in the editor**, not what is on the disk
+— the question *what did I change* is asked before saving at least as often
+as after — and the window says so when the two are not the same thing.
+
+| What to compare with | |
+|---|---|
+| **With a File…** (⌃⌥⌘D) | any other document |
+| **With the Copy on Disk** | what has been saved, which answers *what have I changed since I opened this* |
+| **With a Version…** | one of the versions macOS keeps — including the ones this application keeps for you before the writing help or a file that changed underneath rewrites anything. Nothing is restored: it is put on the right and read |
 
 - A line that was **changed** is one row with both versions on it, not a
   removal followed by an addition, and inside that row the **words** that
@@ -349,7 +354,8 @@ same thing.
 - What was **added** is green, what was **taken away** is red, and the empty
   half of a row that only one side has is grey — the two columns stay level
   with each other all the way down, and each keeps its own line numbers.
-- **Next** and **Previous** walk the differences; **Differences only** folds
+- **Next** and **Previous** walk the differences, and so do **⌘G** and
+  **⇧⌘G** in that window; **Differences only** folds
   away what is the same, keeping three lines around each change; **Swap
   Sides** turns the comparison round; **Read the Files Again** compares the
   files as they are now, which is the button for *somebody else has just
@@ -368,6 +374,9 @@ same thing.
 - The two sides scroll together, following rows rather than pixels: a
   paragraph wraps to a different height on each side, and what has to stay
   level is the comparison, not the geometry.
+- The window is named after what is in it — `nota.md (in the editor, not
+  saved) ↔ nota.md (on disk) — one difference` — so the Window menu is
+  readable with three comparisons open.
 
 With no document open the same menu item asks for two files instead.
 

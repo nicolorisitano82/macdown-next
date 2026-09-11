@@ -588,3 +588,14 @@
 "by paragraph" = "per paragrafi";
 "ignore spaces" = "ignora gli spazi";
 "ignore case" = "ignora maiuscole e minuscole";
+
+/* Confronto con il disco e con una versione */
+"%@ (on disk)" = "%@ (sul disco)";
+"There are no earlier versions of this document" = "Non ci sono versioni precedenti di questo documento";
+"macOS keeps a version when you save, and this application keeps one before anything rewrites the document by itself." = "macOS tiene una versione quando salvi, e questa applicazione ne tiene una prima che qualcosa riscriva il documento da solo.";
+"Which version?" = "Quale versione?";
+"The document as it is now stays on the left; the version you pick goes on the right. Nothing is restored." = "Il documento com'è adesso resta a sinistra; la versione che scegli va a destra. Non si ripristina niente.";
+"Compare" = "Confronta";
+"no differences" = "nessuna differenza";
+"one difference" = "una differenza";
+"%@ — %lu differences" = "%@ — %lu differenze";

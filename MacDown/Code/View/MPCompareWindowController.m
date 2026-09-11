@@ -16,6 +16,28 @@ static const NSUInteger kMPCompareContext = 3;
 static const NSUInteger kMPCompareGutter = 6;
 
 
+/** The two sides, as text views that do not answer ⌘G themselves.
+ *
+ * Find Next in the menu bar sends `performFindPanelAction:` down the
+ * responder chain, and an NSTextView answers it — with the two panes as
+ * first responder that means «find the next match in this column», which is
+ * not what ⌘G means in a window whose whole subject is differences. Passed
+ * on, it reaches the window controller, which walks them.
+ */
+@interface MPCompareTextView : NSTextView
+@end
+
+@implementation MPCompareTextView
+
+- (void)performFindPanelAction:(id)sender
+{
+    [[self nextResponder] tryToPerform:@selector(performFindPanelAction:)
+                                  with:sender];
+}
+
+@end
+
+
 /// The comparisons on screen, so that a window nobody holds does not go
 /// away while somebody is reading it.
 static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
@@ -121,6 +143,33 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
 }
 
 
+/// What the window is called: the two names and how many differences, so
+/// that the Window menu is readable with three comparisons open.
++ (NSString *)titleForLeft:(NSString *)left right:(NSString *)right
+               differences:(NSUInteger)differences
+{
+    NSString *names = [NSString stringWithFormat:@"%@ ↔ %@",
+                       left.length ? left : @"?",
+                       right.length ? right : @"?"];
+    if (!differences)
+    {
+        return [NSString stringWithFormat:@"%@ — %@", names,
+            NSLocalizedString(@"no differences",
+                              @"Comparison window title, when the two are "
+                              @"the same")];
+    }
+    if (differences == 1)
+    {
+        return [NSString stringWithFormat:@"%@ — %@", names,
+            NSLocalizedString(@"one difference",
+                              @"Comparison window title")];
+    }
+    return [NSString stringWithFormat:NSLocalizedString(
+        @"%@ — %lu differences", @"Comparison window title"),
+        names, (unsigned long)differences];
+}
+
+
 #pragma mark - The window
 
 - (void)buildContent
@@ -136,7 +185,11 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
     NSButton *next = [NSButton buttonWithTitle:NSLocalizedString(
         @"Next", @"Go to the next difference")
         target:self action:@selector(goToNext:)];
-    next.keyEquivalent = @"\r";
+    next.keyEquivalent = @"g";
+    next.keyEquivalentModifierMask = NSEventModifierFlagCommand;
+    previous.keyEquivalent = @"G";
+    previous.keyEquivalentModifierMask = NSEventModifierFlagCommand
+        | NSEventModifierFlagShift;
 
     self.foldButton = [NSButton checkboxWithTitle:NSLocalizedString(
         @"Differences only", @"Hide the lines that are the same")
@@ -410,6 +463,11 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
             (unsigned long)removed];
     }
 
+    // In the title too: the Window menu lists titles, and «Comparison»
+    // three times over says nothing about which is which.
+    self.window.title = [MPCompareWindowController titleForLeft:self.leftName
+        right:self.rightName differences:added + removed + changed];
+
     NSMutableArray<NSValue *> *leftRanges = [NSMutableArray array];
     NSMutableArray<NSValue *> *rightRanges = [NSMutableArray array];
     [self.leftView.textStorage setAttributedString:
@@ -576,6 +634,28 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
 
 
 #pragma mark - Walking the differences
+
+/// ⌘G and ⇧⌘G, which is what those keys mean everywhere else: the next one
+/// of what this window is about.
+- (void)performFindPanelAction:(id)sender
+{
+    NSInteger tag = [sender respondsToSelector:@selector(tag)]
+        ? [sender tag] : NSFindPanelActionNext;
+    if (tag == NSFindPanelActionPrevious)
+        [self goToPrevious:sender];
+    else
+        [self goToNext:sender];
+}
+
+- (BOOL)validateMenuItem:(NSMenuItem *)item
+{
+    if (item.action == @selector(performFindPanelAction:))
+    {
+        return item.tag == NSFindPanelActionNext
+            || item.tag == NSFindPanelActionPrevious;
+    }
+    return YES;
+}
 
 - (void)goToNext:(id)sender
 {

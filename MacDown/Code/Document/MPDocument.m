@@ -1957,6 +1957,9 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
             && [MPModelStore sharedStore].selectedModel != nil
             && !self.writingAssistant.isWorking;
     }
+    if (action == @selector(compareWithSavedFile:)
+            || action == @selector(compareWithVersion:))
+        return self.fileURL != nil;
     if (action == @selector(generateDiagram:))
     {
         // The same two conditions as the writing commands, minus the
@@ -6398,34 +6401,167 @@ static BOOL MPActionEditsTheDocument(SEL action)
         encoding:NSUTF8StringEncoding error:NULL];
     if (!theirs)
     {
+        [self sayThatItCannotBeRead:other];
+        return;
+    }
+    [self compareEditorWith:theirs named:other.lastPathComponent url:other];
+}
+
+
+/** This document beside the copy on the disk.
+ *
+ * «Cosa ho cambiato da quando ho aperto» — the question the panel gets
+ * asked most, and until now it meant choosing your own file from a chooser,
+ * which is the same thing said worse.
+ */
+- (IBAction)compareWithSavedFile:(id)sender
+{
+    if (!self.fileURL)
+        return;
+
+    NSString *saved = [NSString stringWithContentsOfURL:self.fileURL
+        encoding:NSUTF8StringEncoding error:NULL];
+    if (!saved)
+    {
+        [self sayThatItCannotBeRead:self.fileURL];
+        return;
+    }
+    [self compareEditorWith:saved
+                      named:[NSString stringWithFormat:NSLocalizedString(
+                          @"%@ (on disk)",
+                          @"Name of the saved side of a comparison"),
+                          self.fileURL.lastPathComponent]
+                        url:self.fileURL];
+}
+
+
+/** This document beside one of the versions macOS has kept.
+ *
+ * The editor already asks for a version to be kept before anything rewrites
+ * the document — the writing help, a file that changed underneath — so the
+ * interesting ones are already there. What was missing was a way to look at
+ * one without restoring it.
+ */
+- (IBAction)compareWithVersion:(id)sender
+{
+    if (!self.fileURL)
+        return;
+
+    NSArray<NSFileVersion *> *versions =
+        [NSFileVersion otherVersionsOfItemAtURL:self.fileURL];
+    if (!versions.count)
+    {
         NSAlert *alert = [[NSAlert alloc] init];
         alert.messageText = NSLocalizedString(
-            @"That file is not text this application can read",
-            @"Title of the alert when a comparison file cannot be read");
-        alert.informativeText = other.path;
+            @"There are no earlier versions of this document",
+            @"Title of the alert when a document has no versions");
+        alert.informativeText = NSLocalizedString(
+            @"macOS keeps a version when you save, and this application "
+            @"keeps one before anything rewrites the document by itself.",
+            @"What versions are, in the alert when there are none");
         [alert beginSheetModalForWindow:self.windowForSheet
                       completionHandler:nil];
         return;
     }
 
+    // Newest first: the one somebody wants is nearly always the last one.
+    versions = [versions sortedArrayUsingComparator:
+        ^NSComparisonResult (NSFileVersion *a, NSFileVersion *b) {
+        return [b.modificationDate compare:a.modificationDate];
+    }];
+
+    NSDateFormatter *clock = [[NSDateFormatter alloc] init];
+    clock.dateStyle = NSDateFormatterMediumStyle;
+    clock.timeStyle = NSDateFormatterShortStyle;
+    clock.doesRelativeDateFormatting = YES;
+
+    NSPopUpButton *chooser = [[NSPopUpButton alloc] initWithFrame:
+        NSMakeRect(0.0, 0.0, 320.0, 26.0)];
+    for (NSFileVersion *version in versions)
+    {
+        NSString *when = version.modificationDate
+            ? [clock stringFromDate:version.modificationDate] : @"?";
+        NSString *who = version.localizedNameOfSavingComputer;
+        [chooser addItemWithTitle:who.length
+            ? [NSString stringWithFormat:@"%@ — %@", when, who] : when];
+    }
+
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = NSLocalizedString(@"Which version?",
+                                          @"Title of the version chooser");
+    alert.informativeText = NSLocalizedString(
+        @"The document as it is now stays on the left; the version you pick "
+        @"goes on the right. Nothing is restored.",
+        @"What the version comparison does");
+    alert.accessoryView = chooser;
+    [alert addButtonWithTitle:NSLocalizedString(@"Compare",
+                                                @"Version chooser")];
+    [alert addButtonWithTitle:NSLocalizedString(@"Cancel",
+                                                @"Version chooser")];
+
+    __weak MPDocument *weakSelf = self;
+    [alert beginSheetModalForWindow:self.windowForSheet
+                  completionHandler:^(NSModalResponse answer) {
+        if (answer != NSAlertFirstButtonReturn)
+            return;
+        MPDocument *document = weakSelf;
+        NSInteger at = chooser.indexOfSelectedItem;
+        if (!document || at < 0 || (NSUInteger)at >= versions.count)
+            return;
+
+        NSFileVersion *version = versions[(NSUInteger)at];
+        NSString *text = [NSString stringWithContentsOfURL:version.URL
+            encoding:NSUTF8StringEncoding error:NULL];
+        if (!text)
+        {
+            [document sayThatItCannotBeRead:version.URL];
+            return;
+        }
+        // On the next run loop: a sheet cannot be replaced by a window
+        // while it is still going down.
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [document compareEditorWith:text
+                                  named:chooser.titleOfSelectedItem
+                                    url:nil];
+        });
+    }];
+}
+
+
+/// The other side, whatever it came from, against what is in the editor.
+- (void)compareEditorWith:(NSString *)theirs
+                    named:(NSString *)name
+                      url:(NSURL *)url
+{
     NSString *mine = self.editor.string ?: @"";
-    NSString *name = self.fileURL
+    NSString *ours = self.fileURL
         ? self.fileURL.lastPathComponent
         : NSLocalizedString(@"Untitled",
                             @"Name of a document with no file, in the "
                             @"comparison window");
     if (self.isDocumentEdited)
     {
-        name = [NSString stringWithFormat:NSLocalizedString(
+        ours = [NSString stringWithFormat:NSLocalizedString(
             @"%@ (in the editor, not saved)",
-            @"Name of the unsaved side of a comparison"), name];
+            @"Name of the unsaved side of a comparison"), ours];
     }
 
     MPNote(@"compare: %lu characters against %@",
-           (unsigned long)mine.length, other.lastPathComponent);
-    [MPCompareWindowController compare:mine named:name url:self.fileURL
-                                  with:theirs named:other.lastPathComponent
-                                   url:other];
+           (unsigned long)mine.length, name);
+    [MPCompareWindowController compare:mine named:ours url:self.fileURL
+                                  with:theirs named:name url:url];
+}
+
+
+- (void)sayThatItCannotBeRead:(NSURL *)url
+{
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = NSLocalizedString(
+        @"That file is not text this application can read",
+        @"Title of the alert when a comparison file cannot be read");
+    alert.informativeText = url.path ?: @"";
+    [alert beginSheetModalForWindow:self.windowForSheet
+                  completionHandler:nil];
 }
 
 

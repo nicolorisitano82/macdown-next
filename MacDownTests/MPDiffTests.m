@@ -8,6 +8,7 @@
 
 #import <XCTest/XCTest.h>
 
+#import "MPCompareWindowController.h"
 #import "MPDiff.h"
 
 
@@ -259,6 +260,32 @@
     MPDiffWordRanges(@"stessa riga", @"stessa riga", &left, &right);
     XCTAssertEqual(left.count, 0u);
     XCTAssertEqual(right.count, 0u);
+}
+
+#pragma mark - What the window is called
+
+- (void)testTheTitleCarriesTheCountSoTheWindowMenuIsReadable
+{
+    NSString *none = [MPCompareWindowController titleForLeft:@"a.md"
+        right:@"b.md" differences:0];
+    XCTAssertTrue([none containsString:@"a.md"]);
+    XCTAssertTrue([none containsString:@"b.md"]);
+
+    NSString *one = [MPCompareWindowController titleForLeft:@"a.md"
+        right:@"b.md" differences:1];
+    NSString *many = [MPCompareWindowController titleForLeft:@"a.md"
+        right:@"b.md" differences:9];
+    // One is not «1 differences», and nine says nine.
+    XCTAssertNotEqualObjects(one, many);
+    XCTAssertTrue([many containsString:@"9"]);
+    XCTAssertFalse([one containsString:@"1 "]);
+}
+
+- (void)testATitleWithNothingToPutInIt
+{
+    NSString *title = [MPCompareWindowController titleForLeft:@"" right:nil
+                                                  differences:3];
+    XCTAssertTrue(title.length > 0);
 }
 
 @end

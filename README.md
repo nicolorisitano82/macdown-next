@@ -142,7 +142,8 @@ Writing**.
 
 ### Comparing
 
-* **Compare with…** (⌃⌥⌘D) shows the document beside another file, with what
+* **Compare** (⌃⌥⌘D for another file; also with the copy on disk, and with
+  any version macOS has kept) shows the document beside it, with what
   differs marked. The left side is what is in the editor, unsaved changes
   included. A changed line is one row carrying both versions, with the words
   that differ marked inside it; the columns keep their own line numbers, mark

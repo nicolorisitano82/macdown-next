@@ -600,6 +600,19 @@ then
     ok "gli spazi si possono ignorare" \
         sh -c '[ "$("$0" "$1" "$2" --counts --ignore-space)" = "1 cambiate, 0 aggiunte, 0 tolte" ]' \
         "$DIFF_PROBE" "$WORK/s-a.md" "$WORK/s-b.md"
+    # A menu item that points at a selector nobody implements looks fine
+    # until somebody clicks it: the nib and the binary are asked together.
+    menu_and_code_agree() {
+        local selector="$1"
+        strings "$APP/Contents/Resources/Base.lproj/MainMenu.nib" \
+            | grep -q "$selector" || return 1
+        strings "$APP/Contents/MacOS/"* | grep -q "$selector"
+    }
+    ok "«con la copia sul disco» è nel menu e nel codice" \
+        menu_and_code_agree compareWithSavedFile:
+    ok "«con una versione» pure" \
+        menu_and_code_agree compareWithVersion:
+
     ok "e le maiuscole pure" \
         sh -c '[ "$("$0" "$1" "$2" --counts --ignore-space --ignore-case)" = "0 cambiate, 0 aggiunte, 0 tolte" ]' \
         "$DIFF_PROBE" "$WORK/s-a.md" "$WORK/s-b.md"
