@@ -848,6 +848,7 @@ up next: [the editor's text rendering](docs/wysiwyg-testo.md),
 [the selection the two panes share](docs/selezione.md),
 [where the work goes](docs/salvataggi.md),
 [the MCP server over a folder](docs/progetto-mcp.md),
+[the plan for syncing a folder](docs/progetto-sync.md),
 [the updater](docs/aggiornamenti.md),
 [the draw.io plug-in](docs/drawio.md),
 [code blocks](docs/blocchi-codice.md), and
