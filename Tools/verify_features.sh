@@ -576,7 +576,7 @@ if [ -x "$MCP" ]; then
     ok "rifiuta un percorso fuori dalla radice" \
         contains "$WORK/mcp.out" \
         "that path is outside the folders this server was given"
-    ok "non ha alcun arnese che scriva" \
+    ok "in sola lettura non esiste un arnese che scriva" \
         contains "$WORK/mcp.out" "there is no tool called write"
     ok "e non sporca il documento" \
         grep -q "parola cardine" "$MCP_ROOT/relazione.md"
@@ -588,6 +588,43 @@ if [ -x "$MCP" ]; then
         contains "$WORK/mcp.out" '\"stato\":\"aperto\"'
     ok "trova i documenti che dichiarano un campo" \
         contains "$WORK/mcp.out" '\"field\":\"stato\"'
+
+    # And phase three, which is the half that can do damage: a second
+    # conversation, started with --write, that makes a document, adds to it
+    # and changes a line — and a third, read-only, that refuses to.
+    MCP_LOG="$WORK/mcp.log"
+    {
+        printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"suite","version":"1"}}}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"create","arguments":{"path":"nuovo.md","text":"# Nuovo\n\nUna riga."}}}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"append","arguments":{"path":"nuovo.md","text":"In coda."}}}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"replace","arguments":{"path":"nuovo.md","find":"Una riga.","with":"Un altra riga."}}}'
+        printf '%s\n' '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"create","arguments":{"path":"nuovo.md","text":"sopra"}}}'
+    } | "$MCP" --root "$MCP_ROOT" --write --log "$MCP_LOG" \
+        > "$WORK/mcp-write.out" 2>&1
+
+    ok "col permesso di scrivere dichiara dieci arnesi" \
+        sh -c '[ "$(grep -o "\"name\":\"\(search\|read\|list\|outline\|backlinks\|frontmatter\|find_by_field\|append\|create\|replace\)\"" "$0" | sort -u | wc -l)" -eq 10 ]' \
+        "$WORK/mcp-write.out"
+    ok "crea un documento che non c'era" test -f "$MCP_ROOT/nuovo.md"
+    ok "aggiunge in coda e sostituisce quello che trova" \
+        sh -c 'grep -q "Un altra riga." "$0" && grep -q "In coda." "$0"' \
+        "$MCP_ROOT/nuovo.md"
+    ok "e rifiuta di scrivere sopra un file che c'è già" \
+        contains "$WORK/mcp-write.out" "writes over nothing"
+    # The diary is the answer to «chi ha toccato questo file», so it has to
+    # hold the refusals as well as the changes.
+    ok "scrive ogni chiamata nel diario" \
+        sh -c 'grep -q "create .*ok" "$0" && grep -q "create .*refused" "$0"' \
+        "$MCP_LOG"
+
+    printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"suite","version":"1"}}}' \
+        '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"append","arguments":{"path":"relazione.md","text":"di nascosto"}}}' \
+        | "$MCP" --root "$MCP_ROOT" --no-log > "$WORK/mcp-ro.out" 2>&1
+    ok "senza permesso non aggiunge niente a niente" \
+        contains "$WORK/mcp-ro.out" "not started with permission"
+    ok "e la relazione è rimasta quella" \
+        sh -c '! grep -q "di nascosto" "$0"' "$MCP_ROOT/relazione.md"
 fi
 
 

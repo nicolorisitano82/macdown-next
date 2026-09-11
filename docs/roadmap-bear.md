@@ -33,7 +33,7 @@ arrivano con la 0.23.0.
 | To-do che si riordinano | **fatto**, a comando | master | — |
 | Anteprima del documento collegato | **fatta** — cartolina dopo cinque secondi sul link | master | — |
 | Anteprima nel Finder (Quick Look) | **fatta** — estensione dentro l'app | master | — |
-| Server MCP con perimetro | **fasi 1 e 2 fatte** — lettura sola | master | alta |
+| Server MCP con perimetro | **fasi 1, 2 e 3 fatte** — lettura, e scrittura a richiesta | master | alta |
 | Web clipper | **fatto** — Archivio ▸ Salva una pagina come Markdown… | master | — |
 | Tag come organizzazione | **no** — l'equivalente su file è il front-matter | — | — |
 | Sync iCloud, cifratura per nota, OCR, scanner, schizzi, archivio/cestino, workspace per tag | **no** | — | — |
@@ -107,8 +107,11 @@ cartella](progetto-mcp.md) — `macdownext-mcp`, accanto a `macdownext` dentro
 l'app, che cerca, legge, elenca, dà l'indice dei titoli, dice chi cita un
 documento, legge il front matter e trova i documenti che dichiarano un
 campo, dentro **una** cartella dichiarata da cui non esce. Le citazioni e il
-front matter li calcola con lo stesso codice dell'editor. Niente scrittura:
-quella è la fase 3 dello stesso documento, con il diario delle chiamate.
+front matter li calcola con lo stesso codice dell'editor. Con `--append` o
+`--write` aggiunge in coda, crea documenti nuovi e sostituisce testo che
+trova — mai cancella, mai rinomina, mai scrive sopra — e ogni chiamata
+finisce in `~/Library/Logs/MacDown Next/mcp.log`. Resta la fase 4: il
+pannello nelle impostazioni.
 
 ---
 

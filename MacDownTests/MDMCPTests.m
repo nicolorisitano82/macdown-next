@@ -8,6 +8,7 @@
 
 #import <XCTest/XCTest.h>
 
+#import "MDMCPDiary.h"
 #import "MDMCPIndex.h"
 #import "MDMCPPerimeter.h"
 #import "MDMCPServer.h"
@@ -348,6 +349,209 @@
     // takes off: for a while that made every answer about a document in a
     // subfolder come back as a bare file name.
     XCTAssertTrue([paths containsObject:@"note/sotto/nota.md"]);
+}
+
+
+#pragma mark - Changing a document
+
+/// The tools for a server started at a level, over the same folder.
+- (MDMCPTools *)toolsWriting:(MDMCPWriting)level
+{
+    MDMCPPerimeter *perimeter = [[MDMCPPerimeter alloc]
+        initWithRoot:self.root];
+    perimeter.writing = level;
+    return [[MDMCPTools alloc] initWithPerimeter:perimeter];
+}
+
+- (NSString *)textOf:(NSString *)name
+{
+    return [NSString stringWithContentsOfURL:
+        [self.root URLByAppendingPathComponent:name]
+        encoding:NSUTF8StringEncoding error:NULL];
+}
+
+- (void)testAReadOnlyServerRefusesEveryChange
+{
+    NSString *error = nil;
+    NSDictionary *arguments = @{@"path": @"verbale.md", @"text": @"altro"};
+    XCTAssertNil([self.tools run:@"append" arguments:arguments error:&error]);
+    XCTAssertTrue([error containsString:@"permission"]);
+    XCTAssertNil([self.tools run:@"create" arguments:arguments error:&error]);
+    NSDictionary *swap = @{@"path": @"verbale.md", @"find": @"firewall",
+                           @"with": @"router"};
+    XCTAssertNil([self.tools run:@"replace" arguments:swap error:&error]);
+    // And the document is exactly as it was.
+    XCTAssertTrue([[self textOf:@"verbale.md"] containsString:@"firewall"]);
+}
+
+- (void)testOnlyWhatTheLevelAllowsIsEvenOffered
+{
+    NSMutableArray<NSString *> *names = [NSMutableArray array];
+    for (NSDictionary *tool in [self.tools declarations])
+        [names addObject:tool[@"name"]];
+    XCTAssertFalse([names containsObject:@"append"]);
+
+    [names removeAllObjects];
+    for (NSDictionary *tool in [[self toolsWriting:MDMCPAppendOnly]
+            declarations])
+        [names addObject:tool[@"name"]];
+    // An assistant is not offered something it would only be refused.
+    XCTAssertTrue([names containsObject:@"append"]);
+    XCTAssertFalse([names containsObject:@"create"]);
+    XCTAssertFalse([names containsObject:@"replace"]);
+
+    [names removeAllObjects];
+    for (NSDictionary *tool in [[self toolsWriting:MDMCPFullWriting]
+            declarations])
+        [names addObject:tool[@"name"]];
+    XCTAssertTrue([names containsObject:@"create"]);
+    XCTAssertTrue([names containsObject:@"replace"]);
+}
+
+- (void)testAppendAddsTheLineEndingTheDocumentWasMissing
+{
+    [self write:@"Prima riga." to:@"coda.md"];       // no newline at the end
+    MDMCPTools *tools = [self toolsWriting:MDMCPAppendOnly];
+    NSString *error = nil;
+    NSDictionary *first = [tools run:@"append"
+        arguments:@{@"path": @"coda.md", @"text": @"Seconda."} error:&error];
+    XCTAssertNil(error);
+    XCTAssertEqualObjects(first[@"lines"], @2);
+    NSDictionary *second = [tools run:@"append"
+        arguments:@{@"path": @"coda.md", @"text": @"Terza."} error:&error];
+    XCTAssertEqualObjects(second[@"lines"], @3);
+    // Three lines, not one long one, and what was there is still there.
+    XCTAssertEqualObjects([self textOf:@"coda.md"],
+                          @"Prima riga.\nSeconda.\nTerza.\n");
+}
+
+- (void)testAppendNeedsADocumentThatIsThere
+{
+    NSString *error = nil;
+    NSDictionary *missing = @{@"path": @"mai-esistito.md", @"text": @"x"};
+    XCTAssertNil([[self toolsWriting:MDMCPAppendOnly] run:@"append"
+        arguments:missing error:&error]);
+    XCTAssertTrue([error containsString:@"nothing at that path"]);
+}
+
+- (void)testCreateMakesADocumentAndWritesOverNothing
+{
+    MDMCPTools *tools = [self toolsWriting:MDMCPFullWriting];
+    NSString *error = nil;
+    NSDictionary *made = [tools run:@"create"
+        arguments:@{@"path": @"nuovo.md", @"text": @"# Nuovo"}
+            error:&error];
+    XCTAssertNil(error);
+    XCTAssertEqualObjects(made[@"path"], @"nuovo.md");
+    XCTAssertEqualObjects([self textOf:@"nuovo.md"], @"# Nuovo\n");
+
+    NSDictionary *again = @{@"path": @"nuovo.md", @"text": @"altro"};
+    XCTAssertNil([tools run:@"create" arguments:again error:&error]);
+    XCTAssertTrue([error containsString:@"already"]);
+    // Refused means untouched, not half written.
+    XCTAssertEqualObjects([self textOf:@"nuovo.md"], @"# Nuovo\n");
+}
+
+- (void)testCreateMakesNoFoldersAndLeavesNothingBehind
+{
+    MDMCPTools *tools = [self toolsWriting:MDMCPFullWriting];
+    NSString *error = nil;
+    NSDictionary *deep = @{@"path": @"cartella-che-manca/nota.md",
+                           @"text": @"x"};
+    XCTAssertNil([tools run:@"create" arguments:deep error:&error]);
+    XCTAssertTrue([error containsString:@"folder"]);
+    NSURL *folder = [self.root
+        URLByAppendingPathComponent:@"cartella-che-manca"];
+    XCTAssertFalse([[NSFileManager defaultManager]
+        fileExistsAtPath:folder.path]);
+
+    NSDictionary *outside = @{@"path": @"../fuori.md", @"text": @"x"};
+    XCTAssertNil([tools run:@"create" arguments:outside error:&error]);
+    XCTAssertTrue([error containsString:@"outside"]);
+    NSDictionary *binary = @{@"path": @"appunti.exe", @"text": @"x"};
+    XCTAssertNil([tools run:@"create" arguments:binary error:&error]);
+    XCTAssertTrue([error containsString:@"Markdown and text"]);
+}
+
+- (void)testReplaceSaysHowManyTimesAndWhere
+{
+    [self write:@"# Rete\n\nIl firewall.\nAncora il firewall.\n"
+             to:@"rete.md"];
+    MDMCPTools *tools = [self toolsWriting:MDMCPFullWriting];
+    NSString *error = nil;
+    NSDictionary *once = [tools run:@"replace"
+        arguments:@{@"path": @"rete.md", @"find": @"firewall",
+                    @"with": @"router", @"count": @1} error:&error];
+    XCTAssertNil(error);
+    XCTAssertEqualObjects(once[@"replaced"], @1);
+    NSArray *lines = @[@3];
+    XCTAssertEqualObjects(once[@"lines"], lines);
+
+    NSDictionary *rest = [tools run:@"replace"
+        arguments:@{@"path": @"rete.md", @"find": @"firewall",
+                    @"with": @"router"} error:&error];
+    XCTAssertEqualObjects(rest[@"replaced"], @1);
+    XCTAssertEqualObjects([self textOf:@"rete.md"],
+        @"# Rete\n\nIl router.\nAncora il router.\n");
+}
+
+- (void)testReplaceRefusesToGuess
+{
+    MDMCPTools *tools = [self toolsWriting:MDMCPFullWriting];
+    NSString *before = [self textOf:@"verbale.md"];
+    NSString *error = nil;
+    NSDictionary *absent = @{@"path": @"verbale.md",
+                             @"find": @"parola che non c'è", @"with": @"x"};
+    XCTAssertNil([tools run:@"replace" arguments:absent error:&error]);
+    XCTAssertTrue([error containsString:@"not in the document"]);
+    XCTAssertEqualObjects([self textOf:@"verbale.md"], before);
+}
+
+- (void)testReplacingTextWithTextThatContainsItEnds
+{
+    [self write:@"uno uno uno\n" to:@"ripetuto.md"];
+    NSString *error = nil;
+    NSDictionary *answer = [[self toolsWriting:MDMCPFullWriting]
+        run:@"replace" arguments:@{@"path": @"ripetuto.md", @"find": @"uno",
+                                   @"with": @"uno e uno"} error:&error];
+    XCTAssertEqualObjects(answer[@"replaced"], @3);
+    XCTAssertEqualObjects([self textOf:@"ripetuto.md"],
+                          @"uno e uno uno e uno uno e uno\n");
+}
+
+
+#pragma mark - The diary
+
+- (void)testEveryCallIsWrittenDown
+{
+    NSURL *log = [self.root URLByAppendingPathComponent:@"prova.log"];
+    MDMCPTools *tools = [self toolsWriting:MDMCPFullWriting];
+    tools.diary = [[MDMCPDiary alloc] initWithFile:log];
+
+    NSString *error = nil;
+    [tools run:@"read" arguments:@{@"path": @"verbale.md"} error:&error];
+    [tools run:@"create" arguments:@{@"path": @"nuovo.md", @"text": @"x"}
+         error:&error];
+    [tools run:@"read" arguments:@{@"path": @"/etc/hosts"} error:&error];
+
+    NSString *written = [NSString stringWithContentsOfURL:log
+        encoding:NSUTF8StringEncoding error:NULL];
+    XCTAssertTrue([written containsString:@"read"]);
+    XCTAssertTrue([written containsString:@"create"]);
+    XCTAssertTrue([written containsString:@"verbale.md"]);
+    // Refusals too, with their reason: that is the half worth having the
+    // day after.
+    XCTAssertTrue([written containsString:@"refused"]);
+    XCTAssertTrue([written containsString:@"outside"]);
+}
+
+- (void)testADiaryWithNoFileWritesNothing
+{
+    MDMCPTools *tools = [self toolsWriting:MDMCPFullWriting];
+    tools.diary = [[MDMCPDiary alloc] initWithFile:nil];
+    NSString *error = nil;
+    XCTAssertNotNil([tools run:@"list" arguments:@{} error:&error]);
+    XCTAssertNil(error);
 }
 
 

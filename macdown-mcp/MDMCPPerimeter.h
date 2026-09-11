@@ -28,6 +28,14 @@ typedef NS_ENUM(NSUInteger, MDMCPVerdict) {
     MDMCPTooBig,
     /// Nothing at that path.
     MDMCPNotThere,
+    /// Asked to make a file that is already there. Nothing is written over.
+    MDMCPAlreadyThere,
+    /// The folder that path would go in does not exist, and this server
+    /// does not make folders.
+    MDMCPNoFolder,
+    /// A change asked of a server that was not started with the level for
+    /// it: read-only cannot append, append-only cannot create or replace.
+    MDMCPNotAllowedToChange,
 };
 
 /// What the server is allowed to change.
@@ -65,6 +73,19 @@ typedef NS_ENUM(NSUInteger, MDMCPWriting) {
 
 /// The file URL for a path a caller gave, or nil when it is refused.
 - (NSURL *)urlForPath:(NSString *)path verdict:(MDMCPVerdict *)verdict;
+
+/** The file URL for a path that is meant not to exist yet.
+ *
+ * Same perimeter as reading — inside the root, not excluded, a text
+ * extension — and then the two things that only matter when making a file:
+ * there must be nothing there already, and the folder it would go in must
+ * exist. This server does not make folders: a typo in a path would
+ * otherwise leave one behind, and nothing here removes anything.
+ */
+- (NSURL *)urlForNewPath:(NSString *)path verdict:(MDMCPVerdict *)verdict;
+
+/// Whether the level this server was started at covers that change.
+- (BOOL)allowsWriting:(MDMCPWriting)needed;
 
 /** Every document under `folder`, or under the root, in a stable order.
  *

@@ -23,6 +23,7 @@
 		1F0D9E0100000000000E4F /* MDMCPIndex.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000E4 /* MDMCPIndex.m */; };
 		1F0D9E0100000000000E6F /* MDMCPTools.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000E6 /* MDMCPTools.m */; };
 		1F0D9E0100000000000E8F /* MDMCPServer.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000E8 /* MDMCPServer.m */; };
+		1F0D9E0100000000000EBF /* MDMCPDiary.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000EB /* MDMCPDiary.m */; };
 		1F0D9E010000000000000EAF /* MDMCPTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000000EA /* MDMCPTests.m */; };
 		1F0D9E0100000000000000A2 /* MPTextBundleTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E0100000000000000A5 /* MPTextBundleTests.m */; };
 		D2C000000000000000000014 /* MPRichExportTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C000000000000000000013 /* MPRichExportTests.m */; };
@@ -218,6 +219,7 @@
 		1F0D9E010000000000000193 /* MDMCPTools.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000E6 /* MDMCPTools.m */; };
 		1F0D9E010000000000000194 /* MDMCPServer.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000E8 /* MDMCPServer.m */; };
 		1F0D9E010000000000000195 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000E9 /* main.m */; };
+		1F0D9E0100000000000F35 /* MDMCPDiary.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000EB /* MDMCPDiary.m */; };
 		1F0D9E0100000000000F31 /* MPBacklinks.m in Sources */ = {isa = PBXBuildFile; fileRef = 7DA2311453239F0973310053 /* MPBacklinks.m */; };
 		1F0D9E0100000000000F32 /* MPMarkdownText.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000F2 /* MPMarkdownText.m */; };
 		1F0D9E0100000000000F33 /* NSString+Lookup.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9D5F194AC7CF008E1856 /* NSString+Lookup.m */; };
@@ -343,6 +345,8 @@
 		1F0D9E01000000000000E7 /* MDMCPServer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MDMCPServer.h; sourceTree = "<group>"; };
 		1F0D9E01000000000000E8 /* MDMCPServer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MDMCPServer.m; sourceTree = "<group>"; };
 		1F0D9E01000000000000E9 /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		1F0D9E01000000000000EA /* MDMCPDiary.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MDMCPDiary.h; sourceTree = "<group>"; };
+		1F0D9E01000000000000EB /* MDMCPDiary.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MDMCPDiary.m; sourceTree = "<group>"; };
 		1F0D9E0100000000000000EA /* MDMCPTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MDMCPTests.m; sourceTree = "<group>"; };
 		1F0D9E0100000000000000A4 /* MPTextBundle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPTextBundle.h; sourceTree = "<group>"; };
 		1F0D9E0100000000000000A5 /* MPTextBundleTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPTextBundleTests.m; sourceTree = "<group>"; };
@@ -1460,6 +1464,8 @@
 				1F0D9E01000000000000E6 /* MDMCPTools.m */,
 				1F0D9E01000000000000E7 /* MDMCPServer.h */,
 				1F0D9E01000000000000E8 /* MDMCPServer.m */,
+				1F0D9E01000000000000EA /* MDMCPDiary.h */,
+				1F0D9E01000000000000EB /* MDMCPDiary.m */,
 				1F0D9E01000000000000E9 /* main.m */,
 			);
 			path = "macdown-mcp";
@@ -2000,6 +2006,7 @@
 				1F0D9E0100000000000E4F /* MDMCPIndex.m in Sources */,
 				1F0D9E0100000000000E6F /* MDMCPTools.m in Sources */,
 				1F0D9E0100000000000E8F /* MDMCPServer.m in Sources */,
+				1F0D9E0100000000000EBF /* MDMCPDiary.m in Sources */,
 				1F0D9E010000000000000EAF /* MDMCPTests.m in Sources */,
 				D2C000000000000000000004 /* MPHeadingFixTests.m in Sources */,
 				D2C000000000000000000002 /* MPHeadingSpaceTests.m in Sources */,
@@ -2060,6 +2067,7 @@
 				1F0D9E010000000000000193 /* MDMCPTools.m in Sources */,
 				1F0D9E010000000000000194 /* MDMCPServer.m in Sources */,
 				1F0D9E010000000000000195 /* main.m in Sources */,
+				1F0D9E0100000000000F35 /* MDMCPDiary.m in Sources */,
 				1F0D9E0100000000000F31 /* MPBacklinks.m in Sources */,
 				1F0D9E0100000000000F32 /* MPMarkdownText.m in Sources */,
 				1F0D9E0100000000000F33 /* NSString+Lookup.m in Sources */,

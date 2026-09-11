@@ -208,6 +208,84 @@ static BOOL MDPathIsUnder(NSString *path, NSString *folder)
 }
 
 
+- (NSURL *)urlForNewPath:(NSString *)path verdict:(MDMCPVerdict *)outVerdict
+{
+    MDMCPVerdict verdict = MDMCPAllowed;
+    NSURL *answer = nil;
+
+    do {
+        if (!path.length || !self.root)
+        {
+            verdict = MDMCPOutsideTheRoots;
+            break;
+        }
+        if ([path hasSuffix:@"/"])
+        {
+            verdict = MDMCPNotText;
+            break;
+        }
+
+        NSURL *given = [path hasPrefix:@"/"]
+            ? [NSURL fileURLWithPath:path]
+            : [self.root URLByAppendingPathComponent:path];
+
+        // The folder is resolved, the name is not: a name is not a place,
+        // and resolving one that is not there yet answers nothing.
+        NSURL *folder = [[given.URLByDeletingLastPathComponent
+            URLByResolvingSymlinksInPath] URLByStandardizingPath];
+        NSURL *wanted = [folder URLByAppendingPathComponent:
+            given.lastPathComponent];
+
+        if (!MDPathIsUnder(wanted.path, self.root.path))
+        {
+            verdict = MDMCPOutsideTheRoots;
+            break;
+        }
+        for (NSString *component in wanted.pathComponents)
+        {
+            if ([MDMCPPerimeter isExcludedComponent:component])
+            {
+                verdict = MDMCPExcluded;
+                break;
+            }
+        }
+        if (verdict != MDMCPAllowed)
+            break;
+        if (![MDTextExtensions() containsObject:
+                wanted.pathExtension.lowercaseString])
+        {
+            verdict = MDMCPNotText;
+            break;
+        }
+
+        NSFileManager *manager = [NSFileManager defaultManager];
+        BOOL directory = NO;
+        if ([manager fileExistsAtPath:wanted.path isDirectory:&directory])
+        {
+            verdict = MDMCPAlreadyThere;
+            break;
+        }
+        if (![manager fileExistsAtPath:folder.path isDirectory:&directory]
+                || !directory)
+        {
+            verdict = MDMCPNoFolder;
+            break;
+        }
+        answer = wanted;
+    } while (0);
+
+    if (outVerdict)
+        *outVerdict = verdict;
+    return verdict == MDMCPAllowed ? answer : nil;
+}
+
+
+- (BOOL)allowsWriting:(MDMCPWriting)needed
+{
+    return self.writing >= needed;
+}
+
+
 + (NSString *)reasonFor:(MDMCPVerdict)verdict
 {
     switch (verdict)
@@ -225,6 +303,15 @@ static BOOL MDPathIsUnder(NSString *path, NSString *folder)
             return @"that file is larger than this server will hand over";
         case MDMCPNotThere:
             return @"there is nothing at that path";
+        case MDMCPAlreadyThere:
+            return @"there is already a file at that path, and this server "
+                   @"writes over nothing";
+        case MDMCPNoFolder:
+            return @"there is no folder for that path, and this server does "
+                   @"not make folders";
+        case MDMCPNotAllowedToChange:
+            return @"this server was not started with permission to make "
+                   @"that change";
     }
 }
 

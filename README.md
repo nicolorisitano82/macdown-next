@@ -251,10 +251,14 @@ Writing**.
   in `Contents/SharedSupport/bin`, hands a declared folder to Claude Code,
   Claude Desktop or any other MCP client over a pipe — **search**, **read**,
   **list**, **outline**, **backlinks** (who cites a document),
-  **frontmatter** and **find_by_field** (which documents declare one), and
-  nothing else. Citations and front matter are worked out by the code the
-  editor itself runs, so a document cannot be cited in one and uncited in
-  the other. No tool writes, renames or
+  **frontmatter** and **find_by_field** (which documents declare one).
+  Citations and front matter are worked out by the code the editor itself
+  runs, so a document cannot be cited in one and uncited in the other.
+  Started with `--append` or `--write` it can also add to the end of a
+  document, make one that is not there, and replace text that is — saying
+  how many times and on which lines. Nothing deletes, nothing renames,
+  nothing writes over a file that exists, and every call (refusals included)
+  goes into `~/Library/Logs/MacDown Next/mcp.log`, which leaves nowhere. No tool writes, renames or
   deletes; a path outside the folder is refused; a second `--root` is an
   error rather than a second permission; text only, 2 MB at most, a
   `.textbundle` counted as one document. The application does not have to be

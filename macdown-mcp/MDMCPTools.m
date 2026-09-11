@@ -6,6 +6,7 @@
 #import "MDMCPTools.h"
 
 #import "MPBacklinks.h"
+#import "MPMarkdownText.h"
 #import "NSString+Lookup.h"
 
 
@@ -15,6 +16,42 @@ static const NSUInteger kMDSearchLimit = 50;
 /// How many lines a read hands over when it is not told. Past this the
 /// answer says it was cut, as the Finder preview does.
 static const NSUInteger kMDReadLines = 500;
+
+
+/// How many lines a text has, counting the last one whether or not it ends
+/// with a line ending.
+static NSUInteger MDMCPLineCount(NSString *text)
+{
+    if (!text.length)
+        return 0;
+    __block NSUInteger lines = 0;
+    [text enumerateLinesUsingBlock:^(NSString *line, BOOL *stop) {
+        lines++;
+    }];
+    return lines;
+}
+
+
+/// The short of an answer, for the diary: how much was read, found or
+/// written. Whatever the tool answered, in the words it used.
+static NSString *MDMCPDetailOf(NSDictionary *answer)
+{
+    if (answer[@"bytes"])
+        return [NSString stringWithFormat:@"%@ bytes", answer[@"bytes"]];
+    if (answer[@"replaced"])
+        return [NSString stringWithFormat:@"%@ replaced", answer[@"replaced"]];
+    if (answer[@"found"])
+        return [NSString stringWithFormat:@"%@ found", answer[@"found"]];
+    if (answer[@"of"])
+        return [NSString stringWithFormat:@"%@ of %@ lines",
+                answer[@"lines"], answer[@"of"]];
+    if (answer[@"count"])
+        return [NSString stringWithFormat:@"%@ of them", answer[@"count"]];
+    if (answer[@"has"])
+        return [answer[@"has"] boolValue] ? @"has front matter"
+                                          : @"no front matter";
+    return @"";
+}
 
 
 /** Enough of a map to answer «what does this document declare».
@@ -160,7 +197,7 @@ NSArray<NSDictionary *> *MDMCPOutlineOfMarkdown(NSString *text)
     NSDictionary *path = @{@"type": @"string",
         @"description": @"Path of the file, relative to the folder this "
                         @"server was given, or absolute inside it."};
-    return @[
+    NSArray<NSDictionary *> *reading = @[
         @{@"name": @"search",
           @"description": @"Find a word or a phrase in the folder. Answers "
                           @"the file, the line number and the line itself. "
@@ -221,12 +258,79 @@ NSArray<NSDictionary *> *MDMCPOutlineOfMarkdown(NSString *text)
                                             @"the field answers."}},
              @"required": @[@"field"]}},
     ];
+
+    if (![self.perimeter allowsWriting:MDMCPAppendOnly])
+        return reading;
+
+    NSMutableArray<NSDictionary *> *all = [reading mutableCopy];
+    [all addObject:
+        @{@"name": @"append",
+          @"description": @"Add text to the end of a document that exists. "
+                          @"Adds the line ending the document was missing, "
+                          @"and changes nothing that was already written.",
+          @"inputSchema": @{@"type": @"object", @"properties": @{
+                @"path": path,
+                @"text": @{@"type": @"string",
+                           @"description": @"What to add."}},
+             @"required": @[@"path", @"text"]}}];
+
+    if (![self.perimeter allowsWriting:MDMCPFullWriting])
+        return all;
+
+    [all addObject:
+        @{@"name": @"create",
+          @"description": @"Make a document that is not there. Refuses if "
+                          @"the path is taken: nothing here writes over a "
+                          @"file, and no folder is made along the way.",
+          @"inputSchema": @{@"type": @"object", @"properties": @{
+                @"path": path,
+                @"text": @{@"type": @"string",
+                           @"description": @"What the document says."}},
+             @"required": @[@"path", @"text"]}}];
+    [all addObject:
+        @{@"name": @"replace",
+          @"description": @"Replace text that is in a document with other "
+                          @"text, and say how many times and on which "
+                          @"lines. Refuses when the text to find is not "
+                          @"there, so a change is never a guess.",
+          @"inputSchema": @{@"type": @"object", @"properties": @{
+                @"path": path,
+                @"find": @{@"type": @"string",
+                           @"description": @"The text to look for, exactly "
+                                           @"as it is written."},
+                @"with": @{@"type": @"string",
+                           @"description": @"What to put in its place."},
+                @"count": @{@"type": @"integer",
+                            @"description": @"At most this many times. "
+                                            @"Left out, every time it "
+                                            @"appears."}},
+             @"required": @[@"path", @"find", @"with"]}}];
+    return all;
 }
 
 
 - (NSDictionary *)run:(NSString *)tool
             arguments:(NSDictionary *)arguments
                 error:(NSString **)error
+{
+    NSString *refusal = nil;
+    NSDictionary *answer = [self perform:tool arguments:arguments
+                                   error:&refusal];
+    // Every call, not only the ones that changed something: the question
+    // the day after is as often «did it read that» as «who wrote this».
+    [self.diary noteTool:tool outcome:answer ? @"ok" : @"refused"
+                    path:[arguments[@"path"] isKindOfClass:[NSString class]]
+                             ? arguments[@"path"] : nil
+                  detail:answer ? MDMCPDetailOf(answer) : refusal];
+    if (!answer && error)
+        *error = refusal;
+    return answer;
+}
+
+
+- (NSDictionary *)perform:(NSString *)tool
+                arguments:(NSDictionary *)arguments
+                    error:(NSString **)error
 {
     if ([tool isEqualToString:@"search"])
         return [self searchFor:arguments[@"query"]
@@ -249,6 +353,17 @@ NSArray<NSDictionary *> *MDMCPOutlineOfMarkdown(NSString *text)
         return [self documentsDeclaring:arguments[@"field"]
                                      as:arguments[@"value"]
                                   error:error];
+    if ([tool isEqualToString:@"append"])
+        return [self append:arguments[@"text"] to:arguments[@"path"]
+                      error:error];
+    if ([tool isEqualToString:@"create"])
+        return [self create:arguments[@"path"] saying:arguments[@"text"]
+                      error:error];
+    if ([tool isEqualToString:@"replace"])
+        return [self replace:arguments[@"find"] with:arguments[@"with"]
+                          in:arguments[@"path"]
+                       times:[arguments[@"count"] unsignedIntegerValue]
+                       error:error];
 
     if (error)
         *error = [NSString stringWithFormat:@"there is no tool called %@",
@@ -486,6 +601,208 @@ NSArray<NSDictionary *> *MDMCPOutlineOfMarkdown(NSString *text)
              @"searched": @(self.index.documentCount),
              @"read": @(self.index.lastReadCount),
              @"documents": documents};
+}
+
+
+#pragma mark - Changing a document
+
+- (NSDictionary *)append:(NSString *)text
+                      to:(NSString *)path
+                   error:(NSString **)error
+{
+    if (![self.perimeter allowsWriting:MDMCPAppendOnly])
+    {
+        if (error)
+            *error = [MDMCPPerimeter reasonFor:MDMCPNotAllowedToChange];
+        return nil;
+    }
+    if (![text isKindOfClass:[NSString class]] || !text.length)
+    {
+        if (error)
+            *error = @"append needs something to add";
+        return nil;
+    }
+
+    MDMCPVerdict verdict = MDMCPAllowed;
+    NSURL *url = [self.perimeter urlForPath:path verdict:&verdict];
+    if (!url)
+    {
+        if (error)
+            *error = [MDMCPPerimeter reasonFor:verdict];
+        return nil;
+    }
+    NSURL *file = [MDMCPPerimeter textFileFor:url];
+    NSString *before = [NSString stringWithContentsOfURL:file
+        encoding:NSUTF8StringEncoding error:NULL];
+    if (!before)
+    {
+        if (error)
+            *error = @"that file is not text this server can read";
+        return nil;
+    }
+
+    // The line ending the document was missing, and the one it will be
+    // missing next time: an assistant adding three paragraphs one after
+    // another should not produce one long line.
+    NSMutableString *added = [NSMutableString string];
+    if (before.length && ![before hasSuffix:@"\n"])
+        [added appendString:@"\n"];
+    [added appendString:text];
+    if (![text hasSuffix:@"\n"])
+        [added appendString:@"\n"];
+
+    NSString *after = [before stringByAppendingString:added];
+    if (after.length > self.perimeter.sizeLimit)
+    {
+        if (error)
+            *error = [MDMCPPerimeter reasonFor:MDMCPTooBig];
+        return nil;
+    }
+    if (![after writeToURL:file atomically:YES encoding:NSUTF8StringEncoding
+                     error:NULL])
+    {
+        if (error)
+            *error = @"that file could not be written";
+        return nil;
+    }
+
+    NSUInteger bytes = [added lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+    return @{@"path": [self relative:url], @"bytes": @(bytes),
+             @"lines": @(MDMCPLineCount(after))};
+}
+
+
+- (NSDictionary *)create:(NSString *)path
+                  saying:(NSString *)text
+                   error:(NSString **)error
+{
+    if (![self.perimeter allowsWriting:MDMCPFullWriting])
+    {
+        if (error)
+            *error = [MDMCPPerimeter reasonFor:MDMCPNotAllowedToChange];
+        return nil;
+    }
+    if (![text isKindOfClass:[NSString class]])
+    {
+        if (error)
+            *error = @"create needs the text the document should say";
+        return nil;
+    }
+
+    MDMCPVerdict verdict = MDMCPAllowed;
+    NSURL *url = [self.perimeter urlForNewPath:path verdict:&verdict];
+    if (!url)
+    {
+        if (error)
+            *error = [MDMCPPerimeter reasonFor:verdict];
+        return nil;
+    }
+    NSString *whole = [text hasSuffix:@"\n"] || !text.length
+        ? text : [text stringByAppendingString:@"\n"];
+    if (whole.length > self.perimeter.sizeLimit)
+    {
+        if (error)
+            *error = [MDMCPPerimeter reasonFor:MDMCPTooBig];
+        return nil;
+    }
+    if (![whole writeToURL:url atomically:YES encoding:NSUTF8StringEncoding
+                     error:NULL])
+    {
+        if (error)
+            *error = @"that file could not be written";
+        return nil;
+    }
+
+    NSUInteger bytes = [whole lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+    return @{@"path": [self relative:url], @"bytes": @(bytes),
+             @"lines": @(MDMCPLineCount(whole))};
+}
+
+
+- (NSDictionary *)replace:(NSString *)find
+                     with:(NSString *)replacement
+                       in:(NSString *)path
+                    times:(NSUInteger)times
+                    error:(NSString **)error
+{
+    if (![self.perimeter allowsWriting:MDMCPFullWriting])
+    {
+        if (error)
+            *error = [MDMCPPerimeter reasonFor:MDMCPNotAllowedToChange];
+        return nil;
+    }
+    if (![find isKindOfClass:[NSString class]] || !find.length
+            || ![replacement isKindOfClass:[NSString class]])
+    {
+        if (error)
+            *error = @"replace needs text to find and text to put there";
+        return nil;
+    }
+
+    MDMCPVerdict verdict = MDMCPAllowed;
+    NSURL *url = [self.perimeter urlForPath:path verdict:&verdict];
+    if (!url)
+    {
+        if (error)
+            *error = [MDMCPPerimeter reasonFor:verdict];
+        return nil;
+    }
+    NSURL *file = [MDMCPPerimeter textFileFor:url];
+    NSString *before = [NSString stringWithContentsOfURL:file
+        encoding:NSUTF8StringEncoding error:NULL];
+    if (!before)
+    {
+        if (error)
+            *error = @"that file is not text this server can read";
+        return nil;
+    }
+
+    // Found before anything is written, and the lines are collected as they
+    // were: a change that cannot say where it happened is a change nobody
+    // can check.
+    NSMutableString *after = [before mutableCopy];
+    NSMutableArray<NSNumber *> *lines = [NSMutableArray array];
+    NSUInteger done = 0;
+    NSUInteger from = 0;
+    while (!times || done < times)
+    {
+        NSRange rest = NSMakeRange(from, after.length - from);
+        NSRange hit = [after rangeOfString:find options:0 range:rest];
+        if (hit.location == NSNotFound)
+            break;
+        [lines addObject:@(MPLineNumberForLocation(after, hit.location))];
+        [after replaceCharactersInRange:hit withString:replacement];
+        from = hit.location + replacement.length;
+        done++;
+        // Replacing text with text that contains it would otherwise be a
+        // loop that never ends; starting after what was written is enough.
+        if (from > after.length)
+            break;
+    }
+
+    if (!done)
+    {
+        if (error)
+            *error = @"that text is not in the document, so nothing was "
+                     @"changed";
+        return nil;
+    }
+    if (after.length > self.perimeter.sizeLimit)
+    {
+        if (error)
+            *error = [MDMCPPerimeter reasonFor:MDMCPTooBig];
+        return nil;
+    }
+    if (![after writeToURL:file atomically:YES encoding:NSUTF8StringEncoding
+                     error:NULL])
+    {
+        if (error)
+            *error = @"that file could not be written";
+        return nil;
+    }
+
+    return @{@"path": [self relative:url], @"replaced": @(done),
+             @"lines": lines, @"of": @(MDMCPLineCount(after))};
 }
 
 

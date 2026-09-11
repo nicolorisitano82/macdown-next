@@ -1,10 +1,11 @@
 # Progetto: un server MCP sulla cartella
 
-Progetto e, da oggi, diario: le **fasi 1 e 2 sono scritte** — il perimetro,
-l'indice, i quattro strumenti di lettura e i tre che leggono la cartella
-come un insieme di note — e il binario viaggia dentro l'applicazione. Le
-sezioni da 1 a 6 restano il progetto com'era; la 7 dice cosa è stato deciso,
-la 8 com'è andata la fase 1 e la 9 la fase 2, con i numeri.
+Progetto e, da oggi, diario: le **fasi 1, 2 e 3 sono scritte** — il
+perimetro, l'indice, i quattro strumenti di lettura, i tre che leggono la
+cartella come un insieme di note, e i tre che la cambiano ai livelli in cui
+è permesso — e il binario viaggia dentro l'applicazione. Le sezioni da 1 a 6
+restano il progetto com'era; la 7 dice cosa è stato deciso, e la 8, la 9 e
+la 10 come sono andate le tre fasi, con i numeri.
 
 Viene da due studi già scritti — la [strada C dello studio su Claude e
 GPT](studio-claude-gpt.md) e la [fase 3 della roadmap](roadmap-bear.md) — e
@@ -349,9 +350,108 @@ standardizzato la radice — e una prova lo tiene fermo.
   intervalli: una data «dopo il primo marzo» è una domanda che non sa fare;
 * niente `open_in_macdown`, niente scrittura, niente diario: fasi 3 e 4.
 
+## 10. La fase 3, com'è andata
+
+La metà che può fare danno. Tre strumenti che cambiano un documento, tre
+livelli, e un diario.
+
+### I livelli si dichiarano all'avvio
+
+```bash
+macdownext-mcp --root ~/Verbali             # legge, e basta
+macdownext-mcp --root ~/Verbali --append    # e aggiunge in coda
+macdownext-mcp --root ~/Verbali --write     # e crea e sostituisce
+```
+
+Come per la radice, **due livelli sono un errore**: `--append --write` non
+prende il più alto dei due, non parte. Un permesso che si somma è un
+permesso che nessuno ha dato apposta.
+
+E il livello si vede nella lista degli strumenti: in sola lettura `tools/list`
+ne dichiara **sette**, con `--append` **otto**, con `--write` **dieci**. A un
+motore non si offre una cosa per poi dirgli di no: la risposta più chiara è
+non averla in mano.
+
+### Tre strumenti, e le regole che si portano dietro
+
+| Strumento | Cosa fa | Cosa rifiuta |
+|---|---|---|
+| `append` | aggiunge in coda a un documento che esiste | un documento che non c'è |
+| `create` | fa un documento nuovo | un percorso occupato, una cartella che non c'è, un'estensione che non è testo |
+| `replace` | sostituisce testo che c'è, e dice quante volte e su che righe | testo che non c'è: non si tira a indovinare |
+
+Tre cose imparate scrivendole:
+
+* **`append` aggiunge il fine riga che mancava**, prima del testo e dopo:
+  tre paragrafi aggiunti uno dopo l'altro devono restare tre paragrafi, non
+  una riga lunga.
+* **`create` non fa cartelle.** Un refuso in un percorso lascerebbe in giro
+  una cartella, e qui non c'è niente che tolga niente.
+* **`replace` riparte dopo quello che ha scritto**, altrimenti sostituire
+  `uno` con `uno e uno` è un ciclo che non finisce. Una prova lo tiene
+  fermo.
+
+E quello che continua a non esserci: **niente cancella, niente rinomina,
+niente scrive un file intero sopra uno che c'era.** Cancellare è mestiere
+del Finder, che ha un Cestino.
+
+### Il diario
+
+Ogni chiamata — anche le letture, anche i rifiuti — finisce in
+`~/Library/Logs/MacDown Next/mcp.log`:
+
+```
+2026-09-11T20:03:16Z  started   write    /Users/tizio/Verbali
+2026-09-11T20:03:16Z  create    ok       nuovo.md        20 bytes
+2026-09-11T20:03:16Z  create    refused  nuovo.md        there is already a file at that path…
+2026-09-11T20:03:16Z  replace   ok       nuovo.md        1 replaced
+```
+
+Quando, quale strumento, com'è andata, su cosa, e quanto. Non esce dal Mac,
+si sposta con `--log <file>` e si spegne con `--no-log`; oltre i 2 MiB
+ricomincia, perché quello che serve è l'ultima sessione. È un file diverso
+da quello dell'applicazione (`actions.log`): quello è una registrazione
+diagnostica che si accende, questo è il verbale di quello che ha fatto un
+agente, che conviene avere anche quando nessuno se lo aspettava.
+
+Un diario che non si riesce a scrivere non è un errore che il chiamante deve
+sentirsi dire: la risposta che ha chiesto resta una risposta.
+
+### I numeri, misurati
+
+| Chiamata | Tempo |
+|---|---|
+| `create` | 0,9 ms |
+| `append` | 1,1 ms |
+| `replace` | 0,5 ms |
+| `create` su un percorso occupato | 0,1 ms |
+
+Le scritture non passano dall'indice: risolvono un percorso e toccano un
+file, e costano quello che costa toccarlo.
+
+### Com'è provata
+
+* **41 prove unitarie** (undici nuove): che in sola lettura ogni cambiamento
+  sia rifiutato *e il documento resti identico*, che il livello decida cosa
+  viene dichiarato, il fine riga che `append` aggiunge, `create` che non
+  scrive sopra e non fa cartelle, `replace` che conta e dice le righe, che
+  si rifiuta di indovinare e che non gira a vuoto, il diario che scrive
+  anche i rifiuti e quello senza file che non scrive niente.
+* **Diciotto prove nella suite di controllo** (sette nuove), tutte al
+  binario: una conversazione con `--write` che crea, aggiunge e sostituisce,
+  con il file sul disco letto dopo; il rifiuto di scrivere sopra; il diario
+  che ha dentro sia l'ok sia il rifiuto; e una conversazione in sola lettura
+  che non aggiunge niente a niente.
+
+### Cosa resta
+
+La fase 4: il pannello **Impostazioni ▸ Agenti**, con le radici, il livello,
+la riga da incollare nella configurazione del client e le ultime chiamate
+lette dal diario. Il server non ne ha bisogno per funzionare — è il posto
+dove si guarda cosa è successo.
+
 ---
 
-*Fase 1 e fase 2 fatte l'11 settembre 2026, versione 0.33.0. Restano la
-scrittura (fase 3) e il pannello nelle impostazioni (fase 4): quando
-toccherà a loro, questo file cresce di una sezione per volta, con i numeri
-veri invece delle intenzioni.*
+*Fasi 1, 2 e 3 fatte l'11 settembre 2026, versione 0.33.0. Resta il pannello
+nelle impostazioni (fase 4): quando toccherà a lui, questo file cresce di
+una sezione, con i numeri veri invece delle intenzioni.*

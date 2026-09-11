@@ -608,14 +608,14 @@ Desktop, or anything else that speaks the protocol. The client starts it,
 talks to it over a pipe and stops it; MacDown Next does not have to be
 running, because what the server reads is the folder.
 
-It can do seven things and nothing else: **search** the folder, **read** a
-file, **list** what is there, give a document's **outline**, say who cites a
-document (**backlinks**), read a document's YAML **frontmatter**, and find
-the documents that declare a field (**find_by_field**). There is no tool
-that writes, none that renames, none that deletes. Citations and front
-matter come from the same code the editor runs, so a document cannot be
-cited in the application and uncited over the wire. The folder is declared,
-never guessed:
+As started above it does seven things and nothing else: **search** the
+folder, **read** a file, **list** what is there, give a document's
+**outline**, say who cites a document (**backlinks**), read a document's
+YAML **frontmatter**, and find the documents that declare a field
+(**find_by_field**). Nothing writes. Citations and front matter come from
+the same code the editor runs, so a document cannot be cited in the
+application and uncited over the wire. The folder is declared, never
+guessed:
 
 ```bash
 claude mcp add notes -- \
@@ -640,8 +640,52 @@ For a client that reads a configuration file instead:
 - `--exclude <glob>` leaves more out; `.git`, `node_modules`, `.build` and
   dot-files are left out already.
 
-Without `--root` it does not start. The design, the measurements and what
-the next phases will add are in
+Without `--root` it does not start.
+
+### Letting it write
+
+Writing is off until you ask for it, and you ask at the level you mean:
+
+```bash
+macdownext-mcp --root ~/Notes            # reads, and that is all
+macdownext-mcp --root ~/Notes --append   # and adds to the end of a document
+macdownext-mcp --root ~/Notes --write    # and makes new ones, and replaces text
+```
+
+Two levels at once is an error, not the higher of the two — and the level
+decides what the assistant is even offered: seven tools reading, eight with
+`--append`, ten with `--write`.
+
+- **append** adds to the end of a document that exists, with the line ending
+  it was missing, and changes nothing that was already written.
+- **create** makes a document that is not there. It refuses a path that is
+  taken, and it makes no folders along the way.
+- **replace** swaps text that is in the document for other text and says how
+  many times and on which lines. If the text to find is not there it refuses:
+  a change is never a guess.
+
+What is not there, at any level: nothing deletes, nothing renames, nothing
+writes a whole file over one that existed. Deleting is the Finder's job — it
+has a Trash.
+
+### What was asked, and what happened
+
+Every call — reads, changes and refusals — is written to
+`~/Library/Logs/MacDown Next/mcp.log`, with the time, the tool, the file and
+how it went:
+
+```
+2026-09-11T20:03:16Z  create    ok       nuovo.md   20 bytes
+2026-09-11T20:03:16Z  create    refused  nuovo.md   there is already a file at that path…
+```
+
+It answers the question that comes the day after — *who touched this file,
+and when* — which the file itself cannot once it has been changed. It goes
+nowhere: `--log <file>` puts it somewhere else, `--no-log` switches it off,
+and past 2 MB it starts again. It is a different file from the editor's own
+`actions.log`, which is a diagnostic recording you switch on.
+
+The design, the measurements and what the next phase will add are in
 [the journal](docs/progetto-mcp.md).
 
 ---
@@ -727,8 +771,9 @@ bundled), the draw.io plug-in (viewer and shapes are inside it), the link
 cards in the preview (an address is taken apart, not visited), the Finder
 preview (it cannot reach the network at all), and the action log.
 
-`macdownext-mcp` touches no network either: it reads the folder and writes
-to a pipe. What happens after that is the assistant's business — a client
+`macdownext-mcp` touches no network either: it reads the folder, writes to a
+pipe, and — when you start it with `--append` or `--write` — to the
+documents you pointed it at and to its own log. What happens after that is the assistant's business — a client
 that sends what it read to a model on the web is sending your documents
 there, which is the reason the folder is declared one at a time.
 
