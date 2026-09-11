@@ -317,4 +317,42 @@
     XCTAssertEqualObjects([self wikiLinksIn:body], body);
 }
 
+#pragma mark - The table of contents
+
+- (void)testADocumentThatAsksForContentsIsNoticed
+{
+    XCTAssertTrue(MDBodyAsksForContents(@"<h1>Titolo</h1>\n<p>[TOC]</p>\n"));
+    XCTAssertTrue(MDBodyAsksForContents(@"<p id=\"x\">  [toc] </p>"));
+    XCTAssertFalse(MDBodyAsksForContents(@"<p>Parliamo di [TOC] in mezzo "
+                                         @"a una frase.</p>"));
+    XCTAssertFalse(MDBodyAsksForContents(@"<h1>Titolo</h1>"));
+    XCTAssertFalse(MDBodyAsksForContents(nil));
+}
+
+- (void)testTheContentsGoWhereTheDocumentAsked
+{
+    NSString *body = @"<h1>Uno</h1>\n<p>[TOC]</p>\n<h2>Due</h2>\n";
+    NSString *contents = @"<ul><li><a href=\"#uno\">Uno</a></li></ul>";
+    NSString *done = MDBodyWithContents(body, contents);
+    XCTAssertTrue([done containsString:contents]);
+    XCTAssertFalse([done containsString:@"[TOC]"]);
+    // What was around it stays where it was.
+    XCTAssertTrue([done hasPrefix:@"<h1>Uno</h1>"]);
+    XCTAssertTrue([done hasSuffix:@"<h2>Due</h2>\n"]);
+}
+
+- (void)testAHeadingWithADollarInItSurvivesTheReplacement
+{
+    // The contents go in as a template, and `$1` in a template means
+    // something: a heading called «$1 al mese» would otherwise vanish.
+    NSString *contents = @"<ul><li><a href=\"#x\">$1 al mese</a></li></ul>";
+    NSString *done = MDBodyWithContents(@"<p>[TOC]</p>", contents);
+    XCTAssertTrue([done containsString:@"$1 al mese"]);
+}
+
+- (void)testADepthThatCoversEveryHeading
+{
+    XCTAssertEqual(MDContentsDepth(), 6);
+}
+
 @end

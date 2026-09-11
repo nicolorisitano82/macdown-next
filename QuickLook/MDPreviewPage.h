@@ -49,6 +49,21 @@ extern NSString *MDPreviewTitleForMarkdown(NSString *markdown, NSURL *fileURL);
  */
 extern NSString *MDBodyWithWikiLinks(NSString *bodyHTML, NSURL *documentURL);
 
+/// Whether the document asked for a table of contents: `[TOC]` on a line of
+/// its own, which arrives in the HTML as the paragraph it looked like.
+extern BOOL MDBodyAsksForContents(NSString *bodyHTML);
+
+/// How deep a table of contents goes: h1 to h6, as in the application.
+extern int MDContentsDepth(void);
+
+/** The `[TOC]` paragraph replaced by the contents themselves.
+ *
+ * hoedown does not do this by itself — the contents are a second pass over
+ * the same text with another renderer — so the preview used to show the
+ * four letters where the application shows a list of the headings.
+ */
+extern NSString *MDBodyWithContents(NSString *bodyHTML, NSString *contents);
+
 /// The document without its front matter.
 ///
 /// A glance at a document should show what it says, and `title:` and

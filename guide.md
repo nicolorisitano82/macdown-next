@@ -536,6 +536,9 @@ application opens with, instead of the source.
   finish a load without it, even for a page built in memory — and makes no
   request with it: the libraries are read from the bundle, and the page
   Finder gets still forbids the network.
+- **`[TOC]` is a table of contents**, as it is in the editor: a list of the
+  document's headings where the document asked for one, rather than the four
+  letters.
 - **WikiLinks are links**: `[[Target]]` and `[[Target|label]]` resolve
   against the document's folder — the name as written, then `.md`,
   `.markdown`, `.txt` — and a target that is not there yet is marked, as it

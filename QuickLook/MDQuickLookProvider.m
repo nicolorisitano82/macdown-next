@@ -63,6 +63,24 @@ int MDMathExtensionsFor(NSNumber *maths, NSNumber *inlineDollar)
 }
 
 
+/// One pass of hoedown over the text, with the renderer it is given.
+static NSString *MDRenderedWith(hoedown_renderer *renderer, NSData *utf8,
+                                int extensions)
+{
+    hoedown_document *document = hoedown_document_new(
+        renderer, kMDExtensions | extensions, kMDNestingAtMost);
+    hoedown_buffer *out = hoedown_buffer_new(64);
+    hoedown_document_render(document, out, utf8.bytes, utf8.length);
+
+    NSString *text = [[NSString alloc] initWithBytes:out->data
+                                              length:out->size
+                                            encoding:NSUTF8StringEncoding];
+    hoedown_buffer_free(out);
+    hoedown_document_free(document);
+    return text ?: @"";
+}
+
+
 /// Markdown turned into HTML, the body only.
 static NSString *MDBodyForMarkdown(NSString *markdown, int extensions)
 {
@@ -71,18 +89,20 @@ static NSString *MDBodyForMarkdown(NSString *markdown, int extensions)
         return @"";
 
     hoedown_renderer *renderer = hoedown_html_renderer_new(0, 0);
-    hoedown_document *document = hoedown_document_new(
-        renderer, kMDExtensions | extensions, kMDNestingAtMost);
-    hoedown_buffer *out = hoedown_buffer_new(64);
-    hoedown_document_render(document, out, utf8.bytes, utf8.length);
-
-    NSString *body = [[NSString alloc] initWithBytes:out->data
-                                              length:out->size
-                                            encoding:NSUTF8StringEncoding];
-    hoedown_buffer_free(out);
-    hoedown_document_free(document);
+    NSString *body = MDRenderedWith(renderer, utf8, extensions);
     hoedown_html_renderer_free(renderer);
-    return body ?: @"";
+
+    // The table of contents is a second pass with another renderer, and
+    // only when the document asks for one.
+    if (MDBodyAsksForContents(body))
+    {
+        hoedown_renderer *toc =
+            hoedown_html_toc_renderer_new(MDContentsDepth());
+        NSString *contents = MDRenderedWith(toc, utf8, extensions);
+        hoedown_html_renderer_free(toc);
+        body = MDBodyWithContents(body, contents);
+    }
+    return body;
 }
 
 

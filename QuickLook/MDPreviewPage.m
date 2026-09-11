@@ -234,6 +234,47 @@ static BOOL MDWikiTargetExists(NSURL *directory, NSString *target)
 }
 
 
+static NSRegularExpression *MDContentsParagraph(void)
+{
+    static NSRegularExpression *paragraph = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        paragraph = [[NSRegularExpression alloc] initWithPattern:
+            @"<p[^>]*>\\s*\\[TOC\\]\\s*</p>"
+            options:NSRegularExpressionCaseInsensitive error:NULL];
+    });
+    return paragraph;
+}
+
+
+BOOL MDBodyAsksForContents(NSString *bodyHTML)
+{
+    if (!bodyHTML.length)
+        return NO;
+    return [MDContentsParagraph() firstMatchInString:bodyHTML options:0
+        range:NSMakeRange(0, bodyHTML.length)] != nil;
+}
+
+
+int MDContentsDepth(void)
+{
+    return 6;
+}
+
+
+NSString *MDBodyWithContents(NSString *bodyHTML, NSString *contents)
+{
+    if (!bodyHTML.length)
+        return bodyHTML ?: @"";
+    // A template, so a `$1` inside a heading does not become something else
+    // on the way in.
+    NSString *safe = [NSRegularExpression
+        escapedTemplateForString:contents ?: @""];
+    return [MDContentsParagraph() stringByReplacingMatchesInString:bodyHTML
+        options:0 range:NSMakeRange(0, bodyHTML.length) withTemplate:safe];
+}
+
+
 NSString *MDBodyWithWikiLinks(NSString *bodyHTML, NSURL *documentURL)
 {
     if (![bodyHTML containsString:@"[["])

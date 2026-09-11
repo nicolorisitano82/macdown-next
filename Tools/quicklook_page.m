@@ -51,7 +51,27 @@ static NSString *MDBody(NSString *markdown)
     hoedown_buffer_free(out);
     hoedown_document_free(document);
     hoedown_html_renderer_free(renderer);
-    return body ?: @"";
+    body = body ?: @"";
+
+    // The table of contents, the same way the extension does it: a second
+    // pass with another renderer, and only when the document asked.
+    if (MDBodyAsksForContents(body))
+    {
+        hoedown_renderer *toc =
+            hoedown_html_toc_renderer_new(MDContentsDepth());
+        hoedown_document *second =
+            hoedown_document_new(toc, kMDExtensions, 16);
+        hoedown_buffer *list = hoedown_buffer_new(64);
+        hoedown_document_render(second, list, utf8.bytes, utf8.length);
+        NSString *contents = [[NSString alloc] initWithBytes:list->data
+                                                      length:list->size
+                                                    encoding:NSUTF8StringEncoding];
+        hoedown_buffer_free(list);
+        hoedown_document_free(second);
+        hoedown_html_renderer_free(toc);
+        body = MDBodyWithContents(body, contents);
+    }
+    return body;
 }
 
 

@@ -261,7 +261,11 @@ source: https://esempio.it
 
 # Relazione di prova
 
+[TOC]
+
 Un paragrafo con **grassetto** e un [collegamento](altro.md).
+
+## Cose da fare
 
 - [ ] comprare il pane
 - [x] pagare la bolletta
@@ -298,6 +302,11 @@ then
 
     ok "il titolo è quello del documento" \
         contains "$WORK/page.html" "<title>Relazione di prova</title>"
+    # `[TOC]` is a second pass with another renderer, and the preview used
+    # to show the four letters where the application shows the headings.
+    ok "l'indice chiesto col [TOC] è un elenco di titoli" \
+        sh -c 'grep -q "toc_1" "$0" && ! grep -q "\\[TOC\\]" "$0"' \
+        "$WORK/page.html"
     ok "il front-matter resta fuori" \
         absent "$WORK/page.html" "da scartare"
     ok "lo stile dell'app è nella pagina" \
