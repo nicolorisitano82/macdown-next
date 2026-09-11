@@ -431,8 +431,9 @@ and [the updater](docs/aggiornamenti.md). There is also a
 study, not a plan: [what a Claude and GPT integration could
 be](docs/studio-claude-gpt.md), and which parts of it are worth having, and
 [what the comparison panel still needs](docs/studio-confronto.md), which
-starts from a measurement: one word changed in a re-wrapped document shows
-up as a hundred and eighty changed lines. They are written for whoever picks a piece of this up
+starts from a measurement — one word changed in a re-wrapped document shows
+up as a hundred and eighty changed lines — and [whether an icon in the menu
+bar would earn its place](docs/studio-barra-menu.md). They are written for whoever picks a piece of this up
 next — what was measured, and the several times the measuring contradicted
 me.
 
