@@ -55,12 +55,17 @@ Due interruttori piccoli che tolgono il resto del rumore: l'indentazione
 cambiata, il doppio spazio dopo il punto, il titolo scritto in maiuscolo.
 Costo: minimo, e sono attese.
 
-### C. Il testo **reso**, non il sorgente
+### C. Il testo **reso**, non il sorgente — *scartata*
 
-«Cosa è cambiato per chi legge»: `**grassetto**` e `__grassetto__` sono la
-stessa cosa; un `<!-- commento -->` non è niente. Lo sappiamo già fare — la
-funzione che toglie i marcatori è quella che il ponte fra i due pannelli usa
-per il verso opposto — quindi è una modalità in più, non un motore in più.
+L'idea era: «cosa è cambiato per chi legge», con `**grassetto**` e
+`__grassetto__` che contano uguale. Scartata, ed è la risposta alla domanda
+4 in fondo.
+
+Il motivo regge: qui si scrive Markdown, e chi confronta due documenti sta
+guardando **quello che ha scritto**, non quello che ne esce. Un confronto
+che dice «uguali» a due sorgenti diversi nasconde proprio le modifiche che
+solo il pannello può far vedere — un link cambiato, un marcatore spostato,
+un commento tolto — e quelle non sono rumore: sono il lavoro.
 
 ### D. Blocchi spostati
 
@@ -157,7 +162,7 @@ Due cose che oggi mancano e che si notano solo quando mancano:
 | 1 | Confronto per paragrafi, ignora spazi e maiuscole; segni nel margine | è la misura della sezione 1: senza questo il pannello non regge un documento riavvolto |
 | 2 | «Confronta con la copia sul disco» e «con una versione»; ⌘G; conteggio nel titolo | le provenienze che esistono già, e i tasti che tutti hanno nelle dita |
 | 3 | Copia la differenza; prendi questa versione (un passo di annulla); mappa laterale | il passo dal leggere al fare, il pezzo sicuro per primo |
-| 4 | Testo reso invece del sorgente; vai alla riga nell'editor; esporta le differenze | il resto, quando i primi tre sono in uso |
+| 4 | Vai alla riga nell'editor; esporta le differenze | il resto, quando i primi tre sono in uso |
 | — | Copie in conflitto, revisioni git, tre vie | con la [sincronizzazione](progetto-sync.md), non prima |
 
 ## 9. Le domande da decidere
@@ -171,7 +176,11 @@ Due cose che oggi mancano e che si notano solo quando mancano:
 3. **La mappa laterale o il conteggio nel titolo, se se ne può fare una
    sola?** La mappa: il conteggio lo si vede già nel pannello.
 4. **Confrontare il testo reso è una modalità del pannello o un'altra voce
-   di menu?** Propendo per una modalità, accanto a «solo le differenze».
+   di menu?** → **né l'una né l'altra: non si fa.** Chi confronta due
+   documenti Markdown guarda il sorgente, che è quello che ha scritto; un
+   confronto che pareggia due sorgenti diversi perché «si leggono uguali»
+   nasconde le modifiche che solo un confronto può mostrare. Il controllo
+   del pannello resta a due: per righe, per paragrafi.
 
 ---
 
@@ -266,8 +275,10 @@ qualcuno non ci clicca — viene ora cercata **sia nel nib sia nel binario**.
 
 ### Cosa resta
 
-Il copiare e il prendere una versione, la mappa laterale, il testo reso.
-L'ordine della sezione 8 non è cambiato.
+Il copiare e il prendere una versione, la mappa laterale, e — in fase 4 —
+andare alla riga nell'editor ed esportare le differenze. Il confronto del
+testo reso è stato scartato (sezione 2.C): il controllo del pannello resta
+a due, per righe e per paragrafi.
 
 ---
 
