@@ -73,3 +73,17 @@
 "none chosen" = "none chosen";
 "/path/to/your/notes" = "/path/to/your/notes";
 "Agents" = "Agents";
+
+/* Comparing two documents */
+"Comparison" = "Comparison";
+"Previous" = "Previous";
+"Next" = "Next";
+"Differences only" = "Differences only";
+"Swap Sides" = "Swap Sides";
+"Read the Files Again" = "Read the Files Again";
+"The two are the same." = "The two are the same.";
+"%lu changed, %lu added, %lu taken away" = "%lu changed, %lu added, %lu taken away";
+"Choose the document to compare this one with" = "Choose the document to compare this one with";
+"Choose the two documents to compare" = "Choose the two documents to compare";
+"That file is not text this application can read" = "That file is not text this application can read";
+"%@ (in the editor, not saved)" = "%@ (in the editor, not saved)";

@@ -535,6 +535,41 @@ else
 fi
 
 
+# ------------------------------------------------------- comparing two files
+
+# The window cannot be driven from a script, but what it draws comes from
+# one pure function, and that function can be asked about real files.
+
+say "Il confronto fra due documenti"
+
+DIFF_A="$WORK/a.md"
+DIFF_B="$WORK/b.md"
+printf '# Verbale\n\nPresenti: Anna.\n\n- una cosa\n' > "$DIFF_A"
+printf '# Verbale\n\nPresenti: Anna, Bruno.\n\n- una cosa\n- e un altra\n' \
+    > "$DIFF_B"
+
+DIFF_PROBE="$WORK/diff_probe"
+if clang -fobjc-arc -framework Foundation -IMacDown/Code/Utility \
+        -o "$DIFF_PROBE" Tools/diff_probe.m MacDown/Code/Utility/MPDiff.m \
+        > "$WORK/diff.log" 2>&1
+then
+    ok "una riga cambiata è una riga, non due" \
+        sh -c '[ "$("$0" "$1" "$2")" = "==~==+" ]' \
+        "$DIFF_PROBE" "$DIFF_A" "$DIFF_B"
+    ok "due file uguali non hanno differenze" \
+        sh -c '[ "$("$0" "$1" "$1" --counts)" = "0 cambiate, 0 aggiunte, 0 tolte" ]' \
+        "$DIFF_PROBE" "$DIFF_A"
+    ok "e al contrario, quello che era aggiunto è tolto" \
+        sh -c '[ "$("$0" "$2" "$1" --counts)" = "1 cambiate, 0 aggiunte, 1 tolte" ]' \
+        "$DIFF_PROBE" "$DIFF_A" "$DIFF_B"
+    ok "un file che non è testo si rifiuta invece di rispondere" \
+        sh -c '! "$0" "$1" /bin/ls >/dev/null 2>&1' \
+        "$DIFF_PROBE" "$DIFF_A"
+else
+    skip "il banco del confronto non si è compilato — $WORK/diff.log"
+fi
+
+
 # ----------------------------------------------------------- the MCP server
 
 # The unit tests talk to the server's classes; this talks to the binary the

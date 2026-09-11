@@ -543,3 +543,17 @@
 "none chosen" = "nessuna scelta";
 "/path/to/your/notes" = "/percorso/dei/tuoi/appunti";
 "Agents" = "Agenti";
+
+/* Il confronto fra due documenti */
+"Comparison" = "Confronto";
+"Previous" = "Precedente";
+"Next" = "Successiva";
+"Differences only" = "Solo le differenze";
+"Swap Sides" = "Scambia i lati";
+"Read the Files Again" = "Rileggi i file";
+"The two are the same." = "I due sono uguali.";
+"%lu changed, %lu added, %lu taken away" = "%lu cambiate, %lu aggiunte, %lu tolte";
+"Choose the document to compare this one with" = "Scegli il documento con cui confrontare questo";
+"Choose the two documents to compare" = "Scegli i due documenti da confrontare";
+"That file is not text this application can read" = "Quel file non è testo che questa applicazione sappia leggere";
+"%@ (in the editor, not saved)" = "%@ (nell'editor, non salvato)";

@@ -46,6 +46,7 @@
 #import "MPProseIssuesViewController.h"
 #import "MPBacklinksViewController.h"
 #import "MPBacklinks.h"
+#import "MPCompareWindowController.h"
 #import "MPLinkPreview.h"
 #import "MPLinkPreviewViewController.h"
 #import "MPWebClipper.h"
@@ -6299,6 +6300,63 @@ static BOOL MPActionEditsTheDocument(SEL action)
     MPNote(@"  opened as a new document (%lu characters)",
            (unsigned long)markdown.length);
     return YES;
+}
+
+
+/** This document beside another one, with what differs marked.
+ *
+ * The left side is what is in the editor, not what is on the disk: the
+ * question «what did I change» is asked before saving at least as often as
+ * after, and answering it with the saved copy would answer a different
+ * question. The window says so when the two are not the same thing.
+ */
+- (IBAction)compareWithFile:(id)sender
+{
+    NSOpenPanel *panel = [NSOpenPanel openPanel];
+    panel.canChooseFiles = YES;
+    panel.canChooseDirectories = NO;
+    panel.allowsMultipleSelection = NO;
+    panel.message = NSLocalizedString(
+        @"Choose the document to compare this one with",
+        @"Prompt of the comparison file chooser");
+    panel.directoryURL = self.fileURL.URLByDeletingLastPathComponent;
+
+    if ([panel runModal] != NSModalResponseOK || !panel.URL)
+        return;
+
+    NSURL *other = panel.URL;
+    NSString *theirs = [NSString stringWithContentsOfURL:other
+        encoding:NSUTF8StringEncoding error:NULL];
+    if (!theirs)
+    {
+        NSAlert *alert = [[NSAlert alloc] init];
+        alert.messageText = NSLocalizedString(
+            @"That file is not text this application can read",
+            @"Title of the alert when a comparison file cannot be read");
+        alert.informativeText = other.path;
+        [alert beginSheetModalForWindow:self.windowForSheet
+                      completionHandler:nil];
+        return;
+    }
+
+    NSString *mine = self.editor.string ?: @"";
+    NSString *name = self.fileURL
+        ? self.fileURL.lastPathComponent
+        : NSLocalizedString(@"Untitled",
+                            @"Name of a document with no file, in the "
+                            @"comparison window");
+    if (self.isDocumentEdited)
+    {
+        name = [NSString stringWithFormat:NSLocalizedString(
+            @"%@ (in the editor, not saved)",
+            @"Name of the unsaved side of a comparison"), name];
+    }
+
+    MPNote(@"compare: %lu characters against %@",
+           (unsigned long)mine.length, other.lastPathComponent);
+    [MPCompareWindowController compare:mine named:name url:self.fileURL
+                                  with:theirs named:other.lastPathComponent
+                                   url:other];
 }
 
 

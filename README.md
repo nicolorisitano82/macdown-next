@@ -129,6 +129,15 @@ Writing**.
   As** hands it to a spreadsheet, a form or a page: tab-separated,
   comma-separated or HTML.
 
+### Comparing
+
+* **Compare with…** (⌃⌥⌘D) shows the document beside another file, with what
+  differs marked. The left side is what is in the editor, unsaved changes
+  included. A changed line is one row carrying both versions, with the words
+  that differ marked inside it; the columns keep their own line numbers and
+  scroll together. Differences only, next, previous, swap sides, and read
+  the files again for when somebody else has just saved.
+
 ### Collecting
 
 * **Save a web page as Markdown**, beside the document: the address and the

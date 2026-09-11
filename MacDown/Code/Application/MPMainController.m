@@ -28,6 +28,7 @@
 #import "MPTerminalPreferencesViewController.h"
 #import "MPDocument.h"
 #import "MPDocumentTemplate.h"
+#import "MPCompareWindowController.h"
 #import "MPModelsWindowController.h"
 
 
@@ -428,6 +429,50 @@ static const NSInteger kMPPlugInExportItemTag = 9003;
 - (IBAction)showHelp:(id)sender
 {
     MPOpenBundledFile(@"help", @"md");
+}
+
+/** Two files compared with no document open.
+ *
+ * The same menu item as in a document: with one open the document answers
+ * it and compares what is in the editor, and with none the responder chain
+ * arrives here, where there is nothing to compare against — so it asks for
+ * both sides. Two files at once in one chooser, because that is one
+ * gesture instead of two.
+ */
+- (IBAction)compareWithFile:(id)sender
+{
+    NSOpenPanel *panel = [NSOpenPanel openPanel];
+    panel.canChooseFiles = YES;
+    panel.canChooseDirectories = NO;
+    panel.allowsMultipleSelection = YES;
+    panel.message = NSLocalizedString(
+        @"Choose the two documents to compare",
+        @"Prompt of the comparison chooser when no document is open");
+
+    if ([panel runModal] != NSModalResponseOK || panel.URLs.count != 2)
+        return;
+
+    NSURL *left = panel.URLs[0];
+    NSURL *right = panel.URLs[1];
+    NSString *leftText = [NSString stringWithContentsOfURL:left
+        encoding:NSUTF8StringEncoding error:NULL];
+    NSString *rightText = [NSString stringWithContentsOfURL:right
+        encoding:NSUTF8StringEncoding error:NULL];
+    if (!leftText || !rightText)
+    {
+        NSAlert *alert = [[NSAlert alloc] init];
+        alert.messageText = NSLocalizedString(
+            @"That file is not text this application can read",
+            @"Title of the alert when a comparison file cannot be read");
+        alert.informativeText = (leftText ? right : left).path;
+        [alert runModal];
+        return;
+    }
+
+    [MPCompareWindowController compare:leftText
+                                 named:left.lastPathComponent url:left
+                                  with:rightText
+                                 named:right.lastPathComponent url:right];
 }
 
 /** Starts and stops writing down what is asked of the editor.

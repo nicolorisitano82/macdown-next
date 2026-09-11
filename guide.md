@@ -34,6 +34,7 @@ deliberately does not do.
 - [The preview](#the-preview)
 - [Diagrams and maths](#diagrams-and-maths)
 - [Moving around a folder](#moving-around-a-folder)
+- [Comparing two documents](#comparing-two-documents)
 - [The prose checker](#the-prose-checker)
 - [Writing help that runs on your Mac](#writing-help-that-runs-on-your-mac)
 - [Collecting: saving a web page](#collecting-saving-a-web-page)
@@ -308,6 +309,32 @@ cell.
 
 ---
 
+## Comparing two documents
+
+**File ▸ Compare with…** (⌃⌥⌘D) puts the document beside another one and
+marks what differs. The left side is **what is in the editor**, not what is
+on the disk — the question *what did I change* is asked before saving at
+least as often as after — and the window says so when the two are not the
+same thing.
+
+- A line that was **changed** is one row with both versions on it, not a
+  removal followed by an addition, and inside that row the **words** that
+  actually differ are marked: a comma should not look like a rewritten
+  paragraph.
+- What was **added** is green, what was **taken away** is red, and the empty
+  half of a row that only one side has is grey — the two columns stay level
+  with each other all the way down, and each keeps its own line numbers.
+- **Next** and **Previous** walk the differences; **Differences only** folds
+  away what is the same, keeping three lines around each change; **Swap
+  Sides** turns the comparison round; **Read the Files Again** compares the
+  files as they are now, which is the button for *somebody else has just
+  saved this*.
+- The two sides scroll together.
+
+With no document open the same menu item asks for two files instead.
+
+---
+
 ## The prose checker
 
 Qualifiers, weasel words, hedging, wordiness, passive tells and repeated
@@ -576,6 +603,7 @@ the list is read, and again before the download starts.
 | ⌃⌥⌘H | Prose underlines on and off |
 | ⌃⌥⌘P | List what the prose checker counted |
 | ⌃⌥⌘B | Which documents link to this one |
+| ⌃⌥⌘D | Compare this document with another |
 | ⌥⌘C | Copy the rendered HTML |
 
 ### Exporting

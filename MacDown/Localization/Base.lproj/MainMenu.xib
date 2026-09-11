@@ -117,6 +117,13 @@
                                     <action selector="revertDocumentToSaved:" target="-1" id="iJ3-Pv-kwq"/>
                                 </connections>
                             </menuItem>
+                            <menuItem title="Compare with…" id="cmp-01-itm">
+                                <modifierMask key="keyEquivalentModifierMask" control="YES" option="YES" command="YES"/>
+                                <string key="keyEquivalent">d</string>
+                                <connections>
+                                    <action selector="compareWithFile:" target="-1" id="cmp-01-act"/>
+                                </connections>
+                            </menuItem>
                             <menuItem isSeparatorItem="YES" id="oOV-6A-wGe"/>
                             <menuItem title="Export" tag="9002" id="5mp-ev-1el">
                                 <modifierMask key="keyEquivalentModifierMask"/>
