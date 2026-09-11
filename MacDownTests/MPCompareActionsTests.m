@@ -15,7 +15,14 @@
 #import "MPDiff.h"
 
 
+@interface MPCompareBand : NSObject
+@property (nonatomic) CGFloat from;
+@property (nonatomic) CGFloat to;
+@end
+
+
 @interface MPCompareWindowController (Testing)
+- (NSArray *)bandsOnTheMap;
 - (void)rowPicked:(NSUInteger)row onTheLeft:(BOOL)left twice:(BOOL)twice;
 - (NSMenu *)menuForRow:(NSUInteger)row onTheLeft:(BOOL)left;
 - (void)copyPickedRow:(id)sender;
@@ -166,6 +173,38 @@
     self.revealed = NSMakeRange(NSNotFound, 0);
     [self.panel rowPicked:row onTheLeft:NO twice:YES];
     XCTAssertEqual(self.revealed.location, (NSUInteger)NSNotFound);
+}
+
+- (void)testTheStripFollowsWhereTheRowsActuallyAre
+{
+    // It drew one band per row at a fixed spacing, which points at the
+    // wrong rows the moment two rows are of different heights — which is
+    // every comparison by paragraph.
+    NSArray *bands = [self.panel bandsOnTheMap];
+    XCTAssertTrue(bands.count > 0);
+
+    NSUInteger differences = 0;
+    for (MPDiffRow *row in MPDiffRowsBetween(@"# Verbale\n\nPresenti: Anna.\n"
+                                             @"\n- una cosa\n",
+                                             @"# Verbale\n\n"
+                                             @"Presenti: Anna, Bruno.\n\n"
+                                             @"- una cosa\n- due cose\n"))
+    {
+        if (row.kind != MPDiffEqual)
+            differences++;
+    }
+    XCTAssertEqual(bands.count, differences);
+
+    CGFloat previous = -1.0;
+    for (MPCompareBand *band in bands)
+    {
+        XCTAssertGreaterThanOrEqual(band.from, 0.0);
+        XCTAssertLessThanOrEqual(band.to, 1.0001);
+        XCTAssertGreaterThan(band.to, band.from);
+        // In order, and never two rows sharing the same place.
+        XCTAssertGreaterThanOrEqual(band.from, previous - 0.0001);
+        previous = band.from;
+    }
 }
 
 - (void)testWithNoEditorBehindItThePanelOffersNeither

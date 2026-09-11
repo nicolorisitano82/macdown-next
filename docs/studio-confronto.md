@@ -208,6 +208,25 @@ contenuto.
 Centottantuno differenze diventano nove, e le nove che restano sono le
 liste che il riavvolgimento ha spostato davvero.
 
+### I due difetti che le fotografie hanno tirato fuori
+
+Fotografare il pannello per il sito ha trovato in dieci minuti quello che
+guardarlo non aveva trovato in un pomeriggio.
+
+**Le colonne erano strizzate**: due strisce da duecento punti in una finestra
+da milleduecento, e metà finestra vuota. Una pila orizzontale dà a ogni
+vista la larghezza che *chiede*, e una vista di testo chiede pochissimo:
+serviva dire che le colonne prendono quello che avanza e la striscia no.
+
+**La striscia non corrispondeva alle righe**: disegnava una banda per riga a
+spaziatura fissa, che è giusto solo se tutte le righe sono alte uguale —
+cioè mai, in modalità paragrafo. Adesso ogni banda sta dove sta davvero il
+suo paragrafo nel testo impaginato, la cornice di «cosa è sullo schermo»
+viene dallo scorrevole invece che da un conteggio, e un clic sulla striscia
+cerca la riga che si trova a quell'altezza. Si ricalcola anche quando la
+finestra cambia forma, perché ridimensionare riavvolge i paragrafi e sposta
+tutto. Una prova tiene le bande legate alle righe.
+
 ### Il difetto che ha tirato fuori
 
 Il primo tentativo dava 107 differenze anche per paragrafi: i paragrafi non

@@ -93,20 +93,36 @@ static const NSUInteger kMPCompareGutter = 6;
  * colour of what it is, and a frame around what is on screen; clicking goes
  * there.
  */
+/// One row on the map: where it is in the column, as a fraction of the
+/// whole, and what kind of difference it is.
+@interface MPCompareBand : NSObject
+@property (nonatomic) CGFloat from;
+@property (nonatomic) CGFloat to;
+@property (nonatomic) MPDiffKind kind;
+@end
+
+@implementation MPCompareBand
+@end
+
+
 @interface MPCompareMapView : NSView
-@property (copy, nonatomic) NSArray<MPDiffRow *> *rows;
-/// Which rows are visible, as a fraction of the whole, for the frame.
+/// Every row that is a difference, by where it actually sits: a paragraph
+/// six lines tall is six lines tall here too. Bands at a fixed spacing —
+/// which is what this drew at first — point at the wrong rows as soon as
+/// two rows have different heights.
+@property (copy, nonatomic) NSArray<MPCompareBand *> *bands;
+/// Which stretch of the column is on screen, as fractions.
 @property (nonatomic) CGFloat visibleFrom;
 @property (nonatomic) CGFloat visibleTo;
-@property (copy, nonatomic) void (^chosen)(NSUInteger row);
-- (void)setRows:(NSArray<MPDiffRow *> *)rows;
+/// Where a click landed, as a fraction of the whole.
+@property (copy, nonatomic) void (^chosenAt)(CGFloat where);
 @end
 
 @implementation MPCompareMapView
 
-- (void)setRows:(NSArray<MPDiffRow *> *)rows
+- (void)setBands:(NSArray<MPCompareBand *> *)bands
 {
-    _rows = [rows copy];
+    _bands = [bands copy];
     self.needsDisplay = YES;
 }
 
@@ -127,35 +143,29 @@ static const NSUInteger kMPCompareGutter = 6;
     [[NSColor controlBackgroundColor] setFill];
     NSRectFill(self.bounds);
 
-    NSUInteger count = self.rows.count;
-    if (!count)
-        return;
-
     CGFloat height = self.bounds.size.height;
-    // At least a point tall, or a single changed line in a long document
-    // draws as nothing at all.
-    CGFloat band = MAX(height / (CGFloat)count, 1.0);
-    [self.rows enumerateObjectsUsingBlock:^(MPDiffRow *row, NSUInteger i,
-                                            BOOL *stop) {
-        if (row.kind == MPDiffEqual)
-            return;
+    for (MPCompareBand *band in self.bands)
+    {
         NSColor *colour = [NSColor systemYellowColor];
-        if (row.kind == MPDiffAdded)
+        if (band.kind == MPDiffAdded)
             colour = [NSColor systemGreenColor];
-        else if (row.kind == MPDiffRemoved)
+        else if (band.kind == MPDiffRemoved)
             colour = [NSColor systemRedColor];
         [[colour colorWithAlphaComponent:0.75] setFill];
-        CGFloat y = height - ((CGFloat)i / (CGFloat)count) * height - band;
-        NSRectFill(NSMakeRect(2.0, y, self.bounds.size.width - 4.0, band));
-    }];
+
+        // At least two points tall, or one changed line in a long document
+        // draws as nothing at all.
+        CGFloat top = height - band.to * height;
+        CGFloat tall = MAX((band.to - band.from) * height, 2.0);
+        NSRectFill(NSMakeRect(2.0, top, self.bounds.size.width - 4.0, tall));
+    }
 
     if (self.visibleTo > self.visibleFrom)
     {
         NSRect frame = NSMakeRect(0.5,
             height - self.visibleTo * height,
             self.bounds.size.width - 1.0,
-            (self.visibleTo - self.visibleFrom) * height);
-        [[NSColor labelColor] setStroke];
+            MAX((self.visibleTo - self.visibleFrom) * height, 4.0));
         NSBezierPath *path = [NSBezierPath bezierPathWithRect:frame];
         path.lineWidth = 1.0;
         [[[NSColor labelColor] colorWithAlphaComponent:0.35] setStroke];
@@ -165,12 +175,11 @@ static const NSUInteger kMPCompareGutter = 6;
 
 - (void)mouseDown:(NSEvent *)event
 {
-    if (!self.rows.count || !self.chosen)
+    if (!self.chosenAt)
         return;
     NSPoint where = [self convertPoint:event.locationInWindow fromView:nil];
     CGFloat share = 1.0 - (where.y / MAX(self.bounds.size.height, 1.0));
-    NSUInteger row = (NSUInteger)(share * (CGFloat)self.rows.count);
-    self.chosen(MIN(row, self.rows.count - 1));
+    self.chosenAt(MIN(MAX(share, 0.0), 1.0));
 }
 
 @end
@@ -275,6 +284,13 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
 
     window.delegate = self;
     [self buildContent];
+
+    // Resizing re-wraps the paragraphs, and every row moves: the strip has
+    // to be worked out again or it points at where things used to be.
+    self.leftView.postsFrameChangedNotifications = YES;
+    [[NSNotificationCenter defaultCenter] addObserver:self
+        selector:@selector(theColumnChangedShape:)
+            name:NSViewFrameDidChangeNotification object:self.leftView];
     return self;
 }
 
@@ -405,8 +421,8 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
     self.map = [[MPCompareMapView alloc] initWithFrame:NSZeroRect];
     self.map.translatesAutoresizingMaskIntoConstraints = NO;
     __weak MPCompareWindowController *weakSelf = self;
-    self.map.chosen = ^(NSUInteger row) {
-        [weakSelf goToRow:row];
+    self.map.chosenAt = ^(CGFloat where) {
+        [weakSelf goToShareOfTheColumn:where];
     };
     [self.map.widthAnchor constraintEqualToConstant:14.0].active = YES;
 
@@ -419,6 +435,17 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
     NSStackView *sides = [NSStackView stackViewWithViews:@[columns, self.map]];
     sides.orientation = NSUserInterfaceLayoutOrientationHorizontal;
     sides.spacing = 8.0;
+    sides.distribution = NSStackViewDistributionFill;
+    // The map is a strip of a fixed width and the two columns take the
+    // rest. Without saying so, a stack gives every view the width it asks
+    // for, and a text view asks for very little: the columns came out two
+    // hundred points wide in a window twelve hundred wide.
+    [columns setContentHuggingPriority:NSLayoutPriorityDefaultLow
+                        forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [self.map setContentHuggingPriority:NSLayoutPriorityRequired
+                         forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [self.map setContentCompressionResistancePriority:NSLayoutPriorityRequired
+                         forOrientation:NSLayoutConstraintOrientationHorizontal];
 
     NSStackView *column = [NSStackView stackViewWithViews:
         @[buttons, options, sides]];
@@ -439,6 +466,8 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
             constant:-kMPComparePadding],
         [sides.leadingAnchor constraintEqualToAnchor:column.leadingAnchor],
         [sides.trailingAnchor constraintEqualToAnchor:column.trailingAnchor],
+        [columns.heightAnchor constraintEqualToAnchor:sides.heightAnchor],
+        [self.map.heightAnchor constraintEqualToAnchor:sides.heightAnchor],
         [buttons.leadingAnchor constraintEqualToAnchor:column.leadingAnchor],
         [buttons.trailingAnchor constraintEqualToAnchor:column.trailingAnchor],
         [options.leadingAnchor constraintEqualToAnchor:column.leadingAnchor],
@@ -523,7 +552,7 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
     if (row >= ranges.count)
         return;
 
-    [self showWhatIsVisibleOnTheMap:row];
+    [self showWhatIsVisibleOnTheMap];
     NSRect rect = [self rectOfRange:ranges[row].rangeValue in:other];
     self.following = YES;
     NSPoint where = otherScroll.contentView.bounds.origin;
@@ -641,13 +670,16 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
     self.rightRowRanges = rightRanges;
     ((MPCompareTextView *)self.leftView).rowRanges = leftRanges;
     ((MPCompareTextView *)self.rightView).rowRanges = rightRanges;
-    [self.map setRows:self.shown];
 
     // A paragraph is too long to read sideways; a line is not, and keeping
     // it on one line is what lets two columns be read across.
     BOOL wrapping = ([self options].grain == MPDiffByParagraphs);
     [self setWrapping:wrapping in:self.leftView scroll:self.leftScroll];
     [self setWrapping:wrapping in:self.rightView scroll:self.rightScroll];
+
+    // After the wrapping is settled, not before: where a row sits depends
+    // on how the rows above it wrapped.
+    [self drawTheMap];
 }
 
 
@@ -799,18 +831,83 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
 }
 
 
-/// The frame on the map: which stretch of the comparison is on screen.
-- (void)showWhatIsVisibleOnTheMap:(NSUInteger)topRow
+/** The bands, from where the rows actually are.
+ *
+ * The left column is the reference: both sides carry the same rows, and a
+ * strip that followed neither would point at nothing. Measured from the
+ * laid-out text rather than from the row number, because a row can be a
+ * paragraph six lines tall.
+ */
+- (void)drawTheMap
 {
-    NSUInteger count = self.shown.count;
-    if (!count)
+    [self.leftView.layoutManager ensureLayoutForTextContainer:
+        self.leftView.textContainer];
+    CGFloat height = self.leftView.frame.size.height;
+    if (height < 1.0 || !self.leftRowRanges.count)
+    {
+        self.map.bands = @[];
         return;
-    CGFloat height = self.leftScroll.contentView.bounds.size.height;
-    CGFloat rowHeight = MAX(self.leftView.frame.size.height
-                            / (CGFloat)count, 1.0);
-    NSUInteger rows = MAX((NSUInteger)(height / rowHeight), 1u);
-    self.map.visibleFrom = (CGFloat)topRow / (CGFloat)count;
-    self.map.visibleTo = MIN(1.0, (CGFloat)(topRow + rows) / (CGFloat)count);
+    }
+
+    NSMutableArray<MPCompareBand *> *bands = [NSMutableArray array];
+    [self.shown enumerateObjectsUsingBlock:^(MPDiffRow *row, NSUInteger i,
+                                             BOOL *stop) {
+        if (row.kind == MPDiffEqual || i >= self.leftRowRanges.count)
+            return;
+        NSRect rect = [self rectOfRange:self.leftRowRanges[i].rangeValue
+                                     in:self.leftView];
+        MPCompareBand *band = [[MPCompareBand alloc] init];
+        band.kind = row.kind;
+        band.from = NSMinY(rect) / height;
+        band.to = NSMaxY(rect) / height;
+        [bands addObject:band];
+    }];
+    self.map.bands = bands;
+    [self showWhatIsVisibleOnTheMap];
+}
+
+
+/// The frame on the map: which stretch of the column is on screen, taken
+/// from the scroller rather than counted in rows.
+- (void)showWhatIsVisibleOnTheMap
+{
+    CGFloat height = self.leftView.frame.size.height;
+    if (height < 1.0)
+        return;
+    NSRect visible = self.leftScroll.contentView.bounds;
+    self.map.visibleFrom = MAX(0.0, NSMinY(visible) / height);
+    self.map.visibleTo = MIN(1.0, NSMaxY(visible) / height);
+}
+
+
+/// A click on the map: the row whose text is at that height.
+- (void)goToShareOfTheColumn:(CGFloat)share
+{
+    CGFloat height = self.leftView.frame.size.height;
+    CGFloat wanted = share * height;
+    __block NSUInteger found = NSNotFound;
+    [self.leftRowRanges enumerateObjectsUsingBlock:^(NSValue *value,
+                                                     NSUInteger i,
+                                                     BOOL *stop) {
+        NSRect rect = [self rectOfRange:value.rangeValue in:self.leftView];
+        if (wanted >= NSMinY(rect) && wanted <= NSMaxY(rect))
+        {
+            found = i;
+            *stop = YES;
+        }
+    }];
+    if (found != NSNotFound)
+        [self goToRow:found];
+}
+
+
+- (void)theColumnChangedShape:(NSNotification *)note
+{
+    // Coalesced: a drag of the window's edge sends a great many of these.
+    [NSObject cancelPreviousPerformRequestsWithTarget:self
+        selector:@selector(drawTheMap) object:nil];
+    [self performSelector:@selector(drawTheMap) withObject:nil
+               afterDelay:0.15];
 }
 
 
@@ -1102,6 +1199,14 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
     [scroll.contentView scrollToPoint:NSMakePoint(visible.origin.x, wanted)];
     [scroll reflectScrolledClipView:scroll.contentView];
     self.following = NO;
+}
+
+
+/// What the strip is drawing, for the test that holds it to the rows.
+- (NSArray *)bandsOnTheMap
+{
+    [self drawTheMap];
+    return self.map.bands;
 }
 
 
