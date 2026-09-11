@@ -95,6 +95,11 @@ if [ "$DO_BUILD" = 1 ]; then
     if xcode build > "$WORK/build.log" 2>&1; then
         printf '  \033[32m✓\033[0m build riuscita\n'
         PASSED=$((PASSED + 1))
+        # The copy in dist/ is made here rather than by the build phase:
+        # that one runs in the middle of the target, before the Info.plist
+        # is written, so on a clean build it has nothing finished to copy.
+        bash Tools/copy_to_dist.sh "$CONFIGURATION" \
+            >> "$WORK/build.log" 2>&1 || true
     else
         printf '  \033[31m✗\033[0m build fallita — %s\n' "$WORK/build.log"
         grep -E " error: " "$WORK/build.log" | head -5
