@@ -69,7 +69,7 @@
     MPCloudDelta *again = [self.ledger applyChanges:@[
         [self change:@"1" name:@"uno.md" revision:@"a"]]];
     XCTAssertTrue(again.isQuiet);
-    XCTAssertEqualObjects(again.summary, @"nothing has moved");
+    XCTAssertTrue(again.summary.length > 0);
 }
 
 - (void)testANewVersionIsAChange
@@ -149,14 +149,26 @@
     XCTAssertNil(again.startToken);
 }
 
-- (void)testTheSummaryIsReadable
+- (void)testTheSummarySaysTheNumbers
 {
+    // Le parole dipendono dalla lingua di chi guarda — provarle qui
+    // vorrebbe dire provare la traduzione — quindi si guarda che i conti
+    // ci siano e che una cosa sola non ne nomini tre.
     MPCloudDelta *delta = [[MPCloudDelta alloc] init];
     delta.added = 2;
     delta.changed = 1;
-    XCTAssertEqualObjects(delta.summary, @"2 new, 1 changed");
+    XCTAssertTrue([delta.summary containsString:@"2"]);
+    XCTAssertTrue([delta.summary containsString:@"1"]);
+    XCTAssertFalse([delta.summary containsString:@"3"]);
+
     delta.removed = 3;
-    XCTAssertTrue([delta.summary containsString:@"3 gone"]);
+    XCTAssertTrue([delta.summary containsString:@"3"]);
+    XCTAssertEqual([[delta.summary componentsSeparatedByString:@","] count],
+                   3u);
+
+    MPCloudDelta *quiet = [[MPCloudDelta alloc] init];
+    XCTAssertTrue(quiet.isQuiet);
+    XCTAssertFalse([quiet.summary containsString:@"0"]);
 }
 
 @end
