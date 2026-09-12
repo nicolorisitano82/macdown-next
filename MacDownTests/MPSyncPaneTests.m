@@ -120,4 +120,49 @@
     google.clientIdentifier = was;
 }
 
+
+- (void)testALongMessageFromTheServiceIsReadableAndItsLinkPressable
+{
+    MPSyncPreferencesViewController *pane =
+        [[MPSyncPreferencesViewController alloc] init];
+    (void)pane.view;
+
+    // Le parole di Google, quelle vere, quando manca l'API nel progetto.
+    [pane say:@"Google Drive API has not been used in project 832285497074 "
+               @"before or it is disabled. Enable it by visiting "
+               @"https://console.developers.google.com/apis/api/"
+               @"drive.googleapis.com/overview?project=832285497074 then "
+               @"retry. If you enabled this API recently, wait a few "
+               @"minutes for the action to propagate to our systems and "
+               @"retry."];
+
+    NSAttributedString *written = pane.stateText;
+    // Una frase per riga, invece di un'unica riga larga come la finestra.
+    XCTAssertTrue([written.string containsString:@"\n"]);
+    XCTAssertEqual([[written.string componentsSeparatedByString:@"\n"] count],
+                   3u);
+
+    // E l'indirizzo si può premere.
+    __block NSURL *link = nil;
+    [written enumerateAttribute:NSLinkAttributeName
+                        inRange:NSMakeRange(0, written.length)
+                        options:0
+                     usingBlock:^(id value, NSRange range, BOOL *stop) {
+        if (value)
+            link = [value isKindOfClass:[NSURL class]] ? value
+                 : [NSURL URLWithString:value];
+    }];
+    XCTAssertNotNil(link);
+    XCTAssertEqualObjects(link.host, @"console.developers.google.com");
+}
+
+- (void)testAShortStateStaysOnOneLine
+{
+    MPSyncPreferencesViewController *pane =
+        [[MPSyncPreferencesViewController alloc] init];
+    (void)pane.view;
+    [pane say:@"Non collegato."];
+    XCTAssertFalse([pane.stateText.string containsString:@"\n"]);
+}
+
 @end

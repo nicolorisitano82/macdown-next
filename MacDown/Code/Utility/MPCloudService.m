@@ -118,8 +118,24 @@ static int MPListenOnLoopback(uint16_t *outPort)
 }
 
 
+/// Aspetta il richiamo, ma non per sempre.
+///
+/// Chi apre il consenso e poi chiude la finestra non torna mai, e senza una
+/// scadenza il pannello resterebbe su «aspetto il browser» finché non si
+/// chiude l'applicazione — con il pulsante spento. Cinque minuti sono più
+/// di quanto serva a dare un permesso, e meno di quanto serva a dimenticare
+/// di averlo chiesto.
+static const time_t kMPConsentPatience = 300;
+
 static NSDictionary *MPAcceptCallback(int listener)
 {
+    fd_set waiting;
+    FD_ZERO(&waiting);
+    FD_SET(listener, &waiting);
+    struct timeval limit = {.tv_sec = kMPConsentPatience, .tv_usec = 0};
+    if (select(listener + 1, &waiting, NULL, NULL, &limit) <= 0)
+        return nil;             // nessuno è tornato: si smette di aspettare
+
     int client = accept(listener, NULL, NULL);
     if (client < 0)
         return nil;

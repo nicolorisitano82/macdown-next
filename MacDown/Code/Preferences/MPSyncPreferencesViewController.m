@@ -109,7 +109,12 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
         @"preferences file or the log.",
         @"Why the client secret is optional")];
 
-    self.stateLabel = [self label:@""];
+    self.stateLabel = [self paragraph:@""];
+    self.stateLabel.textColor = [NSColor labelColor];
+    // Perché un indirizzo dentro un messaggio del servizio si possa
+    // premere invece che ricopiare a mano.
+    self.stateLabel.allowsEditingTextAttributes = YES;
+    self.stateLabel.selectable = YES;
     self.linkButton = [NSButton buttonWithTitle:NSLocalizedString(
         @"Connect…", @"Starts the permission flow")
         target:self action:@selector(link:)];
@@ -171,6 +176,9 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 - (void)viewWillAppear
 {
     [super viewWillAppear];
+    // Fra una volta e l'altra può essere successo di tutto — un permesso
+    // dato, uno lasciato a metà — quindi i pulsanti si rifanno da capo
+    // invece di ricordarsi com'erano.
     [self showService];
 }
 
@@ -220,9 +228,8 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 
     if (!service.isConfigured)
     {
-        self.stateLabel.stringValue = NSLocalizedString(
-            @"No client ID yet.",
-            @"State: the pane has no client identifier");
+        [self say:NSLocalizedString(@"No client ID yet.",
+            @"State: the pane has no client identifier")];
         self.unlinkButton.enabled = NO;
         return;
     }
@@ -234,20 +241,20 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     // lascerebbe un'applicazione collegata che non vede niente.
     if (service.isLinked && service.problem.length)
     {
-        self.stateLabel.stringValue = service.problem;
+        [self say:service.problem];
         return;
     }
     if (!service.isLinked)
     {
-        self.stateLabel.stringValue = NSLocalizedString(
-            @"Not connected.", @"State: no permission yet");
+        [self say:NSLocalizedString(@"Not connected.",
+                                   @"State: no permission yet")];
         return;
     }
     NSString *place = service.placeName.length ? service.placeName : nil;
     if (!place)
     {
-        self.stateLabel.stringValue = NSLocalizedString(
-            @"Connected.", @"State: connected to a service");
+        [self say:NSLocalizedString(@"Connected.",
+                                   @"State: connected to a service")];
         return;
     }
 
@@ -257,26 +264,26 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     NSInteger visible = service.visibleInPlace;
     if (visible > 0)
     {
-        self.stateLabel.stringValue = [NSString stringWithFormat:
+        [self say:[NSString stringWithFormat:
             NSLocalizedString(@"Connected, on «%@» — %ld documents in there.",
                 @"State: connected, the chosen folder and what is visible"),
-            place, (long)visible];
+            place, (long)visible]];
     }
     else if (visible == 0)
     {
-        self.stateLabel.stringValue = [NSString stringWithFormat:
+        [self say:[NSString stringWithFormat:
             NSLocalizedString(
                 @"Connected, on «%@» — but nothing inside it is visible: "
                 @"choose the documents instead of the folder, or let this "
                 @"application make a folder of its own.",
                 @"State: the folder came across but not its contents"),
-            place];
+            place]];
     }
     else
     {
-        self.stateLabel.stringValue = [NSString stringWithFormat:
+        [self say:[NSString stringWithFormat:
             NSLocalizedString(@"Connected, on «%@».",
-                @"State: connected, and what the connection covers"), place];
+                @"State: connected, and what the connection covers"), place]];
     }
 }
 
@@ -311,9 +318,8 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 - (void)link:(id)sender
 {
     self.linkButton.enabled = NO;
-    self.stateLabel.stringValue = NSLocalizedString(
-        @"Waiting for the browser…",
-        @"State while the consent screen is open");
+    [self say:NSLocalizedString(@"Waiting for the browser…",
+        @"State while the consent screen is open")];
 
     [[self chosen] linkWithCompletion:
      ^(MPCloudLinkOutcome outcome, NSString *message) {
@@ -343,8 +349,8 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 - (void)check:(id)sender
 {
     self.checkButton.enabled = NO;
-    self.stateLabel.stringValue = NSLocalizedString(
-        @"Asking…", @"State while the service is being asked what it sees");
+    [self say:NSLocalizedString(@"Asking…",
+        @"State while the service is being asked what it sees")];
     [[self chosen] checkWithCompletion:^(NSString *problem) {
         [self showState];
     }];
@@ -355,6 +361,69 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 {
     [[self chosen] unlink];
     [self showState];
+}
+
+
+/** Scrive la riga di stato, e rende premibile quello che è un indirizzo.
+ *
+ * I messaggi che contano non sono i nostri: sono quelli del servizio, e
+ * quello di Google quando manca un'API è una frase lunga **con dentro il
+ * link che la risolve**. Ricopiarlo a mano da un pannello è un lavoro che
+ * non ha ragione di esistere, e una riga sola larga quanto la finestra non
+ * si legge.
+ */
+- (void)say:(NSString *)text
+{
+    NSString *message = text ?: @"";
+
+    // Una frase per riga, quando ce n'è più d'una: il messaggio di un
+    // servizio è scritto per un registro, non per un pannello, e tutto di
+    // fila non si legge. Le parole restano le sue — si tocca solo dove va
+    // a capo.
+    if (message.length > 120)
+    {
+        message = [message stringByReplacingOccurrencesOfString:@". "
+                                                     withString:@".\n"];
+    }
+
+    NSMutableAttributedString *written =
+        [[NSMutableAttributedString alloc] initWithString:message];
+    [written addAttribute:NSFontAttributeName
+                    value:[NSFont systemFontOfSize:
+                              [NSFont systemFontSize]]
+                    range:NSMakeRange(0, message.length)];
+    [written addAttribute:NSForegroundColorAttributeName
+                    value:[NSColor labelColor]
+                    range:NSMakeRange(0, message.length)];
+
+    NSDataDetector *addresses = [NSDataDetector
+        dataDetectorWithTypes:NSTextCheckingTypeLink error:NULL];
+    for (NSTextCheckingResult *found in
+            [addresses matchesInString:message options:0
+                                 range:NSMakeRange(0, message.length)])
+    {
+        if (!found.URL)
+            continue;
+        [written addAttribute:NSLinkAttributeName value:found.URL
+                        range:found.range];
+        [written addAttribute:NSUnderlineStyleAttributeName
+                        value:@(NSUnderlineStyleSingle) range:found.range];
+    }
+
+    NSMutableParagraphStyle *paragraph =
+        [[NSMutableParagraphStyle alloc] init];
+    paragraph.lineBreakMode = NSLineBreakByWordWrapping;
+    paragraph.paragraphSpacing = 4.0;
+    [written addAttribute:NSParagraphStyleAttributeName value:paragraph
+                    range:NSMakeRange(0, message.length)];
+
+    self.stateLabel.attributedStringValue = written;
+}
+
+
+- (NSAttributedString *)stateText
+{
+    return self.stateLabel.attributedStringValue;
 }
 
 
