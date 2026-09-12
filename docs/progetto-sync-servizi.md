@@ -246,6 +246,39 @@ cui questo passo non si automatizza del tutto. Un client desktop accetta
 `127.0.0.1` su **qualunque porta**, quindi non c'è niente da registrare a
 ogni giro.
 
+### Il passo che sfugge a tutti, e i sette giorni
+
+Il primo collegamento vero si è fermato qui:
+
+> *«MacDownNext non ha completato la procedura di verifica di Google. L'app
+> è attualmente in fase di test ed è accessibile solo ai tester approvati
+> dallo sviluppatore.»*
+
+Non è la verifica *restricted* di cui sopra: è lo **stato di pubblicazione**
+della schermata di consenso. Un progetto nuovo nasce in **Test**, e in Test
+possono dare il consenso solo gli indirizzi elencati fra gli utenti di
+prova — al massimo **cento**.
+
+Due modi, e non sono equivalenti:
+
+| | Cosa fa | Il prezzo |
+|---|---|---|
+| **Utenti di test** | si aggiunge il proprio indirizzo e funziona subito | resta in Test |
+| **Pubblica app** | il progetto passa «in produzione» | **nessuna verifica**, con `drive.file` |
+
+La seconda è quella giusta, e per una ragione che non si vede il primo
+giorno: un progetto in stato **Test** riceve permessi **che scadono dopo
+sette giorni**. Un collegamento fatto oggi smette di funzionare la
+settimana prossima, in silenzio, e sembrerebbe un difetto nostro.
+
+E pubblicare qui **non costa niente e non chiede niente**: la verifica è
+obbligatoria per gli ambiti *sensibili* e *restricted*, e `drive.file` non è
+né l'uno né l'altro. È esattamente il motivo per cui la fase B1 vive dentro
+quell'ambito.
+
+Il pannello lo dice nelle sue istruzioni, perché è il muro contro cui
+sbatte chiunque colleghi la prima volta.
+
 ### E per questo il client lo porta l'utente, non l'applicazione
 
 Non è un ripiego della misura: è la scelta. Un client OAuth dentro un

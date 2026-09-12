@@ -472,7 +472,17 @@ NSURL *MPCloudConsentURL(MPCloudService *service, NSString *redirect,
         @"Make a project, enable the Google Drive API, then Credentials ▸ "
         @"Create credentials ▸ OAuth client ID, of type Desktop app. Copy "
         @"the ID. There is no redirect address to register: a desktop "
-        @"client may come back to this Mac on any port.",
+        @"client may come back to this Mac on any port.\n\n"
+        @"Then press Publish app on the consent screen. It is the step "
+        @"everybody misses, and without it Google answers «this app has "
+        @"not completed verification and is only open to approved "
+        @"testers». Publishing asks for no verification here, because "
+        @"drive.file is not one of the scopes Google calls sensitive — and "
+        @"it matters for a second reason: while the project stays in "
+        @"testing, Google hands out permissions that expire after seven "
+        @"days, so a connection made today would quietly stop working next "
+        @"week. Adding yourself under Test users works too, with that same "
+        @"seven-day clock.",
         @"How to make a Google OAuth client");
 }
 
