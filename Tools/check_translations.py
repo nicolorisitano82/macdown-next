@@ -54,8 +54,12 @@ class Bundle:
         self.name = name
         self.sources = [os.path.join(ROOT, s) for s in sources]
         self.localizations = os.path.join(ROOT, localizations)
+        # A backslash may sit between the call and its string, and between
+        # two pieces of it: a localized string written inside a #define is
+        # continued that way, and those were the ones this went past.
         self.call = re.compile(
-            r'%s\s*\(\s*((?:@"(?:[^"\\]|\\.)*"\s*)+)' % call, re.S)
+            r'%s[\s\\]*\([\s\\]*((?:@"(?:[^"\\]|\\.)*"[\s\\]*)+)' % call,
+            re.S)
 
 
 BUNDLES = [
@@ -67,13 +71,15 @@ BUNDLES = [
            "plugins/Drawio/Localization", "MDLocalizedString"),
     Bundle("LoremIpsum.plugin", ["plugins/LoremIpsum"],
            "plugins/LoremIpsum/Localization", "LILocalizedString"),
+    Bundle("DocumentImport.plugin", ["plugins/DocumentImport"],
+           "plugins/DocumentImport/Localization", "DILocalized"),
 ]
 
-LITERAL = re.compile(r'@"((?:[^"\\]|\\.)*)"')
+LITERAL = re.compile(r'@"((?:[^"\\]|\\.)*)"', re.S)
 
 # Any localized call at all, for finding the strings that are in none.
 ANY_CALL = re.compile(
-    r'\w*LocalizedString\w*\s*\(\s*(?:@"(?:[^"\\]|\\.)*"\s*)+', re.S)
+    r'\w*Localized\w*[\s\\]*\([\s\\]*(?:@"(?:[^"\\]|\\.)*"[\s\\]*)+', re.S)
 
 # A line written to a diary rather than shown in the interface. The action
 # log and the plug-in's log are diagnostics, in one language on purpose:
@@ -116,6 +122,11 @@ TECHNICAL = {
 
 
 def unescape(text):
+    # A backslash at the end of a line is the preprocessor's, not the
+    # string's: it joins the two lines and leaves nothing behind, so the key
+    # the compiler ends up with — and the one a .strings file must carry —
+    # has neither the backslash nor the newline.
+    text = re.sub(r"\\\n", "", text)
     return (text.replace('\\"', '"').replace("\\n", "\n")
             .replace("\\t", "\t").replace("\\\\", "\\"))
 

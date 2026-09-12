@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<office:document-content
+  xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
+  xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0"
+  xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"
+  xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0"
+  xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0"
+  xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0"
+  xmlns:xlink="http://www.w3.org/1999/xlink">
+ <office:automatic-styles>
+  <style:style style:name="T1" style:family="text"><style:text-properties fo:font-weight="bold"/></style:style>
+  <style:style style:name="T2" style:family="text"><style:text-properties fo:font-style="italic"/></style:style>
+  <style:style style:name="T3" style:family="text"><style:text-properties style:text-line-through-style="solid"/></style:style>
+  <style:style style:name="T4" style:family="text"><style:text-properties style:font-name="Courier New"/></style:style>
+  <text:list-style style:name="L1"><text:list-level-style-bullet text:level="1"/></text:list-style>
+  <text:list-style style:name="L2"><text:list-level-style-number text:level="1"/></text:list-style>
+ </office:automatic-styles>
+ <office:body><office:text>
+  <text:h text:outline-level="1">Verbale della riunione</text:h>
+  <text:p>Presenti: <text:span text:style-name="T1">Anna</text:span>, <text:span text:style-name="T2">Bruno</text:span>.</text:p>
+  <text:h text:outline-level="2">Decisioni</text:h>
+  <text:list text:style-name="L1">
+   <text:list-item><text:p>Si adotta il formato Markdown</text:p>
+    <text:list><text:list-item><text:p>anche per i verbali</text:p></text:list-item></text:list>
+   </text:list-item>
+  </text:list>
+  <text:list text:style-name="L2">
+   <text:list-item><text:p>Primo passo</text:p></text:list-item>
+   <text:list-item><text:p>Secondo passo</text:p></text:list-item>
+  </text:list>
+  <text:p>Vedi il <text:a xlink:href="https://esempio.it/progetto.md">documento di progetto</text:a>, e <text:span text:style-name="T3">questo no</text:span>, e <text:span text:style-name="T4">codice()</text:span>.</text:p>
+  <table:table table:name="Tabella1">
+   <table:table-row><table:table-cell><text:p>Sottosistema</text:p></table:table-cell><table:table-cell><text:p>Stato</text:p></table:table-cell></table:table-row>
+   <table:table-row><table:table-cell><text:p>Acquisizione</text:p></table:table-cell><table:table-cell><text:p>pronto</text:p></table:table-cell></table:table-row>
+  </table:table>
+  <text:p text:style-name="Quotations">La misura che conta non è quanto va veloce.</text:p>
+  <text:p><draw:frame draw:name="schema della rete"><draw:image xlink:href="Pictures/rete.png"/></draw:frame></text:p>
+ </office:text></office:body>
+</office:document-content>

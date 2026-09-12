@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D1B000000000000000000002 /* DocumentImport.m in Sources */ = {isa = PBXBuildFile; fileRef = D1B00000000000000000000A /* DocumentImport.m */; };
+		D1B000000000000000000003 /* MDOfficeImport.m in Sources */ = {isa = PBXBuildFile; fileRef = D1B00000000000000000000C /* MDOfficeImport.m */; };
+		D1B000000000000000000004 /* en.lproj in Resources */ = {isa = PBXBuildFile; fileRef = D1B00000000000000000000E /* en.lproj */; };
+		D1B000000000000000000005 /* it-IT.lproj in Resources */ = {isa = PBXBuildFile; fileRef = D1B00000000000000000000F /* it-IT.lproj */; };
+		D1B000000000000000000006 /* DocumentImport.plugin in Embed Plug-ins */ = {isa = PBXBuildFile; fileRef = D1B000000000000000000001 /* DocumentImport.plugin */; };
 		D2C000000000000000000052 /* MPInstructionsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C000000000000000000051 /* MPInstructionsViewController.m */; };
 		D2C000000000000000000042 /* MPInstructionFiles.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C000000000000000000041 /* MPInstructionFiles.m */; };
 		D2C000000000000000000044 /* MPInstructionFilesTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C000000000000000000043 /* MPInstructionFilesTests.m */; };
@@ -237,6 +242,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		D1B000000000000000000033 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1FA6DE191941CC9E000409FB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D1B000000000000000000028;
+			remoteInfo = DocumentImport;
+		};
 		D2B0000000000000000000F0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1FA6DE191941CC9E000409FB /* Project object */;
@@ -296,6 +308,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				D1A0000000000000000000B9 /* Drawio.plugin in Embed Plug-ins */,
+				D1B000000000000000000006 /* DocumentImport.plugin in Embed Plug-ins */,
 				D2B0000000000000000000BC /* MacDownQuickLook.appex in Embed Plug-ins */,
 			);
 			name = "Embed Plug-ins";
@@ -326,6 +339,13 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D1B000000000000000000001 /* DocumentImport.plugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DocumentImport.plugin; sourceTree = BUILT_PRODUCTS_DIR; };
+		D1B00000000000000000000A /* DocumentImport.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DocumentImport.m; sourceTree = "<group>"; };
+		D1B00000000000000000000B /* MDOfficeImport.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MDOfficeImport.h; sourceTree = "<group>"; };
+		D1B00000000000000000000C /* MDOfficeImport.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MDOfficeImport.m; sourceTree = "<group>"; };
+		D1B00000000000000000000D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D1B00000000000000000000E /* en.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = en.lproj; path = Localization/en.lproj; sourceTree = "<group>"; };
+		D1B00000000000000000000F /* it-IT.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "it-IT.lproj"; path = "Localization/it-IT.lproj"; sourceTree = "<group>"; };
 		D2C000000000000000000050 /* MPInstructionsViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPInstructionsViewController.h; sourceTree = "<group>"; };
 		D2C000000000000000000051 /* MPInstructionsViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPInstructionsViewController.m; sourceTree = "<group>"; };
 		D2C000000000000000000040 /* MPInstructionFiles.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPInstructionFiles.h; sourceTree = "<group>"; };
@@ -938,6 +958,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D1B000000000000000000014 /* DocumentImport */ = {
+			isa = PBXGroup;
+			children = (
+				D1B00000000000000000000A /* DocumentImport.m */,
+				D1B00000000000000000000B /* MDOfficeImport.h */,
+				D1B00000000000000000000C /* MDOfficeImport.m */,
+				D1B00000000000000000000E /* en.lproj */,
+				D1B00000000000000000000F /* it-IT.lproj */,
+				D1B00000000000000000000D /* Info.plist */,
+			);
+			name = DocumentImport;
+			path = plugins/DocumentImport;
+			sourceTree = "<group>";
+		};
 		D2B0000000000000000000C0 /* QuickLook */ = {
 			isa = PBXGroup;
 			children = (
@@ -1292,6 +1326,7 @@
 			children = (
 				1F8A83551953453100B6BF69 /* Dependency */,
 				D1A0000000000000000000D1 /* Drawio */,
+				D1B000000000000000000014 /* DocumentImport */,
 				D2B0000000000000000000C0 /* QuickLook */,
 				1FCDC9EB1944F89B00B1F966 /* MacDown */,
 				1FCDCA2F1944F96E00B1F966 /* MacDownTests */,
@@ -1308,6 +1343,7 @@
 			isa = PBXGroup;
 			children = (
 				D1A0000000000000000000C9 /* Drawio.plugin */,
+				D1B000000000000000000001 /* DocumentImport.plugin */,
 				1FA6DE211941CC9E000409FB /* MacDown.app */,
 				D2B0000000000000000000A6 /* MacDownQuickLook.appex */,
 				1FA6DE451941CC9E000409FB /* MacDownTests.xctest */,
@@ -1511,6 +1547,22 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		D1B000000000000000000028 /* DocumentImport */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D1B000000000000000000029 /* Build configuration list for PBXNativeTarget "DocumentImport" */;
+			buildPhases = (
+				D1B00000000000000000001E /* Sources */,
+				D1B00000000000000000001F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DocumentImport;
+			productName = DocumentImport;
+			productReference = D1B000000000000000000001 /* DocumentImport.plugin */;
+			productType = "com.apple.product-type.bundle";
+		};
 		D2B0000000000000000000E0 /* MacDownQuickLook */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D2B0000000000000000000E1 /* Build configuration list for PBXNativeTarget "MacDownQuickLook" */;
@@ -1565,6 +1617,7 @@
 				905EF1B5196164DD00FC3CE9 /* PBXTargetDependency */,
 				1FE2197819534A5D00DB931F /* PBXTargetDependency */,
 				D1A0000000000000000000F1 /* PBXTargetDependency */,
+				D1B000000000000000000032 /* PBXTargetDependency */,
 				D2B0000000000000000000F1 /* PBXTargetDependency */,
 				1F0D9E01000000000000019C /* PBXTargetDependency */,
 			);
@@ -1690,6 +1743,7 @@
 			targets = (
 				1FA6DE201941CC9E000409FB /* MacDown */,
 				D1A0000000000000000000E1 /* Drawio */,
+				D1B000000000000000000028 /* DocumentImport */,
 				D2B0000000000000000000E0 /* MacDownQuickLook */,
 				1FA6DE441941CC9E000409FB /* MacDownTests */,
 				905EF1A6196164CA00FC3CE9 /* macdown-cmd */,
@@ -1699,6 +1753,15 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		D1B00000000000000000001F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D1B000000000000000000004 /* en.lproj in Resources */,
+				D1B000000000000000000005 /* it-IT.lproj in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D2B0000000000000000000D1 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1908,6 +1971,15 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		D1B00000000000000000001E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D1B000000000000000000002 /* DocumentImport.m in Sources */,
+				D1B000000000000000000003 /* MDOfficeImport.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D2B0000000000000000000D0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -2124,6 +2196,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		D1B000000000000000000032 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D1B000000000000000000028 /* DocumentImport */;
+			targetProxy = D1B000000000000000000033 /* PBXContainerItemProxy */;
+		};
 		D2B0000000000000000000F1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = D2B0000000000000000000E0 /* MacDownQuickLook */;
@@ -2503,6 +2580,56 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		D1B00000000000000000002A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = NO;
+				GCC_PREFIX_HEADER = "";
+				INFOPLIST_FILE = "plugins/DocumentImport/Info.plist";
+				MACH_O_TYPE = mh_bundle;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					Cocoa,
+					"-framework",
+					UniformTypeIdentifiers,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.nicolorisitano82.macdown.plugin.documentimport";
+				PRODUCT_NAME = DocumentImport;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = plugin;
+			};
+			name = Debug;
+		};
+		D1B00000000000000000002B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = NO;
+				GCC_PREFIX_HEADER = "";
+				INFOPLIST_FILE = "plugins/DocumentImport/Info.plist";
+				MACH_O_TYPE = mh_bundle;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					Cocoa,
+					"-framework",
+					UniformTypeIdentifiers,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.nicolorisitano82.macdown.plugin.documentimport";
+				PRODUCT_NAME = DocumentImport;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = plugin;
+			};
+			name = Release;
+		};
 		D2B0000000000000000000E2 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2973,6 +3100,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		D1B000000000000000000029 /* Build configuration list for PBXNativeTarget "DocumentImport" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D1B00000000000000000002A /* Debug */,
+				D1B00000000000000000002B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		D2B0000000000000000000E1 /* Build configuration list for PBXNativeTarget "MacDownQuickLook" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

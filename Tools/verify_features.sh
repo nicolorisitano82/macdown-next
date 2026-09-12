@@ -795,6 +795,59 @@ fi
 # with no translation shows the reader English inside an Italian menu. Both
 # are invisible to a build and to XCTest, so they are counted here.
 
+# ------------------------------------------------- importing a Word document
+
+# The conversion is asked about XML by the plug-in's own suite; here the
+# question is the one that suite cannot ask — whether the plug-in the
+# application actually ships opens a real archive.
+
+say "L'importazione di un documento"
+
+IMPORT="$APP/Contents/PlugIns/DocumentImport.plugin"
+ok "il plug-in viaggia nell'app" test -d "$IMPORT"
+ok "e non chiede di essere installato a parte" \
+    test -x "$IMPORT/Contents/MacOS/DocumentImport"
+ok "le sue voci stanno in Archivio, non nel menu dei plug-in" \
+    contains plugins/DocumentImport/DocumentImport.m "placesItsOwnMenuItem"
+
+ok "il convertitore risponde delle proprie prove" \
+    bash plugins/DocumentImport/tests/run.sh
+
+# A real .docx, built here: a zip with the parts Word writes. What the
+# plug-in does with it — unzip, read, convert — is what a person does.
+DOCX="$WORK/docx"
+mkdir -p "$DOCX/word/_rels" "$DOCX/_rels"
+cp plugins/DocumentImport/tests/word-document.xml "$DOCX/word/document.xml"
+cp plugins/DocumentImport/tests/word-rels.xml "$DOCX/word/_rels/document.xml.rels"
+cp plugins/DocumentImport/tests/word-numbering.xml "$DOCX/word/numbering.xml"
+printf '<?xml version="1.0"?><Relationships/>' > "$DOCX/_rels/.rels"
+(cd "$DOCX" && zip -q -r "$WORK/verbale.docx" .)
+
+ok "un .docx vero è un archivio che unzip apre" \
+    unzip -t "$WORK/verbale.docx"
+
+unzip -q -o "$WORK/verbale.docx" -d "$WORK/aperto" 2>/dev/null
+if command -v clang > /dev/null 2>&1 \
+        && clang -fobjc-arc -framework Foundation \
+            -I plugins/DocumentImport \
+            -o "$WORK/import-probe" \
+            plugins/DocumentImport/tests/harness.m \
+            plugins/DocumentImport/MDOfficeImport.m > /dev/null 2>&1; then
+    "$WORK/import-probe" --word "$WORK/aperto/word/document.xml" \
+        "$WORK/aperto/word/_rels/document.xml.rels" \
+        "$WORK/aperto/word/numbering.xml" > "$WORK/importato.md" 2>/dev/null
+    ok "e quello che ne esce è il documento, in Markdown" \
+        contains "$WORK/importato.md" "# Verbale della riunione"
+    ok "con gli elenchi ancora due" \
+        sh -c 'grep -q "^- Si adotta" "$0" && grep -q "^1\. Primo passo" "$0"' \
+        "$WORK/importato.md"
+    ok "e l'immagine collegata dove sarà scritta" \
+        contains "$WORK/importato.md" "](media/rete.png)"
+else
+    skip "la conversione di un .docx vero (clang non ha costruito l'arnese)"
+fi
+
+
 say "Traduzione"
 
 ok "ogni stringa inglese ha la sua traduzione italiana, e i nib pure" \
@@ -831,6 +884,9 @@ if clang -fobjc-arc -framework Foundation -o "$LOCALIZED" \
     ok "LoremIpsum.plugin porta le sue traduzioni" \
         "$LOCALIZED" plugins/LoremIpsum/LoremIpsum.plugin it-IT \
         "Insert Sample Text"
+    ok "DocumentImport.plugin porta le sue traduzioni" \
+        "$LOCALIZED" "$APP/Contents/PlugIns/DocumentImport.plugin" it-IT \
+        "Word Document (.docx)…"
 else
     skip "le traduzioni a runtime (clang non ha costruito l'arnese)"
 fi

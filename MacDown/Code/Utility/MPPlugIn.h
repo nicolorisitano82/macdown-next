@@ -29,6 +29,17 @@
  */
 @property (nonatomic, readonly) BOOL isExporter;
 
+/** Whether it has already given itself a place in the menus.
+ *
+ * The plug-ins menu is where a plug-in goes when it has nowhere better.
+ * One that imports a document belongs next to the one that exports it, in
+ * File, and once it is there the entry under Plug-ins is the same command
+ * written twice — which is also two places to look when it misbehaves. A
+ * plug-in says so by answering `-placesItsOwnMenuItem` with YES; it stays
+ * in the plug-in manager, where it can still be switched off.
+ */
+@property (nonatomic, readonly) BOOL placesItsOwnMenuItem;
+
 /// What the format is called, for an exporter; nil for anything else.
 - (NSString *)exportFormatName;
 /// The extension its files get, without the dot.

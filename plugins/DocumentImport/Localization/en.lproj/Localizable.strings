@@ -1,0 +1,27 @@
+/* DocumentImport */
+"Import Word and OpenDocument Files" = "Import Word and OpenDocument Files";
+"Choose the document to bring in" = "Choose the document to bring in";
+"Open a document first" = "Open a document first";
+"The text is put in where the cursor is, so there has to be a document with a cursor in it. A new one (⌘N) will do." = "The text is put in where the cursor is, so there has to be a document with a cursor in it. A new one (⌘N) will do.";
+"That document could not be read" = "That document could not be read";
+"That file could not be opened as an archive. A .docx and an .odt are zip files; this one is not." = "That file could not be opened as an archive. A .docx and an .odt are zip files; this one is not.";
+"There was nothing to bring in" = "There was nothing to bring in";
+"The document holds no text this plug-in knows how to read." = "The document holds no text this plug-in knows how to read.";
+"Brought in, with something left behind" = "Brought in, with something left behind";
+"the pictures: this document has never been saved, so there is nowhere beside it to put them" = "the pictures: this document has never been saved, so there is nowhere beside it to put them";
+"some of the pictures, which could not be written" = "some of the pictures, which could not be written";
+"<!-- picture not brought in -->" = "<!-- picture not brought in -->";
+"Import" = "Import";
+"Word Document (.docx)…" = "Word Document (.docx)…";
+"OpenDocument Text (.odt)…" = "OpenDocument Text (.odt)…";
+
+/* The folder the pictures go into, beside the document: the name of the
+   imported file and then this. */
+"%@-pictures" = "%@-pictures";
+
+/* What MDOfficeImport reports as left behind. The converter has no
+   bundle, so it says these in English and the plug-in looks them up
+   here — which is why nothing in the code asks for them by name. */
+"a picture whose file could not be found" = "a picture whose file could not be found";
+"the document could not be read as XML" = "the document could not be read as XML";
+"there is no text in this document" = "there is no text in this document";

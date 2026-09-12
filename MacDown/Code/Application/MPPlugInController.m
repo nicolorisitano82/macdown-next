@@ -55,6 +55,7 @@
 
     NSArray *disabled = [MPPreferences sharedInstance].disabledPlugIns;
     NSUInteger shown = 0;
+    NSUInteger elsewhere = 0;
     for (MPPlugIn *plugin in [self buildPlugIns])
     {
         if ([disabled containsObject:plugin.identifier])
@@ -64,6 +65,13 @@
         // panel out of a menu of things that act on the document now.
         if (plugin.isExporter)
             continue;
+        // And one that has put itself in File, or anywhere else, is
+        // already reachable: here it would be the same command twice.
+        if (plugin.placesItsOwnMenuItem)
+        {
+            elsewhere++;
+            continue;
+        }
         NSMenuItem *item = [menu addItemWithTitle:plugin.name
                                            action:@selector(invokePlugIn:)
                                     keyEquivalent:@""];
@@ -73,13 +81,17 @@
     }
 
     // An empty menu below the separator reads as broken, so say what is
-    // going on instead.
+    // going on instead — and «none active» would be a lie when the active
+    // ones are simply somewhere else.
     if (!shown)
     {
-        NSMenuItem *none = [menu addItemWithTitle:
-            NSLocalizedString(@"No plug-in is active",
-                              @"Shown when every plug-in is off or absent")
-                                           action:NULL keyEquivalent:@""];
+        NSString *what = elsewhere
+            ? NSLocalizedString(@"The active plug-ins have a place of their own",
+                                @"Shown when every plug-in lives in another menu")
+            : NSLocalizedString(@"No plug-in is active",
+                                @"Shown when every plug-in is off or absent");
+        NSMenuItem *none = [menu addItemWithTitle:what action:NULL
+                                    keyEquivalent:@""];
         none.enabled = NO;
     }
 }

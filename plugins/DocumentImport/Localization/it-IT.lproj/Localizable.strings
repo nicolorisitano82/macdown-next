@@ -1,0 +1,24 @@
+/* DocumentImport */
+"Import Word and OpenDocument Files" = "Importa file Word e OpenDocument";
+"Choose the document to bring in" = "Scegli il documento da portare dentro";
+"Open a document first" = "Prima apri un documento";
+"The text is put in where the cursor is, so there has to be a document with a cursor in it. A new one (⌘N) will do." = "Il testo va dove sta il cursore, quindi ci vuole un documento con dentro un cursore. Ne basta uno nuovo (⌘N).";
+"That document could not be read" = "Quel documento non si è potuto leggere";
+"That file could not be opened as an archive. A .docx and an .odt are zip files; this one is not." = "Quel file non si apre come archivio. Un .docx e un .odt sono file zip; questo no.";
+"There was nothing to bring in" = "Non c'era niente da portare dentro";
+"The document holds no text this plug-in knows how to read." = "Il documento non contiene testo che questo plug-in sappia leggere.";
+"Brought in, with something left behind" = "Portato dentro, con qualcosa rimasto fuori";
+"the pictures: this document has never been saved, so there is nowhere beside it to put them" = "le immagini: questo documento non è mai stato salvato, quindi non c'è un accanto dove metterle";
+"some of the pictures, which could not be written" = "alcune immagini, che non si sono potute scrivere";
+"<!-- picture not brought in -->" = "<!-- immagine non portata dentro -->";
+"Import" = "Importa";
+"Word Document (.docx)…" = "Documento Word (.docx)…";
+"OpenDocument Text (.odt)…" = "Testo OpenDocument (.odt)…";
+"%@-pictures" = "%@-immagini";
+
+/* What MDOfficeImport reports as left behind. The converter has no
+   bundle, so it says these in English and the plug-in looks them up
+   here — which is why nothing in the code asks for them by name. */
+"a picture whose file could not be found" = "un'immagine il cui file non si è trovato";
+"the document could not be read as XML" = "il documento non si è potuto leggere come XML";
+"there is no text in this document" = "in questo documento non c'è testo";

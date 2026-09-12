@@ -95,6 +95,14 @@
 }
 
 
+- (BOOL)placesItsOwnMenuItem
+{
+    if (![self.content respondsToSelector:@selector(placesItsOwnMenuItem)])
+        return NO;
+    return [self.content placesItsOwnMenuItem];
+}
+
+
 #pragma mark - Exporting
 
 - (BOOL)isExporter

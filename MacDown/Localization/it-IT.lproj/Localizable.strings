@@ -261,7 +261,9 @@
 "File not found at path:\n%@" = "Nessun file al percorso:\n%@";
 "Insert a link" = "Inserisci un collegamento";
 "Link to:" = "Collega a:";
+"MacDown can’t create a file for the clicked link because the current file is not saved anywhere yet. Save the current file somewhere to enable this feature." = "MacDown Next non può creare un file per il collegamento su cui hai fatto clic perché il documento non è ancora salvato da nessuna parte. Salvalo, e poi riprova.";
 "Only %@ of %@ arrived. Try again: what came down is kept and the download carries on from there." = "Sono arrivati solo %@ di %@. Riprova: quello che è sceso resta e lo scaricamento riparte da lì.";
+"Please check the path of your link is correct. Turn on “Automatically create link targets” If you want MacDown to create nonexistent link targets for you." = "Controlla che il percorso del collegamento sia giusto. Se vuoi che i file che non esistono vengano creati, accendi «Crea automaticamente file per link di destinazione» in Impostazioni ▸ Generale.";
 "Text:" = "Testo:";
 "The EPUB could not be built." = "L'EPUB non si è potuto costruire.";
 "The rendered document could not be turned into the XHTML an EPUB requires." = "Il documento reso non si è potuto trasformare nell'XHTML che un EPUB richiede.";
@@ -356,6 +358,7 @@
 /* Il menù dei plug-in */
 "Manage Plug-ins…" = "Gestisci plug-in…";
 "No plug-in is active" = "Nessun plug-in attivo";
+"The active plug-ins have a place of their own" = "I plug-in attivi hanno una voce loro nei menu";
 
 /* La finestra dei plug-in */
 "  · installed by you" = "  · installato da te";
