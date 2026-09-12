@@ -82,6 +82,13 @@ installato. E costa più di tutto il resto di questo progetto messo insieme.
 **Proposta: no.** Se un giorno servirà, servirà per un motivo che oggi non
 esiste.
 
+> **Superato.** Il motivo è arrivato — non dipendere da quello che qualcun
+> altro ha installato — e questa strada ha adesso un progetto suo:
+> [parlare ai servizi, senza le loro applicazioni](progetto-sync-servizi.md),
+> con i requisiti veri letti sulle documentazioni ufficiali invece che
+> stimati qui. Quello che è scritto qui sopra resta vero sul costo; quello
+> che è cambiato è che il costo è stato accettato.
+
 ### C. Git — *tenere una storia*
 
 Git non è la stessa cosa messa in un altro modo: è un'altra cosa. Dà quello

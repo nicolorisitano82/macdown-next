@@ -1,9 +1,23 @@
 # Roadmap: la sincronizzazione
 
-Il *perché* sta nel [progetto](progetto-sync.md), che ha già deciso le tre
+Il *perché* sta nel [progetto](progetto-sync.md), che aveva deciso le tre
 strade: vivere bene dentro un provider (**sì**), le API dei provider
 (**no**), git (**sì, dopo**). Questo file è il *come* e soprattutto
 **in che ordine**, scritto per essere eseguito.
+
+> **Cambiato in corsa.** È stato chiesto di **non dipendere dalle
+> applicazioni dei provider** e di parlare direttamente ai servizi. Quella
+> era la strada scartata, e adesso ha un progetto suo:
+> [parlare ai servizi](progetto-sync-servizi.md), con quello che comporta
+> davvero — gli ambiti di Google che sono *restricted* anche solo per
+> elencare una cartella, il PKCE di Dropbox, e iCloud che **non ha
+> un'API** e resta raggiungibile solo dalla cartella.
+>
+> Le tappe qui sotto **restano**, e non per affezione: sono l'unica strada
+> che funziona con iCloud, e valgono per chiunque il client ce l'abbia già.
+> Cambia il loro peso — non sono più tutta la sincronizzazione, sono la
+> metà che non chiede a nessuno di collegare un account. La metà nuova è
+> nelle fasi **B** dell'altro documento, e comincia da *leggere*.
 
 Ogni tappa dice quattro cose: **cosa si vede**, **cosa si scrive**, **come
 si prova**, e **quando è finita**. Una tappa che non ha tutte e quattro non
@@ -325,9 +339,16 @@ entrambi*, sul pannello che già confronta due documenti.
 
 ## L'ordine, in una riga
 
-**M0 → M1 → M2 → M3 → M4 → M5** è la parte che riguarda i provider, si può
-fermare in qualsiasi punto e ogni tappa da sola migliora qualcosa. **M6 →
-M7 → M8** è git, e comincia solo quando la prima metà è in uso.
+**M0 → M1 → M2 → M3 → M4 → M5** è la parte che riguarda le cartelle dei
+provider, si può fermare in qualsiasi punto e ogni tappa da sola migliora
+qualcosa. **M6 → M7 → M8** è git. **B1 → B5**, nell'[altro
+documento](progetto-sync-servizi.md), è parlare ai servizi senza le loro
+applicazioni.
+
+M1 e B1 non si ostacolano: la prima è una funzione che guarda un file, la
+seconda è un collegamento a Dropbox in sola lettura. Si possono fare in
+qualunque ordine, e M4 — contare quello che non si è potuto leggere — serve
+a tutte e due.
 
 Se si dovesse fare **una cosa sola**, è **M4**: è l'unica dove oggi
 l'applicazione può fare un danno vero — scaricare gigabyte che nessuno ha
