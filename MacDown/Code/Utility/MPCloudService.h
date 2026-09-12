@@ -30,6 +30,8 @@
 
 #import <Foundation/Foundation.h>
 
+#import "MPCloudLedger.h"
+
 
 /// Come è andato un collegamento.
 typedef NS_ENUM(NSUInteger, MPCloudLinkOutcome) {
@@ -169,6 +171,18 @@ typedef NS_ENUM(NSUInteger, MPCloudPick) {
 
 
 @interface MPCloudService (Documents)
+
+/** Cosa è cambiato da quando si è guardato l'ultima volta.
+ *
+ * La prima volta non c'è un «da quando»: si chiede al servizio il suo
+ * segnalibro di adesso, lo si mette a registro, e si risponde «niente si è
+ * mosso» — che è vero, e costa una chiamata invece dell'elenco di tutto.
+ *
+ * Dalla seconda in poi è il servizio a raccontare, e noi a contare. È
+ * questa la differenza fra una sincronizzazione e un carica-e-scarica.
+ */
+- (void)changesWithCompletion:(void (^)(MPCloudDelta *delta,
+                                        NSString *problem))done;
 
 /// I documenti che l'applicazione può vedere adesso. Nil e `problem`
 /// pieno quando il servizio ha detto di no.

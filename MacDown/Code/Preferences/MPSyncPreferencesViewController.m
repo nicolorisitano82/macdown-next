@@ -19,6 +19,8 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 @interface MPSyncPreferencesViewController ()
 
 @property (strong, nonatomic) NSSegmentedControl *picker;
+/// Cosa si è mosso all'ultima occhiata, detto a parole.
+@property (copy, nonatomic) NSString *movement;
 @property (strong, nonatomic) NSTextField *soon;
 @property (strong, nonatomic) NSTextField *explanation;
 @property (strong, nonatomic) NSTextField *howTitle;
@@ -273,10 +275,13 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     NSInteger visible = service.visibleInPlace;
     if (visible > 0)
     {
-        [self say:[NSString stringWithFormat:
+        NSString *line = [NSString stringWithFormat:
             NSLocalizedString(@"Connected, on «%@» — %ld documents in there.",
                 @"State: connected, the chosen folder and what is visible"),
-            place, (long)visible]];
+            place, (long)visible];
+        if (self.movement.length)
+            line = [line stringByAppendingFormat:@" %@", self.movement];
+        [self say:line];
     }
     else if (visible == 0)
     {
@@ -376,10 +381,23 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 - (void)check:(id)sender
 {
     self.checkButton.enabled = NO;
+    self.movement = nil;
     [self say:NSLocalizedString(@"Asking…",
         @"State while the service is being asked what it sees")];
-    [[self chosen] checkWithCompletion:^(NSString *problem) {
-        [self showState];
+
+    MPCloudService *service = [self chosen];
+    [service checkWithCompletion:^(NSString *problem) {
+        if (problem)
+        {
+            [self showState];
+            return;
+        }
+        // Due domande, una dietro l'altra: cosa si vede, e cosa si è
+        // mosso da quando si è guardato l'ultima volta.
+        [service changesWithCompletion:^(MPCloudDelta *delta, NSString *bad) {
+            self.movement = delta.summary;
+            [self showState];
+        }];
     }];
 }
 

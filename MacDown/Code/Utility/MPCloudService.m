@@ -5,6 +5,8 @@
 
 #import "MPCloudService.h"
 
+#import "MPCloudLedger.h"
+
 #import <AppKit/AppKit.h>
 #import <Security/Security.h>
 #import <netinet/in.h>
@@ -319,6 +321,9 @@ static NSDictionary *MPAcceptCallback(int listener)
 {
     MPKeychainWrite([self keychainAccount:@"refresh"], nil);
     self.problem = nil;
+    // Il registro è quello che sapevamo di un collegamento che non c'è
+    // più: tenerlo vorrebbe dire ricominciare con delle idee sbagliate.
+    [[MPCloudLedger ledgerFor:self.identifier] forget];
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     [defaults removeObjectForKey:[self defaultsKey:@"place"]];
     [defaults removeObjectForKey:[self defaultsKey:@"placeName"]];
@@ -1106,6 +1111,91 @@ NSString *MPConflictNameFor(NSString *name, NSDate *when)
         dispatch_async(dispatch_get_main_queue(), ^{
             if (done)
                 done(revision, conflict, problem);
+        });
+    });
+}
+
+@end
+
+
+#pragma mark - Il delta
+
+@implementation MPCloudService (Changes)
+
+- (void)changesWithCompletion:(void (^)(MPCloudDelta *, NSString *))done
+{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        MPCloudLedger *ledger = [MPCloudLedger ledgerFor:self.identifier];
+        NSString *problem = nil;
+        NSString *token = [self freshToken:&problem];
+        MPCloudDelta *delta = [[MPCloudDelta alloc] init];
+
+        if (token && [self.identifier isEqualToString:@"google"])
+        {
+            if (!ledger.startToken.length)
+            {
+                // Prima volta: si chiede il segnalibro e ci si ferma lì.
+                // Chiedere «cosa è cambiato dall'inizio dei tempi» a un
+                // servizio è un modo di farsi dare tutto per scoprire che
+                // non era cambiato niente.
+                NSMutableURLRequest *start = [NSMutableURLRequest requestWithURL:
+                    [NSURL URLWithString:
+                        @"https://www.googleapis.com/drive/v3/changes/"
+                        @"startPageToken"]];
+                NSDictionary *answer = MPSend(start, token, NULL);
+                if (answer[@"error"])
+                    problem = answer[@"error"][@"message"];
+                else
+                    ledger.startToken = answer[@"startPageToken"];
+                [ledger save];
+            }
+            else
+            {
+                // Il servizio racconta a pagine, e ogni pagina dice come
+                // chiedere la prossima. Si va avanti finché ne dà una.
+                NSString *page = ledger.startToken;
+                NSMutableArray *changes = [NSMutableArray array];
+                while (page.length && !problem)
+                {
+                    NSString *address = [NSString stringWithFormat:
+                        @"https://www.googleapis.com/drive/v3/changes"
+                        @"?pageToken=%@&pageSize=200"
+                        @"&fields=nextPageToken,newStartPageToken,"
+                        @"changes(fileId,removed,file(name,trashed,"
+                        @"headRevisionId))", page];
+                    NSMutableURLRequest *request =
+                        [NSMutableURLRequest requestWithURL:
+                            [NSURL URLWithString:address]];
+                    NSDictionary *answer = MPSend(request, token, NULL);
+                    if (answer[@"error"])
+                    {
+                        problem = answer[@"error"][@"message"];
+                        break;
+                    }
+                    [changes addObjectsFromArray:answer[@"changes"] ?: @[]];
+
+                    if ([answer[@"newStartPageToken"] length])
+                    {
+                        // Finito: il servizio dà il segnalibro nuovo, ed è
+                        // quello che va tenuto per la volta dopo.
+                        ledger.startToken = answer[@"newStartPageToken"];
+                        page = nil;
+                    }
+                    else
+                        page = answer[@"nextPageToken"];
+                }
+                if (!problem)
+                {
+                    delta = [ledger applyChanges:changes];
+                    [ledger save];
+                }
+            }
+        }
+
+        self.problem = problem;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (done)
+                done(problem ? nil : delta, problem);
         });
     });
 }

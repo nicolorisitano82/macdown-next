@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D2B20000000000000000000A /* MPCloudLedgerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B200000000000000000001 /* MPCloudLedgerTests.m */; };
+		D2B10000000000000000000A /* MPCloudLedger.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B100000000000000000002 /* MPCloudLedger.m */; };
 		D2A00000000000000000000A /* MPSyncPaneTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2A000000000000000000001 /* MPSyncPaneTests.m */; };
 		D1F000000000000000000014 /* MPCloudService.m in Sources */ = {isa = PBXBuildFile; fileRef = D1F000000000000000000002 /* MPCloudService.m */; };
 		D1F000000000000000000015 /* MPSyncPreferencesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = D1F000000000000000000004 /* MPSyncPreferencesViewController.m */; };
@@ -348,6 +350,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D2B200000000000000000001 /* MPCloudLedgerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudLedgerTests.m; sourceTree = "<group>"; };
+		D2B100000000000000000001 /* MPCloudLedger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPCloudLedger.h; sourceTree = "<group>"; };
+		D2B100000000000000000002 /* MPCloudLedger.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudLedger.m; sourceTree = "<group>"; };
 		D2A000000000000000000001 /* MPSyncPaneTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPSyncPaneTests.m; sourceTree = "<group>"; };
 		D1F000000000000000000001 /* MPCloudService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPCloudService.h; sourceTree = "<group>"; };
 		D1F000000000000000000002 /* MPCloudService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudService.m; sourceTree = "<group>"; };
@@ -1161,6 +1166,8 @@
 				7DA2311453239F0973310004 /* MPRemoteImageFetch.m */,
 				D1C000000000000000000001 /* MPAttributedSpans.h */,
 				D1C000000000000000000002 /* MPAttributedSpans.m */,
+				D2B100000000000000000001 /* MPCloudLedger.h */,
+				D2B100000000000000000002 /* MPCloudLedger.m */,
 				D1F000000000000000000001 /* MPCloudService.h */,
 				D1F000000000000000000002 /* MPCloudService.m */,
 				1F0D9E01000000000000F1 /* MPMarkdownText.h */,
@@ -1488,6 +1495,7 @@
 				D1C000000000000000000003 /* MPAttributedSpansTests.m */,
 				D1E000000000000000000001 /* MPSpanStylerTests.m */,
 				D2A000000000000000000001 /* MPSyncPaneTests.m */,
+				D2B200000000000000000001 /* MPCloudLedgerTests.m */,
 				1F0D9E0100000000000110 /* MPDiagramPromptTests.m */,
 				1F0D9E0100000000000120 /* MPCompareActionsTests.m */,
 				7DA2311453239F0973310062 /* MPActionLogTests.m */,
@@ -2112,6 +2120,7 @@
 				1F0D9D67194AC7CF008E1856 /* MPUtilities.m in Sources */,
 				1F0D9E0100000000000F2A /* MPMarkdownText.m in Sources */,
 				D1F000000000000000000014 /* MPCloudService.m in Sources */,
+				D2B10000000000000000000A /* MPCloudLedger.m in Sources */,
 				D1C00000000000000000000A /* MPAttributedSpans.m in Sources */,
 				852D523C1E260A6400BA7162 /* MPTerminalPreferencesViewController.m in Sources */,
 				1F0D9D78194AC7F7008E1856 /* MPHtmlPreferencesViewController.m in Sources */,
@@ -2187,6 +2196,7 @@
 				D1C00000000000000000000C /* MPAttributedSpansTests.m in Sources */,
 				D1E00000000000000000000A /* MPSpanStylerTests.m in Sources */,
 				D2A00000000000000000000A /* MPSyncPaneTests.m in Sources */,
+				D2B20000000000000000000A /* MPCloudLedgerTests.m in Sources */,
 				1F0D9E0100000000000111 /* MPDiagramPromptTests.m in Sources */,
 				1F0D9E0100000000000121 /* MPCompareActionsTests.m in Sources */,
 				F55A342A5A01CEBCC9F60055 /* MPActionLogTests.m in Sources */,

@@ -660,3 +660,10 @@
 "Drive did not answer." = "Drive non ha risposto.";
 "Choose a folder…" = "Scegli una cartella…";
 "Choose documents…" = "Scegli documenti…";
+
+/* Il delta */
+"nothing has moved" = "non si è mosso niente";
+"%lu new" = "%lu nuovi";
+"%lu changed" = "%lu cambiati";
+"%lu gone" = "%lu spariti";
+", " = ", ";
