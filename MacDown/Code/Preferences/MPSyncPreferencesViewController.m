@@ -271,12 +271,17 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     }
     else if (visible == 0)
     {
+        // Zero vuol dire due cose diverse e non sappiamo quale: una
+        // cartella vuota e una cartella i cui documenti non sono compresi
+        // nel permesso rispondono uguale. Dirne una sola sarebbe
+        // inventare, quindi si dicono tutte e due e si dice come saperlo.
         [self say:[NSString stringWithFormat:
             NSLocalizedString(
-                @"Connected, on «%@» — but nothing inside it is visible: "
-                @"choose the documents instead of the folder, or let this "
-                @"application make a folder of its own.",
-                @"State: the folder came across but not its contents"),
+                @"Connected, on «%@», and nothing is visible inside it — "
+                @"which means either that it is empty, or that documents "
+                @"already in there are not covered by the permission. To "
+                @"find out: put a file in it from Drive and press Check.",
+                @"State: the folder came across, and it looks empty"),
             place]];
     }
     else

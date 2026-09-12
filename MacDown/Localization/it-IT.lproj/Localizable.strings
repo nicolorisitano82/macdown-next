@@ -653,7 +653,7 @@
 "Open the Dropbox App Console…" = "Apri la App Console di Dropbox…";
 "Open the Google Cloud console…" = "Apri la console di Google Cloud…";
 "Connected, on «%@» — %ld documents in there." = "Collegato, su «%@» — %ld documenti là dentro.";
-"Connected, on «%@» — but nothing inside it is visible: choose the documents instead of the folder, or let this application make a folder of its own." = "Collegato, su «%@» — ma di quello che c'è dentro non si vede niente: scegli i documenti invece della cartella, oppure lascia che sia l'applicazione a farsene una.";
+"Connected, on «%@», and nothing is visible inside it — which means either that it is empty, or that documents already in there are not covered by the permission. To find out: put a file in it from Drive and press Check." = "Collegato, su «%@», e là dentro non si vede niente — che vuol dire una di due cose: o è vuota, o i documenti che c'erano già non sono compresi nel permesso. Per saperlo: mettici un file dalla pagina di Drive e premi Verifica.";
 "Check" = "Verifica";
 "Asking…" = "Sto chiedendo…";
 "The service did not answer." = "Il servizio non ha risposto.";
