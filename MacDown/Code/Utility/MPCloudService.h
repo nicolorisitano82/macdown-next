@@ -112,6 +112,23 @@ typedef NS_ENUM(NSUInteger, MPCloudLinkOutcome) {
 - (void)linkWithCompletion:(void (^)(MPCloudLinkOutcome outcome,
                                      NSString *message))done;
 
+/** Rinnova il permesso e richiede al servizio cosa si vede.
+ *
+ * Serve due volte: per sapere che il collegamento è ancora valido — un
+ * gettone dura ore, quello di rinnovo dura finché non lo si revoca — e per
+ * rifare la domanda che al primo giro può essere fallita per ragioni che
+ * non c'entrano con noi. La prima volta è successo: il permesso c'era e la
+ * Drive API non era attiva nel progetto, e senza questo l'applicazione
+ * sarebbe rimasta «collegata» senza vedere niente e senza dire perché.
+ *
+ * `done` arriva sulla coda principale, con il guaio in parole del servizio
+ * o nil se è andata.
+ */
+- (void)checkWithCompletion:(void (^)(NSString *problem))done;
+
+/// L'ultimo guaio, com'è stato detto dal servizio. Nil quando non ce n'è.
+@property (readonly, copy, nonatomic) NSString *problem;
+
 /// Dimentica tutto: gettoni fuori dal portachiavi, posto scelto via.
 /// L'ID client resta, che è l'unica cosa che non è un segreto.
 - (void)unlink;

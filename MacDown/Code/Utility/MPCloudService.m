@@ -164,6 +164,7 @@ static NSDictionary *MPAcceptCallback(int listener)
 
 @interface MPCloudService ()
 @property (assign, nonatomic) BOOL linking;
+@property (copy, nonatomic) NSString *problem;
 @end
 
 
@@ -294,10 +295,88 @@ static NSDictionary *MPAcceptCallback(int listener)
 - (void)unlink
 {
     MPKeychainWrite([self keychainAccount:@"refresh"], nil);
+    self.problem = nil;
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     [defaults removeObjectForKey:[self defaultsKey:@"place"]];
     [defaults removeObjectForKey:[self defaultsKey:@"placeName"]];
     [defaults removeObjectForKey:[self defaultsKey:@"visible"]];
+}
+
+
+#pragma mark La verifica, e il rinnovo che le serve
+
+/// Un gettone valido adesso, chiesto con quello di rinnovo. Sincrona: chi
+/// la chiama è già su una coda di fondo.
+- (NSString *)freshToken:(NSString **)outProblem
+{
+    NSString *refresh = MPKeychainRead([self keychainAccount:@"refresh"]);
+    if (!refresh.length)
+    {
+        if (outProblem)
+            *outProblem = NSLocalizedString(@"Not connected.",
+                                            @"State: no permission yet");
+        return nil;
+    }
+
+    NSMutableArray *fields = [NSMutableArray arrayWithArray:@[
+        [NSString stringWithFormat:@"client_id=%@", self.clientIdentifier],
+        [NSString stringWithFormat:@"refresh_token=%@", refresh],
+        @"grant_type=refresh_token",
+    ]];
+    NSString *secret = self.clientSecret;
+    if (secret.length)
+        [fields addObject:[NSString stringWithFormat:@"client_secret=%@",
+                           secret]];
+
+    NSMutableURLRequest *request =
+        [NSMutableURLRequest requestWithURL:self.tokenURL];
+    request.HTTPMethod = @"POST";
+    [request setValue:@"application/x-www-form-urlencoded"
+   forHTTPHeaderField:@"Content-Type"];
+    request.HTTPBody = [[fields componentsJoinedByString:@"&"]
+        dataUsingEncoding:NSUTF8StringEncoding];
+
+    __block NSData *got = nil;
+    dispatch_semaphore_t done = dispatch_semaphore_create(0);
+    [[[NSURLSession sharedSession] dataTaskWithRequest:request
+        completionHandler:^(NSData *body, NSURLResponse *r, NSError *e) {
+        got = body;
+        dispatch_semaphore_signal(done);
+    }] resume];
+    dispatch_semaphore_wait(done, dispatch_time(DISPATCH_TIME_NOW,
+                                                30 * NSEC_PER_SEC));
+    NSDictionary *tokens = got
+        ? [NSJSONSerialization JSONObjectWithData:got options:0 error:NULL] : nil;
+    if (![tokens isKindOfClass:[NSDictionary class]]
+            || !tokens[@"access_token"])
+    {
+        if (outProblem)
+            *outProblem = tokens[@"error_description"] ?: tokens[@"error"]
+                ?: NSLocalizedString(@"The service did not answer.",
+                        @"The token endpoint gave nothing back");
+        return nil;
+    }
+    return tokens[@"access_token"];
+}
+
+
+/// Quello che il servizio risponde a «cosa vedi». Nelle sottoclassi.
+- (NSString *)lookAroundWithToken:(NSString *)token { return nil; }
+
+
+- (void)checkWithCompletion:(void (^)(NSString *))done
+{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSString *problem = nil;
+        NSString *token = [self freshToken:&problem];
+        if (token)
+            problem = [self lookAroundWithToken:token];
+        self.problem = problem;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (done)
+                done(problem);
+        });
+    });
 }
 
 
@@ -545,6 +624,8 @@ NSURL *MPCloudConsentURL(MPCloudService *service, NSString *redirect,
 
 /// Una GET aspettata: siamo su una coda di fondo, e questo pezzo di
 /// collegamento è fatto di tre domande in fila.
+/// La risposta del servizio, o nil. L'errore non si inghiotte: sta dentro
+/// il dizionario, con le sue parole, ed è il chiamante a decidere.
 static NSDictionary *MPGet(NSString *address, NSString *token)
 {
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:
@@ -564,6 +645,60 @@ static NSDictionary *MPGet(NSString *address, NSString *token)
     id parsed = got ? [NSJSONSerialization JSONObjectWithData:got options:0
                                                         error:NULL] : nil;
     return [parsed isKindOfClass:[NSDictionary class]] ? parsed : nil;
+}
+
+
+/** Cosa vede l'applicazione, adesso, con il permesso che ha.
+ *
+ * Con `drive.file` l'universo visibile è piccolo per costruzione — quello
+ * che l'app ha creato e quello che le è stato passato — quindi chiederlo
+ * tutto è una domanda sola e onesta. Se fra quelle cose c'è una cartella,
+ * si guarda dentro: è la domanda di B0.
+ */
+- (NSString *)lookAroundWithToken:(NSString *)token
+{
+    NSDictionary *all = MPGet(
+        @"https://www.googleapis.com/drive/v3/files"
+        @"?q=trashed%20%3D%20false&fields=files(id,name,mimeType)&pageSize=100",
+        token);
+    if (all[@"error"])
+        return all[@"error"][@"message"];
+    if (!all)
+        return NSLocalizedString(@"Drive did not answer.",
+                                 @"The Drive API gave nothing back");
+
+    NSDictionary *folder = nil;
+    for (NSDictionary *file in all[@"files"])
+    {
+        if ([file[@"mimeType"]
+                isEqualToString:@"application/vnd.google-apps.folder"])
+        {
+            folder = file;
+            break;
+        }
+    }
+    if (!folder)
+    {
+        // Nessuna cartella fra le cose passate: il posto sono i file
+        // stessi, ed è già una risposta.
+        NSArray *files = all[@"files"];
+        [self rememberPlace:@"" named:@""];
+        [self rememberVisible:(NSInteger)files.count];
+        return nil;
+    }
+
+    [self rememberPlace:folder[@"id"] named:folder[@"name"]];
+    NSString *query = [[NSString stringWithFormat:
+        @"'%@' in parents and trashed = false", folder[@"id"]]
+        stringByAddingPercentEncodingWithAllowedCharacters:
+            [NSCharacterSet URLQueryAllowedCharacterSet]];
+    NSDictionary *children = MPGet([NSString stringWithFormat:
+        @"https://www.googleapis.com/drive/v3/files?q=%@"
+        @"&fields=files(id)&pageSize=100", query], token);
+    if (children[@"error"])
+        return children[@"error"][@"message"];
+    [self rememberVisible:(NSInteger)[children[@"files"] count]];
+    return nil;
 }
 
 

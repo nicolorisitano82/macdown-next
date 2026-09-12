@@ -32,6 +32,7 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 @property (strong, nonatomic) NSTextField *stateLabel;
 @property (strong, nonatomic) NSButton *linkButton;
 @property (strong, nonatomic) NSButton *unlinkButton;
+@property (strong, nonatomic) NSButton *checkButton;
 @property (strong, nonatomic) NSTextField *scopeNote;
 @property (strong, nonatomic) NSStackView *clientRow;
 @property (strong, nonatomic) NSStackView *secretRow;
@@ -115,6 +116,9 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     self.unlinkButton = [NSButton buttonWithTitle:NSLocalizedString(
         @"Disconnect", @"Forgets the tokens of a service")
         target:self action:@selector(unlink:)];
+    self.checkButton = [NSButton buttonWithTitle:NSLocalizedString(
+        @"Check", @"Asks the service what it can see, again")
+        target:self action:@selector(check:)];
     self.scopeNote = [self paragraph:@""];
 
     self.clientRow = [NSStackView stackViewWithViews:
@@ -128,7 +132,7 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     self.secretRow.spacing = 8.0;
 
     self.buttons = [NSStackView stackViewWithViews:
-        @[self.linkButton, self.unlinkButton]];
+        @[self.linkButton, self.checkButton, self.unlinkButton]];
     self.buttons.orientation = NSUserInterfaceLayoutOrientationHorizontal;
     self.buttons.spacing = 10.0;
 
@@ -223,6 +227,16 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
         return;
     }
     self.unlinkButton.enabled = service.isLinked;
+    self.checkButton.enabled = service.isLinked;
+
+    // Il guaio, con le parole del servizio: «la Drive API non è attiva in
+    // questo progetto» è una frase che si risolve in un clic, e nasconderla
+    // lascerebbe un'applicazione collegata che non vede niente.
+    if (service.isLinked && service.problem.length)
+    {
+        self.stateLabel.stringValue = service.problem;
+        return;
+    }
     if (!service.isLinked)
     {
         self.stateLabel.stringValue = NSLocalizedString(
@@ -303,9 +317,16 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 
     [[self chosen] linkWithCompletion:
      ^(MPCloudLinkOutcome outcome, NSString *message) {
+        if (outcome == MPCloudLinkDone)
+        {
+            // Collegati non vuol dire che si veda qualcosa: si chiede
+            // subito, ed è anche la misura di B0.
+            [self check:nil];
+            return;
+        }
         [self showState];
-        if (outcome == MPCloudLinkDone || outcome == MPCloudLinkCancelled)
-            return;             // riuscito, o chiuso: non è successo niente
+        if (outcome == MPCloudLinkCancelled)
+            return;             // chiusa la finestra: non è successo niente
 
         // Le parole del servizio, non le nostre: «client sbagliato» e
         // «permesso negato» si distinguono solo così.
@@ -315,6 +336,17 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
             @"Title of the alert when linking a service fails");
         alert.informativeText = message ?: @"";
         [alert runModal];
+    }];
+}
+
+
+- (void)check:(id)sender
+{
+    self.checkButton.enabled = NO;
+    self.stateLabel.stringValue = NSLocalizedString(
+        @"Asking…", @"State while the service is being asked what it sees");
+    [[self chosen] checkWithCompletion:^(NSString *problem) {
+        [self showState];
     }];
 }
 

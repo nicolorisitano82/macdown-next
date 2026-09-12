@@ -654,3 +654,7 @@
 "Open the Google Cloud console…" = "Apri la console di Google Cloud…";
 "Connected, on «%@» — %ld documents in there." = "Collegato, su «%@» — %ld documenti là dentro.";
 "Connected, on «%@» — but nothing inside it is visible: choose the documents instead of the folder, or let this application make a folder of its own." = "Collegato, su «%@» — ma di quello che c'è dentro non si vede niente: scegli i documenti invece della cartella, oppure lascia che sia l'applicazione a farsene una.";
+"Check" = "Verifica";
+"Asking…" = "Sto chiedendo…";
+"The service did not answer." = "Il servizio non ha risposto.";
+"Drive did not answer." = "Drive non ha risposto.";
