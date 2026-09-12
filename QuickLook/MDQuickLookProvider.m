@@ -11,6 +11,7 @@
 #import "MDDiagramRenderer.h"
 #import "MDPreviewPage.h"
 #import "MDQuickLookStrings.h"
+#import "MPAttributedSpans.h"
 
 #include "document.h"
 #include "html.h"
@@ -84,6 +85,9 @@ static NSString *MDRenderedWith(hoedown_renderer *renderer, NSData *utf8,
 /// Markdown turned into HTML, the body only.
 static NSString *MDBodyForMarkdown(NSString *markdown, int extensions)
 {
+    // The same rewriting the application does before it parses, so that a
+    // coloured word is coloured in the Finder as well as in the editor.
+    markdown = MPMarkdownWithAttributedSpans(markdown);
     NSData *utf8 = [markdown dataUsingEncoding:NSUTF8StringEncoding];
     if (!utf8.length)
         return @"";

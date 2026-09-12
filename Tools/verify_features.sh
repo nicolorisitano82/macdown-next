@@ -795,6 +795,49 @@ fi
 # with no translation shows the reader English inside an Italian menu. Both
 # are invisible to a build and to XCTest, so they are counted here.
 
+# ------------------------------------------------------ colour, and the rest
+
+# `[testo]{...}` is rewritten before the parser sees it. Two things are
+# worth checking on the built products rather than in XCTest: that the
+# Finder extension carries the same rewriting as the application — a
+# colour that shows in the editor and not in the preview is the kind of
+# difference nobody notices until somebody else opens the file — and that
+# what it refuses is still refused.
+
+say "Il colore delle parole"
+
+ok "l'applicazione porta la riscrittura" \
+    sh -c 'nm -u "$0" > /dev/null 2>&1;
+           nm "$0" 2>/dev/null | grep -q MPMarkdownWithAttributedSpans' \
+    "$APP/Contents/MacOS/MacDown Next"
+ok "e l'estensione dell'anteprima la stessa" \
+    sh -c 'nm "$0" 2>/dev/null | grep -q MPMarkdownWithAttributedSpans' \
+    "$APPEX/Contents/MacOS/MacDownQuickLook"
+ok "il menu contestuale offre di scegliere un colore" \
+    contains MacDown/Code/View/MPEditorView.m "chooseColourForSelection:"
+
+if clang -fobjc-arc -framework Foundation \
+         -I MacDown/Code/Utility -o "$WORK/spans" \
+         Tools/spans_probe.m MacDown/Code/Utility/MPAttributedSpans.m \
+         MacDown/Code/Utility/MPMarkdownText.m > /dev/null 2>&1; then
+    ok "una parola col colore diventa una span" \
+        sh -c '[ "$("$0" "Una [parola]{style=\"color:#c00\"} qui")" \
+               = "Una <span style=\"color:#c00\">parola</span> qui" ]' \
+        "$WORK/spans"
+    ok "un gestore di eventi resta scritto, non diventa niente" \
+        sh -c '[ "$("$0" "[x]{onclick=\"alert(1)\"}")" \
+               = "[x]{onclick=\"alert(1)\"}" ]' "$WORK/spans"
+    ok "uno stile che andrebbe a prendere qualcosa neanche" \
+        sh -c '[ "$("$0" "[x]{style=\"background:url(http://e.it)\"}")" \
+               = "[x]{style=\"background:url(http://e.it)\"}" ]' "$WORK/spans"
+    ok "un collegamento resta un collegamento" \
+        sh -c '[ "$("$0" "[testo](http://e.it)")" = "[testo](http://e.it)" ]' \
+        "$WORK/spans"
+else
+    skip "la riscrittura provata a parte (clang non ha costruito l'arnese)"
+fi
+
+
 # ------------------------------------------------- importing a Word document
 
 # The conversion is asked about XML by the plug-in's own suite; here the

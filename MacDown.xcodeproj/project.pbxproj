@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D1C00000000000000000000A /* MPAttributedSpans.m in Sources */ = {isa = PBXBuildFile; fileRef = D1C000000000000000000002 /* MPAttributedSpans.m */; };
+		D1C00000000000000000000B /* MPAttributedSpans.m in Sources */ = {isa = PBXBuildFile; fileRef = D1C000000000000000000002 /* MPAttributedSpans.m */; };
+		D1C00000000000000000000C /* MPAttributedSpansTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D1C000000000000000000003 /* MPAttributedSpansTests.m */; };
+		D1C00000000000000000000D /* MPMarkdownText.m in Sources */ = {isa = PBXBuildFile; fileRef = 1F0D9E01000000000000F2 /* MPMarkdownText.m */; };
 		D1B000000000000000000002 /* DocumentImport.m in Sources */ = {isa = PBXBuildFile; fileRef = D1B00000000000000000000A /* DocumentImport.m */; };
 		D1B000000000000000000003 /* MDOfficeImport.m in Sources */ = {isa = PBXBuildFile; fileRef = D1B00000000000000000000C /* MDOfficeImport.m */; };
 		D1B000000000000000000004 /* en.lproj in Resources */ = {isa = PBXBuildFile; fileRef = D1B00000000000000000000E /* en.lproj */; };
@@ -339,6 +343,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D1C000000000000000000001 /* MPAttributedSpans.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPAttributedSpans.h; sourceTree = "<group>"; };
+		D1C000000000000000000002 /* MPAttributedSpans.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPAttributedSpans.m; sourceTree = "<group>"; };
+		D1C000000000000000000003 /* MPAttributedSpansTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPAttributedSpansTests.m; sourceTree = "<group>"; };
 		D1B000000000000000000001 /* DocumentImport.plugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DocumentImport.plugin; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1B00000000000000000000A /* DocumentImport.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DocumentImport.m; sourceTree = "<group>"; };
 		D1B00000000000000000000B /* MDOfficeImport.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MDOfficeImport.h; sourceTree = "<group>"; };
@@ -1139,6 +1146,8 @@
 				FD4A413A2D24286D41BAD8E9 /* MPTableSource.m */,
 				7DA2311453239F0973310003 /* MPRemoteImageFetch.h */,
 				7DA2311453239F0973310004 /* MPRemoteImageFetch.m */,
+				D1C000000000000000000001 /* MPAttributedSpans.h */,
+				D1C000000000000000000002 /* MPAttributedSpans.m */,
 				1F0D9E01000000000000F1 /* MPMarkdownText.h */,
 				1F0D9E01000000000000F2 /* MPMarkdownText.m */,
 				1F0D9D63194AC7CF008E1856 /* MPUtilities.h */,
@@ -1457,6 +1466,7 @@
 				7DA2311453239F0973310056 /* MPBacklinkTests.m */,
 				1F0D9E01000000000000F7 /* MPAgentsPanelTests.m */,
 				1F0D9E01000000000000FE /* MPDiffTests.m */,
+				D1C000000000000000000003 /* MPAttributedSpansTests.m */,
 				1F0D9E0100000000000110 /* MPDiagramPromptTests.m */,
 				1F0D9E0100000000000120 /* MPCompareActionsTests.m */,
 				7DA2311453239F0973310062 /* MPActionLogTests.m */,
@@ -1986,6 +1996,8 @@
 			files = (
 				D2B0000000000000000000B0 /* MDQuickLookProvider.m in Sources */,
 				D2B0000000000000000000B1 /* MDPreviewPage.m in Sources */,
+				D1C00000000000000000000B /* MPAttributedSpans.m in Sources */,
+				D1C00000000000000000000D /* MPMarkdownText.m in Sources */,
 				D2B0000000000000000001B0 /* MDDiagramRenderer.m in Sources */,
 				D2B0000000000000000000B2 /* autolink.c in Sources */,
 				D2B0000000000000000000B3 /* buffer.c in Sources */,
@@ -2076,6 +2088,7 @@
 				D0C1A1000000000000000033 /* MPSidebarController.m in Sources */,
 				1F0D9D67194AC7CF008E1856 /* MPUtilities.m in Sources */,
 				1F0D9E0100000000000F2A /* MPMarkdownText.m in Sources */,
+				D1C00000000000000000000A /* MPAttributedSpans.m in Sources */,
 				852D523C1E260A6400BA7162 /* MPTerminalPreferencesViewController.m in Sources */,
 				1F0D9D78194AC7F7008E1856 /* MPHtmlPreferencesViewController.m in Sources */,
 				1F0D9D7C194AC7F7008E1856 /* MPPreferences.m in Sources */,
@@ -2147,6 +2160,7 @@
 				F55A342A5A01CEBCC9F60051 /* MPBacklinkTests.m in Sources */,
 				1F0D9E0100000000000F7A /* MPAgentsPanelTests.m in Sources */,
 				1F0D9E0100000000000FEA /* MPDiffTests.m in Sources */,
+				D1C00000000000000000000C /* MPAttributedSpansTests.m in Sources */,
 				1F0D9E0100000000000111 /* MPDiagramPromptTests.m in Sources */,
 				1F0D9E0100000000000121 /* MPCompareActionsTests.m in Sources */,
 				F55A342A5A01CEBCC9F60055 /* MPActionLogTests.m in Sources */,
@@ -2640,7 +2654,10 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
 				GCC_PREFIX_HEADER = "";
-				HEADER_SEARCH_PATHS = "$(SRCROOT)/Dependency/hoedown/src";
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/Dependency/hoedown/src",
+					"$(SRCROOT)/MacDown/Code/Utility",
+				);
 				INFOPLIST_FILE = "QuickLook/Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.nicolorisitano82.macdown-debug.quicklook";
@@ -2671,7 +2688,10 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
 				GCC_PREFIX_HEADER = "";
-				HEADER_SEARCH_PATHS = "$(SRCROOT)/Dependency/hoedown/src";
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/Dependency/hoedown/src",
+					"$(SRCROOT)/MacDown/Code/Utility",
+				);
 				INFOPLIST_FILE = "QuickLook/Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.nicolorisitano82.macdown.quicklook";

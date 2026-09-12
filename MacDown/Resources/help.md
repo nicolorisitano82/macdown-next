@@ -245,6 +245,31 @@ Superscript         | hoge\^(fuga)     | hoge<sup>fuga</sup>   |
 Autolink            | http://t.co      | <http://t.co>         |
 Footnotes           | [\^4] and [\^4]: | [^4] and footnote 4   |
 
+### Colour, and anything else about a word
+
+Markdown says what a thing *is*, not how it looks, so it has no colour of
+its own. The two languages that grew out of it and do say it — Djot and
+Pandoc — spell it the same way, and so do I: the words in square brackets,
+the attributes in braces right after.
+
+```markdown
+Rosso: [acceso]{style="color:#c00"}, e [in classe]{.avviso}.
+```
+
+Select some words, right-click, and **Choose a Colour…** opens the colour
+panel and writes that for you. `.class` and `#id` work too, and need a
+style sheet of your own to do anything.
+
+Only attributes that *describe* are let through — `class`, `id`, `style`,
+`title`, `lang`, `dir` and `data-…`. An event handler is not one of them
+and stays on the page as you typed it, because a document is often
+somebody else's and the preview is a web view. The same goes for a style
+that would fetch something: `url(…)` and `@import` are dropped whole.
+
+Note that this is mine and Pandoc's and Djot's, not GitHub's: GitHub
+strips the `style` attribute, so a colour written in any spelling is
+invisible there.
+
 [^4]: You don't have to use a number. Arbitrary things like `[^footy note4]` and `[^footy note4]:` will also work. But they will *render* as numbered footnotes. Also, no need to keep your footnotes in order, I will sort out the order for you so they appear in the same order they were referenced in the text body. You can even keep some footnotes near where you referenced them, and collect others at the bottom of the file in the traditional place for footnotes. 
 
 

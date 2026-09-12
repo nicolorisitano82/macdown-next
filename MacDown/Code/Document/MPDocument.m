@@ -12,6 +12,7 @@
 #import <hoedown/html.h>
 #import "hoedown_html_patch.h"
 #import "HGMarkdownHighlighter.h"
+#import "MPAttributedSpans.h"
 #import "MPUtilities.h"
 #import "MPAutosaving.h"
 #import "NSColor+HTML.h"
@@ -238,6 +239,17 @@ NS_INLINE NSString *MPRectStringForAutosaveName(NSString *name)
 @property (nonatomic) NSUInteger hoverToken;
 /// How many the last tally found, so the menu item knows whether to offer.
 @property (assign, nonatomic) NSUInteger proseIssueCount;
+
+/** What the colour panel is working on.
+ *
+ * The panel is modeless and shared: it stays up while the pointer wanders
+ * round the wheel, and every stop is a new colour. So the words are
+ * remembered as they were written, and each colour rewrites *that* — one
+ * span at the end, not one for every shade passed through.
+ */
+@property (copy, nonatomic) NSString *colouringOriginal;
+/// Where in the document the span written so far is.
+@property (assign, nonatomic) NSRange colouringRange;
 
 typedef NS_ENUM(NSUInteger, MPWordCountType) {
     MPWordCountTypeWord,
@@ -1512,6 +1524,19 @@ static NSString * const kMPScrollReporterSource =
         [self.preview.configuration.userContentController
             removeAllScriptMessageHandlers];
 
+        // The colour panel keeps an unowned pointer to whoever it is
+        // acting for, and does not give it back — so who set it last is
+        // remembered here. A closed document is not somewhere to send a
+        // colour.
+        if (MPDocumentColouring() == self)
+        {
+            NSColorPanel *colours = [NSColorPanel sharedColorPanel];
+            colours.target = nil;
+            colours.action = NULL;
+            MPSetDocumentColouring(nil);
+        }
+        self.colouringOriginal = nil;
+
         [[NSNotificationCenter defaultCenter] removeObserver:self];
 
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -1969,6 +1994,8 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
     }
     if (action == @selector(linkToNewMarkdownFile:))
         return self.fileURL != nil && self.editor.selectedRange.length > 0;
+    if (action == @selector(chooseColourForSelection:))
+        return self.editor.selectedRange.length > 0 && !self.readOnly;
 
     // There is nothing to go back to when the file has gone: the command
     // stays offered, and says so rather than failing as a save.
@@ -5385,6 +5412,99 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
     // And there it is, in its own tab.
     [self openOrCreateFileForUrl:url];
 }
+
+#pragma mark - Colour
+
+/** Which document the shared colour panel is aimed at.
+ *
+ * NSColorPanel takes a target and never says what it is, so the one thing
+ * needed on the way out — «is it still me?» — has to be kept. Weak: a
+ * document that goes away leaves nil here, not a pointer to nothing.
+ */
+static __weak MPDocument *sColouringDocument = nil;
+
+NS_INLINE MPDocument *MPDocumentColouring(void) { return sColouringDocument; }
+NS_INLINE void MPSetDocumentColouring(MPDocument *document)
+{
+    sColouringDocument = document;
+}
+
+
+/// A colour as a document can carry it: six digits, lower case, and the
+/// same six every time so that a document does not change under version
+/// control because the panel came back in another colour space.
+NS_INLINE NSString *MPHexForColour(NSColor *colour)
+{
+    NSColor *rgb = [colour colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
+    if (!rgb)
+        return @"#000000";
+    return [NSString stringWithFormat:@"#%02lx%02lx%02lx",
+        (unsigned long)lround(rgb.redComponent * 255.0),
+        (unsigned long)lround(rgb.greenComponent * 255.0),
+        (unsigned long)lround(rgb.blueComponent * 255.0)];
+}
+
+
+/** Right-click ▸ «Choose a Colour…» over a selection.
+ *
+ * The panel is the system's own, which is the one everybody already knows;
+ * what this adds is where the answer goes — `[words]{style="color:…"}`,
+ * the spelling Djot and Pandoc agree on, which the preview turns into a
+ * span. Markdown has no colour of its own, so the alternative was raw HTML
+ * typed by hand.
+ */
+- (IBAction)chooseColourForSelection:(id)sender
+{
+    NSRange selection = self.editor.selectedRange;
+    if (!selection.length)
+        return;
+
+    self.colouringOriginal = [self.editor.string substringWithRange:selection];
+    self.colouringRange = selection;
+
+    NSColorPanel *panel = [NSColorPanel sharedColorPanel];
+    panel.showsAlpha = NO;      // a half-transparent word is not a colour
+    panel.target = self;
+    panel.action = @selector(colourChosen:);
+    MPSetDocumentColouring(self);
+    [panel orderFront:sender];
+}
+
+
+- (void)colourChosen:(NSColorPanel *)panel
+{
+    if (!self.colouringOriginal)
+        return;
+    // The panel is one and the documents are many, and it goes on sending
+    // colours to whoever asked last. A document that is not the one in
+    // front is not the one being coloured, whatever the panel remembers.
+    NSWindow *mine = self.windowControllers.firstObject.window;
+    NSWindow *front = [NSApp mainWindow];
+    if (mine && front && mine != front)
+        return;
+    NSRange range = self.colouringRange;
+    if (NSMaxRange(range) > self.editor.string.length)
+    {
+        // The document moved on — a paste, another window, an agent. The
+        // panel stays up; it simply stops writing into a place that is no
+        // longer the one that was picked.
+        self.colouringOriginal = nil;
+        return;
+    }
+
+    NSString *replacement = MPSpanColouring(self.colouringOriginal,
+                                            MPHexForColour(panel.color));
+    if (![self.editor shouldChangeTextInRange:range
+                            replacementString:replacement])
+        return;
+    [self.editor.textStorage replaceCharactersInRange:range
+                                           withString:replacement];
+    [self.editor didChangeText];
+
+    self.colouringRange = NSMakeRange(range.location, replacement.length);
+    self.editor.selectedRange = self.colouringRange;
+}
+
 
 - (IBAction)linkToNewMarkdownFile:(id)sender
 {

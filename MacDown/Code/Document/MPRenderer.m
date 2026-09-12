@@ -15,6 +15,7 @@
 #import "NSJSONSerialization+File.h"
 #import "NSObject+HTMLTabularize.h"
 #import "NSString+Lookup.h"
+#import "MPAttributedSpans.h"
 #import "MPUtilities.h"
 #import "MPAsset.h"
 #import "MPPreferences.h"
@@ -122,6 +123,11 @@ NS_INLINE NSString *MPHTMLFromMarkdown(
     NSString *text, int flags, BOOL smartypants, NSString *frontMatter,
     hoedown_renderer *htmlRenderer, hoedown_renderer *tocRenderer)
 {
+    // `[testo]{style="color:#c00"}` becomes a span before hoedown sees it:
+    // hoedown has never heard of attributes, and what it is handed instead
+    // is inline HTML, which it has always passed through. Both passes get
+    // the same text, so the table of contents says what the page says.
+    text = MPMarkdownWithAttributedSpans(text);
     NSData *inputData = [text dataUsingEncoding:NSUTF8StringEncoding];
     hoedown_document *document = hoedown_document_new(
         htmlRenderer, flags, kMPRendererNestingLevel);

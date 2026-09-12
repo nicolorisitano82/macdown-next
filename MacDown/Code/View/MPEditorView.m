@@ -727,7 +727,17 @@ NS_INLINE BOOL MPAreRectsEqual(NSRect r1, NSRect r2)
             action:@selector(linkToNewMarkdownFile:) keyEquivalent:@""];
         link.target = nil;
         [menu insertItem:link atIndex:0];
-        [menu insertItem:[NSMenuItem separatorItem] atIndex:1];
+
+        // The colour of the words, which Markdown itself does not have and
+        // the document says in the spelling the preview understands. Above
+        // the link because colouring is the commoner of the two, and with
+        // the target left nil so a read-only document can refuse it.
+        NSMenuItem *colour = [[NSMenuItem alloc] initWithTitle:
+            NSLocalizedString(@"Choose a Colour…", @"Editor context menu")
+            action:@selector(chooseColourForSelection:) keyEquivalent:@""];
+        colour.target = nil;
+        [menu insertItem:colour atIndex:0];
+        [menu insertItem:[NSMenuItem separatorItem] atIndex:2];
     }
 
     /* A diagram described in words, where the diagram is going to go.
