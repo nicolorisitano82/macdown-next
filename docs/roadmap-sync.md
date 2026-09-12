@@ -1,0 +1,283 @@
+# Roadmap: la sincronizzazione
+
+Il *perché* sta nel [progetto](progetto-sync.md), che ha già deciso le tre
+strade: vivere bene dentro un provider (**sì**), le API dei provider
+(**no**), git (**sì, dopo**). Questo file è il *come* e soprattutto
+**in che ordine**, scritto per essere eseguito.
+
+Ogni tappa dice quattro cose: **cosa si vede**, **cosa si scrive**, **come
+si prova**, e **quando è finita**. Una tappa che non ha tutte e quattro non
+è una tappa, è un desiderio.
+
+---
+
+## Prima di cominciare: quattro fatti, tre misurati
+
+**1. Una sola API per tutti.** Dropbox, Google Drive, OneDrive e iCloud su
+macOS moderno non sono cartelle magiche: sono **File Provider**, e i loro
+file rispondono alle stesse chiavi di `NSURL`. Misurato su questo Mac, un
+file dentro `~/Library/CloudStorage/OneDrive-…`:
+
+```
+NSURLIsUbiquitousItemKey                  1
+NSURLUbiquitousItemDownloadingStatusKey   …StatusCurrent
+NSURLUbiquitousItemIsUploadedKey          0
+```
+
+Niente SDK, niente OAuth, niente codice per provider.
+
+**2. Le chiavi possono non esserci, e il nome della cartella non prova
+niente.** Sempre su questo Mac ci sono **tre** cartelle chiamate
+`~/Library/CloudStorage/iCloudDrive-iCloudDrive (…)` — residui di migrazioni
+— e i file dentro rispondono `(niente)` a tutte e cinque le chiavi: sono
+cartelle locali con un nome che sembra cloud. Regola che ne esce:
+*chiave assente = non è in un provider*, non è un errore, e il percorso non
+è una prova.
+
+**3. Non possiamo chiedere al sistema l'elenco dei provider.**
+`NSFileProviderManager getDomainsWithCompletionHandler:` risponde, a chi non
+possiede un dominio suo: *«In questo momento non è possibile utilizzare
+l'applicazione»*, e zero domini. Misurato. Quindi si va per chiavi, file per
+file, e non c'è una lista da mostrare.
+
+**4. Da verificare, non misurato qui**: su questo Mac Dropbox e Google Drive
+**non sono installati**. Che rispondano le stesse chiavi è vero per
+costruzione — sono File Provider come OneDrive — ma non l'ho visto con i
+miei occhi. È la prima cosa da fare quando uno dei due c'è: la tappa **M0**.
+
+### La regola che tiene insieme tutta la parte «lettura»
+
+> **I metadati non costano, il contenuto sì.** Leggere le chiavi di un file
+> non lo scarica. **Aprirlo lo scarica.** Una ricerca a tutto testo su una
+> cartella di Google Drive, fatta ingenuamente, si porta giù la cartella
+> intera — gigabyte, sul contatore di qualcun altro, senza che nessuno
+> l'abbia chiesto.
+
+Da qui in poi ogni funzione che legge la cartella — ricerca, backlink,
+indice del server MCP, importazione — deve dire **quale delle due cose sta
+facendo**. È il filo rosso di M1, M4 e M5.
+
+---
+
+## M0 — Verificare su Dropbox e su Google Drive
+
+**Cosa si vede**: niente. È una misura.
+
+**Cosa si scrive**: niente. Si installa un client, si mette un file in una
+cartella, lo si toglie dal locale («rendi disponibile online»), e si
+leggono le chiavi con lo stesso arnese usato per OneDrive.
+
+**Come si prova**: da sé.
+
+**Quando è finita**: quando in questo file c'è una tabella con tre righe —
+Dropbox, Google Drive, OneDrive — e cosa risponde ognuno per un file
+scaricato e per uno che non lo è. Se uno dei tre risponde diverso, tutto il
+resto della roadmap cambia forma, ed è meglio saperlo adesso che a M4.
+
+## M1 — Sapere dove si è (una funzione pura)
+
+**Cosa si vede**: ancora niente.
+
+**Cosa si scrive**: `MPCloudStatus.{h,m}` — una funzione e un tipo:
+
+```objc
+typedef NS_ENUM(NSUInteger, MPCloudState) {
+    MPCloudStateLocal,        // non è in un provider, o non lo sappiamo
+    MPCloudStateDownloaded,   // c'è, ed è qui
+    MPCloudStateDownloading,  // sta arrivando
+    MPCloudStateNotLocal,     // esiste, ma i byte non ci sono
+    MPCloudStateUploading,    // salvato, non ancora partito
+};
+MPCloudState MPCloudStateOfURL(NSURL *url);
+```
+
+Dentro: `resourceValuesForKeys:` con le cinque chiavi, e la regola del
+fatto 2 — assente vuol dire `Local`. Nessuna finestra, nessuna rete,
+nessun download: **non tocca il contenuto**.
+
+**Come si prova**: le chiavi sono un dizionario, quindi la parte che decide
+si separa da quella che legge — `MPCloudStateFromValues(NSDictionary *)` — e
+si prova con una tabella di dizionari, compresi quelli vuoti e quelli
+contraddittori. Più un controllo nella suite su un file vero, che su questo
+Mac risponde `Local`.
+
+**Quando è finita**: quando i cinque stati hanno una prova ciascuno e
+`MPCloudStateOfURL` non apre mai un file.
+
+## M2 — Dirlo, in una riga
+
+**Cosa si vede**: sotto il titolo del documento, dove oggi c'è «nessuna
+segnalazione», una parola in più quando il file è dentro un provider: *in
+arrivo*, *non scaricato*, *da caricare*. Quando è tutto a posto, **niente**:
+un'applicazione che dice «sincronizzato» ogni tre secondi è rumore.
+
+**Cosa si scrive**: la riga nel controller del documento, e un
+`NSFilePresenter` che già c'è per i cambi sotto il documento — lo stato si
+aggiorna lì, non con un timer.
+
+**Come si prova**: la funzione che trasforma uno stato in una parola è pura
+e si prova da sola; il resto è un controllo nella suite che apre una
+finestra e legge l'etichetta, come si fa per il pannello del confronto.
+
+**Quando è finita**: quando aprire un documento locale non mostra niente di
+nuovo.
+
+## M3 — Aprire un documento che non è sceso
+
+Oggi: si apre **vuoto**, o con un errore secco. Misurato nel progetto:
+`NSURLFileSizeKey` è nullo per un segnaposto.
+
+**Cosa si vede**: invece del documento vuoto, un foglio che dice «questo
+documento non è ancora sceso da OneDrive», una barra che si muove, e
+**Annulla**. Quando arriva, si apre da solo.
+
+**Cosa si scrive**: `startDownloadingUbiquitousItemAtURL:error:`, e
+l'attesa: un `NSMetadataQuery` sul singolo file — è il modo documentato di
+sapere quando è arrivato — con un tetto di tempo e un annulla che funziona
+davvero.
+
+**Come si prova**: la logica dell'attesa (cosa fare a ogni cambio di stato,
+quando arrendersi) è una macchina a stati pura. Il download vero è una prova
+a mano, scritta nel diario, con un file messo «solo online» apposta.
+
+**Quando è finita**: quando aprire un file non locale non produce mai un
+documento vuoto. Quello è il difetto che stiamo togliendo.
+
+## M4 — Le funzioni che leggono tutta la cartella
+
+È la tappa che riguarda davvero **la lettura da Google Drive e Dropbox**, ed
+è la più delicata: ricerca, backlink, indice del server MCP e importazione
+oggi camminano una cartella e **aprono ogni file**.
+
+**Cosa si vede**: in fondo ai risultati, una riga onesta — *«12 documenti
+non sono ancora scesi e non sono stati cercati»*, con un pulsante
+**Scaricali** che li chiede e rifà la ricerca. Non «0 risultati», che è una
+bugia.
+
+**Cosa si scrive**:
+
+* una passata sola che, mentre cammina, chiede a ogni file **le chiavi** e
+  non il contenuto: i non-locali finiscono in un elenco a parte invece di
+  essere letti;
+* `MPFolderScan`, un risultato che porta con sé *quanti ne ha saltati*, e
+  che tutte e quattro le funzioni usano invece di camminare per conto loro;
+* nel **server MCP** la stessa cosa, e la sua risposta lo deve dire nel
+  testo: un assistente che riceve «nessun risultato» non ha modo di sapere
+  che mezza cartella era in cielo. Questo tocca `MDMCPIndex` e le sue prove.
+
+**Come si prova**: una cartella finta in cui alcuni file sono dichiarati
+non-locali da una funzione iniettata (non serve un provider per provare la
+*regola*); più una misura vera: quanti file apre una ricerca su N documenti,
+contata, prima e dopo. Deve passare da N a zero.
+
+**Quando è finita**: quando una ricerca su una cartella sincronizzata **non
+scarica niente**, e dice cosa non ha guardato.
+
+## M5 — Le copie in conflitto
+
+Ogni provider, quando due Mac scrivono lo stesso file, ne lascia due:
+`nota (copia in conflitto di Mac di Tizio).md`, `nota-conflicted copy.md`,
+`nota (1).md`. I nomi sono diversi per ognuno — è l'unica cosa per cui
+serve sapere **quale** provider è.
+
+**Cosa si vede**: quando accanto al documento aperto compare una copia in
+conflitto, una riga: *«è comparsa una copia in conflitto»* con **Confronta**
+— e il pannello del confronto, che c'è già dalla 0.34, si apre con i due.
+
+**Cosa si scrive**: il riconoscimento del nome (una funzione pura, un elenco
+di forme per provider, da riempire a M0), e l'aggancio al presenter che
+osserva la cartella.
+
+**Come si prova**: nomi veri in una tabella, e un controllo nella suite che
+mette un file dal nome giusto accanto a un documento aperto.
+
+**Quando è finita**: quando una copia in conflitto non passa più inosservata.
+
+---
+
+A questo punto **la parte provider è finita** e non abbiamo scritto una riga
+di sincronizzazione: abbiamo smesso di comportarci male dentro quella che
+c'è già. Le tappe che seguono sono la funzione vera, e sono un'altra cosa.
+
+---
+
+## M6 — Git, a comando
+
+**Cosa si vede**: un pannello con il ramo, quante modifiche non sono andate
+su, quante non sono scese, l'ultimo errore **con le parole di git**, e tre
+pulsanti: **Porta giù**, **Porta su**, **Storia di questo documento**.
+
+**Cosa si scrive**: nessuna libreria — si esegue `git`, con un ambiente
+dichiarato. Un lettore di `git status --porcelain=v2`, che è un formato
+pensato per essere letto da un programma; la costruzione del messaggio di
+commit; e il pannello.
+
+**Come si prova**: `git init --bare` in una cartella temporanea fa da
+server, due cloni fanno da due Mac. Senza rete, mezzo secondo a prova. È già
+stato fatto una volta per misurare il conflitto nel progetto.
+
+**Quando è finita**: quando i tre pulsanti funzionano su un repository vero
+e un errore di rete si legge per esteso invece di sparire.
+
+## M7 — Git, da solo
+
+**Cosa si vede**: la stessa cosa, senza premere niente: porta giù
+all'apertura, porta su dopo N minuti di quiete — **mai mentre si scrive**.
+
+**Cosa si scrive**: un temporizzatore che guarda l'ultima battitura, non
+l'orologio, e l'interruttore per spegnerlo.
+
+**Quando è finita**: dopo che M6 è in uso da un po'. Un automatismo che
+sbaglia lo si scopre dopo, e questa è la ragione per cui non è la prima
+tappa.
+
+## M8 — Il conflitto nell'editor
+
+**Cosa si vede**: due colonne, *tieni questo / tieni quello / tieni
+entrambi*, sul pannello che già confronta due documenti.
+
+**Quando è finita**: quando c'è qualcosa da mostrare, e non prima.
+
+---
+
+## Cosa non faremo (dal progetto, e vale qui)
+
+* Niente `push --force`, `reset --hard`, `rebase` automatico.
+* Niente cancellazioni fatte da noi.
+* Niente credenziali nostre: le chiede git, le tiene il portachiavi.
+* Niente merge inventato da noi.
+* Una cartella dichiarata, non tutta la home.
+* Un repository dentro un provider si può fare, ma **si avvisa**: Dropbox
+  che copia mentre git scrive dentro `.git` è il modo classico di rovinare
+  un repository.
+
+## L'ordine, in una riga
+
+**M0 → M1 → M2 → M3 → M4 → M5** è la parte che riguarda i provider, si può
+fermare in qualsiasi punto e ogni tappa da sola migliora qualcosa. **M6 →
+M7 → M8** è git, e comincia solo quando la prima metà è in uso.
+
+Se si dovesse fare **una cosa sola**, è **M4**: è l'unica dove oggi
+l'applicazione può fare un danno vero — scaricare gigabyte che nessuno ha
+chiesto — e l'unica dove oggi dice una cosa falsa, «nessun risultato», di
+una cartella che semplicemente non ha guardato.
+
+## Cosa resta da decidere
+
+1. **Lo stato lo mostriamo sempre o solo quando è interessante?** Propendo
+   per *solo quando è interessante*: niente etichetta quando il file è qui e
+   caricato.
+2. **Quando una ricerca trova documenti non scesi, li scarichiamo?**
+   Propendo per *mai da soli*: lo si dice e c'è il pulsante.
+3. **Il server MCP scarica?** Propendo per *no, mai*: è un processo senza
+   finestre che parla con un assistente, ed è l'ultimo posto dove far
+   partire un download di gigabyte. Dice quanti non ha guardato e basta.
+4. **M0 quando?** Serve un Mac con Dropbox o Google Drive installato. Finché
+   non c'è, M1 si scrive lo stesso — la funzione pura non cambia — ma M5 (i
+   nomi delle copie in conflitto) resta incompleta.
+
+---
+
+*Questa è una roadmap, non un diario: ogni tappa che si scrive porta qui i
+suoi numeri veri, e quando ci saranno tutti questo file diventerà il diario
+della sincronizzazione.*
