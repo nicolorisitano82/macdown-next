@@ -227,31 +227,8 @@ NS_INLINE void treat()
     NSString *text = document.markdown ?: @"";
     if (document.cloudIdentifier.length)
     {
-        [service writeDocument:document.cloudIdentifier text:text
-                  fromRevision:document.cloudRevision
-                    completion:^(NSString *revision, NSString *conflict,
-                                 NSString *problem) {
-            if (problem)
-            {
-                [self sayAboutTheCloud:NSLocalizedString(
-                    @"That document could not be written",
-                    @"Failure saving a document to a service") text:problem];
-                return;
-            }
-            if (conflict)
-            {
-                // Non si è sovrascritto niente: là fuori era cambiato.
-                [self sayAboutTheCloud:NSLocalizedString(
-                    @"Somebody else had written there first",
-                    @"A save landed as a conflict copy")
-                                  text:[NSString stringWithFormat:
-                    NSLocalizedString(@"What you had was written beside it, "
-                        @"as «%@». Nothing was overwritten.",
-                        @"Where the conflict copy went"), conflict]];
-                return;
-            }
-            document.cloudRevision = revision;
-        }];
+        // Viene già di là: ⌘S ci va da solo, e la voce non si offre.
+        [document saveToCloudWithCompletion:nil];
         return;
     }
 

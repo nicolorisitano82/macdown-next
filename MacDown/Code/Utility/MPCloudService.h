@@ -199,18 +199,34 @@ typedef NS_ENUM(NSUInteger, MPCloudPick) {
                  completion:(void (^)(MPCloudDocument *made,
                                       NSString *problem))done;
 
+/// Cosa fare quando la versione là fuori si è mossa.
+typedef NS_ENUM(NSUInteger, MPCloudOnMoved) {
+    /// Fermarsi e dirlo: la scelta è di chi sta scrivendo, non nostra.
+    MPCloudOnMovedAsk,
+    /// Scrivere accanto, senza toccare quello che c'è.
+    MPCloudOnMovedCopy,
+    /// Scrivere sopra: si è guardato cosa c'era e si è deciso così.
+    MPCloudOnMovedOverwrite,
+};
+
+
 /** Riscrive un documento, ma solo se là fuori è ancora quello di prima.
  *
- * `fromRevision` è la versione da cui si è partiti. Se nel frattempo si è
- * mossa, **non si sovrascrive**: il servizio non ha una precondizione da
- * offrire, quindi la copia in conflitto la scriviamo noi, accanto, con il
- * nome dell'originale e la data — e `conflict` dice come si chiama.
+ * `fromRevision` è la versione da cui si è partiti; Drive non ha una
+ * precondizione da offrire, quindi la si rilegge subito prima. Se si è
+ * mossa, `ifMoved` decide — e il valore che usa il salvataggio normale è
+ * **fermarsi**: sovrascrivere o fare una copia sono due decisioni, e le
+ * prende chi ha scritto, dopo aver visto cosa c'era.
+ *
+ * `moved` torna vero quando ci si è fermati per quella ragione; `conflict`
+ * porta il nome della copia quando se n'è fatta una.
  */
 - (void)writeDocument:(NSString *)identifier
                  text:(NSString *)text
          fromRevision:(NSString *)fromRevision
-           completion:(void (^)(NSString *revision, NSString *conflict,
-                                NSString *problem))done;
+              ifMoved:(MPCloudOnMoved)ifMoved
+           completion:(void (^)(NSString *revision, BOOL moved,
+                                NSString *conflict, NSString *problem))done;
 
 @end
 

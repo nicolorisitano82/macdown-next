@@ -681,3 +681,15 @@
 "What you had was written beside it, as «%@». Nothing was overwritten." = "Quello che avevi è stato scritto accanto, come «%@». Non è stato sovrascritto niente.";
 "untitled" = "senza nome";
 "untitled.md" = "senza nome.md";
+
+/* Quando due hanno scritto lo stesso documento */
+"Somebody wrote there while you were working" = "Qualcuno ci ha scritto mentre lavoravi";
+"Nothing has been written yet. Look at the two before deciding, or decide now." = "Non è stato scritto ancora niente. Guarda i due prima di decidere, oppure decidi adesso.";
+"Compare…" = "Confronta…";
+"Keep Both" = "Tieni entrambi";
+"Keep Mine" = "Tieni la mia";
+"Keep Theirs" = "Tieni la loro";
+"Both are up there now" = "Adesso ci sono tutte e due";
+"Yours went beside it, as «%@»." = "La tua è finita accanto, come «%@».";
+"%@ (yours)" = "%@ (la tua)";
+"%@ (up there)" = "%@ (là fuori)";

@@ -1040,17 +1040,18 @@ NSString *MPConflictNameFor(NSString *name, NSDate *when)
 - (void)writeDocument:(NSString *)identifier
                  text:(NSString *)text
          fromRevision:(NSString *)fromRevision
-           completion:(void (^)(NSString *, NSString *, NSString *))done
+              ifMoved:(MPCloudOnMoved)ifMoved
+           completion:(void (^)(NSString *, BOOL, NSString *, NSString *))done
 {
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         NSString *problem = nil, *conflict = nil, *revision = nil;
+        BOOL moved = NO;
         NSString *token = [self freshToken:&problem];
         if (token)
         {
             // Drive non ha una precondizione da offrire su files.update:
-            // si guarda la versione **subito prima**, e se si è mossa non
-            // si scrive sopra. Non è atomico e non finge di esserlo: è la
-            // finestra più stretta che l'API lasci.
+            // si guarda la versione **subito prima**. Non è atomico e non
+            // finge di esserlo: è la finestra più stretta che l'API lasci.
             NSMutableURLRequest *look = [NSMutableURLRequest requestWithURL:
                 [NSURL URLWithString:[NSString stringWithFormat:
                     @"https://www.googleapis.com/drive/v3/files/%@"
@@ -1060,13 +1061,18 @@ NSString *MPConflictNameFor(NSString *name, NSDate *when)
                 problem = now[@"error"][@"message"];
 
             NSString *head = now[@"headRevisionId"];
-            BOOL moved = fromRevision.length && head.length
-                      && ![head isEqualToString:fromRevision];
+            moved = fromRevision.length && head.length
+                 && ![head isEqualToString:fromRevision];
 
-            if (!problem && moved)
+            if (!problem && moved && ifMoved == MPCloudOnMovedAsk)
             {
-                // Accanto, non sopra: quello che c'è là fuori non è più
-                // quello da cui siamo partiti, e qualcuno lo ha scritto.
+                // Ci si ferma qui, e non si scrive niente da nessuna
+                // parte: sovrascrivere e fare una copia sono due
+                // decisioni, e non sono nostre.
+            }
+            else if (!problem && moved && ifMoved == MPCloudOnMovedCopy)
+            {
+                // Accanto, non sopra.
                 conflict = MPConflictNameFor(now[@"name"], nil);
                 NSString *folder = self.placeIdentifier;
                 NSMutableDictionary *metadata =
@@ -1111,7 +1117,7 @@ NSString *MPConflictNameFor(NSString *name, NSDate *when)
         self.problem = problem;
         dispatch_async(dispatch_get_main_queue(), ^{
             if (done)
-                done(revision, conflict, problem);
+                done(revision, moved, conflict, problem);
         });
     });
 }
