@@ -40,6 +40,13 @@ typedef NS_ENUM(NSUInteger, MPCloudLinkOutcome) {
 };
 
 
+/// Cosa si va a scegliere nel selettore del servizio.
+typedef NS_ENUM(NSUInteger, MPCloudPick) {
+    MPCloudPickFolder,          ///< una cartella in cui scrivere
+    MPCloudPickDocuments,       ///< i documenti da portare dentro
+};
+
+
 @interface MPCloudService : NSObject
 
 /// I servizi che l'applicazione conosce, nell'ordine in cui si mostrano.
@@ -112,6 +119,18 @@ typedef NS_ENUM(NSUInteger, MPCloudLinkOutcome) {
 - (void)linkWithCompletion:(void (^)(MPCloudLinkOutcome outcome,
                                      NSString *message))done;
 
+/** Lo stesso, dicendo **cosa** si va a scegliere.
+ *
+ * Sono due gesti diversi e la misura di B0 li ha separati per sempre: una
+ * **cartella** è il posto dove l'applicazione scriverà, e non porta con sé
+ * quello che contiene; dei **documenti** sono quelli che si vogliono avere
+ * qui, e vanno indicati uno per uno. Chiederli insieme sarebbe una
+ * schermata che promette una cosa e ne dà un'altra.
+ */
+- (void)link:(MPCloudPick)what
+  completion:(void (^)(MPCloudLinkOutcome outcome, NSString *message))done;
+
+
 /** Rinnova il permesso e richiede al servizio cosa si vede.
  *
  * Serve due volte: per sapere che il collegamento è ancora valido — un
@@ -132,6 +151,52 @@ typedef NS_ENUM(NSUInteger, MPCloudLinkOutcome) {
 /// Dimentica tutto: gettoni fuori dal portachiavi, posto scelto via.
 /// L'ID client resta, che è l'unica cosa che non è un segreto.
 - (void)unlink;
+
+@end
+
+
+#pragma mark - I documenti
+
+/// Un documento come lo vede il servizio: quel che serve per aprirlo, e
+/// la versione da cui si è partiti quando lo si risalva.
+@interface MPCloudDocument : NSObject
+@property (copy, nonatomic) NSString *identifier;
+@property (copy, nonatomic) NSString *name;
+/// La versione che il servizio dice essere l'ultima. Quello che rende
+/// possibile accorgersi che qualcun altro ha scritto nel frattempo.
+@property (copy, nonatomic) NSString *revision;
+@end
+
+
+@interface MPCloudService (Documents)
+
+/// I documenti che l'applicazione può vedere adesso. Nil e `problem`
+/// pieno quando il servizio ha detto di no.
+- (void)documentsWithCompletion:(void (^)(NSArray<MPCloudDocument *> *found,
+                                          NSString *problem))done;
+
+/// Il testo di un documento.
+- (void)readDocument:(NSString *)identifier
+          completion:(void (^)(NSString *text, NSString *problem))done;
+
+/// Un documento nuovo nella cartella scelta.
+- (void)createDocumentNamed:(NSString *)name
+                       text:(NSString *)text
+                 completion:(void (^)(MPCloudDocument *made,
+                                      NSString *problem))done;
+
+/** Riscrive un documento, ma solo se là fuori è ancora quello di prima.
+ *
+ * `fromRevision` è la versione da cui si è partiti. Se nel frattempo si è
+ * mossa, **non si sovrascrive**: il servizio non ha una precondizione da
+ * offrire, quindi la copia in conflitto la scriviamo noi, accanto, con il
+ * nome dell'originale e la data — e `conflict` dice come si chiama.
+ */
+- (void)writeDocument:(NSString *)identifier
+                 text:(NSString *)text
+         fromRevision:(NSString *)fromRevision
+           completion:(void (^)(NSString *revision, NSString *conflict,
+                                NSString *problem))done;
 
 @end
 

@@ -179,8 +179,15 @@ static NSDictionary *MPAcceptCallback(int listener)
 #pragma mark - Quello che ogni servizio deve saper dire
 
 @interface MPCloudService ()
-@property (assign, nonatomic) BOOL linking;
+- (NSString *)freshToken:(NSString **)outProblem;
 @property (copy, nonatomic) NSString *problem;
+@property (assign, nonatomic) BOOL linking;
+/// Cosa si sta andando a scegliere in questo giro.
+@property (assign, nonatomic) MPCloudPick picking;
+@end
+
+
+@implementation MPCloudDocument
 @end
 
 
@@ -376,6 +383,33 @@ static NSDictionary *MPAcceptCallback(int listener)
 }
 
 
+/// Una richiesta qualunque, aspettata, con il gettone addosso.
+static NSDictionary *MPSend(NSMutableURLRequest *request, NSString *token,
+                            NSString **outText)
+{
+    [request setValue:[@"Bearer " stringByAppendingString:token ?: @""]
+   forHTTPHeaderField:@"Authorization"];
+
+    __block NSData *got = nil;
+    dispatch_semaphore_t done = dispatch_semaphore_create(0);
+    [[[NSURLSession sharedSession] dataTaskWithRequest:request
+        completionHandler:^(NSData *body, NSURLResponse *r, NSError *e) {
+        got = body;
+        dispatch_semaphore_signal(done);
+    }] resume];
+    dispatch_semaphore_wait(done, dispatch_time(DISPATCH_TIME_NOW,
+                                                60 * NSEC_PER_SEC));
+    if (!got)
+        return nil;
+    if (outText)
+        *outText = [[NSString alloc] initWithData:got
+                                         encoding:NSUTF8StringEncoding];
+    id parsed = [NSJSONSerialization JSONObjectWithData:got options:0
+                                                  error:NULL];
+    return [parsed isKindOfClass:[NSDictionary class]] ? parsed : nil;
+}
+
+
 /// Quello che il servizio risponde a «cosa vedi». Nelle sottoclassi.
 - (NSString *)lookAroundWithToken:(NSString *)token { return nil; }
 
@@ -400,6 +434,14 @@ static NSDictionary *MPAcceptCallback(int listener)
 
 - (void)linkWithCompletion:(void (^)(MPCloudLinkOutcome, NSString *))done
 {
+    [self link:MPCloudPickFolder completion:done];
+}
+
+
+- (void)link:(MPCloudPick)what
+  completion:(void (^)(MPCloudLinkOutcome, NSString *))done
+{
+    self.picking = what;
     void (^answer)(MPCloudLinkOutcome, NSString *) =
         ^(MPCloudLinkOutcome outcome, NSString *message) {
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -623,16 +665,26 @@ NSURL *MPCloudConsentURL(MPCloudService *service, NSString *redirect,
 {
     NSURLComponents *url = [NSURLComponents componentsWithString:
         @"https://accounts.google.com/o/oauth2/v2/auth"];
+    // Una cartella o dei documenti, mai tutti e due: sono due gesti con due
+    // significati, e B0 ha misurato che una cartella **non** porta con sé
+    // quello che contiene.
+    BOOL folder = (self.picking == MPCloudPickFolder);
     url.queryItems = @[
         [NSURLQueryItem queryItemWithName:@"scope"
             value:@"https://www.googleapis.com/auth/drive.file"],
         [NSURLQueryItem queryItemWithName:@"access_type" value:@"offline"],
         [NSURLQueryItem queryItemWithName:@"prompt" value:@"consent"],
-        // Le due che, su desktop, *sono* il Picker: la scelta dei file
-        // avviene dentro la schermata di consenso, nel browser.
+        // Le due che, su desktop, *sono* il Picker: la scelta avviene
+        // dentro la schermata di consenso, nel browser.
         [NSURLQueryItem queryItemWithName:@"trigger_onepick" value:@"true"],
         [NSURLQueryItem queryItemWithName:@"allow_folder_selection"
-                                    value:@"true"],
+                                    value:folder ? @"true" : @"false"],
+        [NSURLQueryItem queryItemWithName:@"allow_multiple"
+                                    value:folder ? @"false" : @"true"],
+        [NSURLQueryItem queryItemWithName:@"mimetypes"
+                                    value:folder
+            ? @"application/vnd.google-apps.folder"
+            : @"text/markdown,text/plain,application/octet-stream"],
     ];
     return url;
 }
@@ -806,5 +858,256 @@ static NSDictionary *MPGet(NSString *address, NSString *token)
 - (NSString *)howToGetAClient { return @""; }
 - (NSString *)clientPlaceholder { return @""; }
 - (NSString *)scopeExplanation { return @""; }
+
+@end
+
+
+#pragma mark - I documenti
+
+@implementation MPCloudService (Documents)
+
+/// Le quattro operazioni sono le stesse per tutti i servizi a parte come
+/// si scrivono le richieste; finché il servizio è uno, stanno qui e
+/// parlano Drive. Quando Dropbox arriverà, questo diventa un altro metodo
+/// da riempire, come lo sono già il consenso e i gettoni.
+- (BOOL)isGoogle
+{
+    return [self.identifier isEqualToString:@"google"];
+}
+
+
+- (void)documentsWithCompletion:(void (^)(NSArray<MPCloudDocument *> *,
+                                          NSString *))done
+{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSString *problem = nil;
+        NSString *token = [self freshToken:&problem];
+        NSMutableArray *found = [NSMutableArray array];
+        if (token && [self isGoogle])
+        {
+            NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:
+                [NSURL URLWithString:
+                    @"https://www.googleapis.com/drive/v3/files"
+                    @"?q=trashed%20%3D%20false"
+                    @"&fields=files(id,name,mimeType,headRevisionId)"
+                    @"&pageSize=200"]];
+            NSDictionary *answer = MPSend(request, token, NULL);
+            if (answer[@"error"])
+                problem = answer[@"error"][@"message"];
+            for (NSDictionary *file in answer[@"files"])
+            {
+                if ([file[@"mimeType"] isEqualToString:
+                        @"application/vnd.google-apps.folder"])
+                    continue;   // le cartelle non sono documenti
+                MPCloudDocument *document = [[MPCloudDocument alloc] init];
+                document.identifier = file[@"id"];
+                document.name = file[@"name"];
+                document.revision = file[@"headRevisionId"];
+                [found addObject:document];
+            }
+        }
+        self.problem = problem;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (done)
+                done(problem ? nil : found, problem);
+        });
+    });
+}
+
+
+- (void)readDocument:(NSString *)identifier
+          completion:(void (^)(NSString *, NSString *))done
+{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSString *problem = nil;
+        NSString *token = [self freshToken:&problem];
+        NSString *text = nil;
+        if (token)
+        {
+            NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:
+                [NSURL URLWithString:[NSString stringWithFormat:
+                    @"https://www.googleapis.com/drive/v3/files/%@?alt=media",
+                    identifier]]];
+            NSString *body = nil;
+            NSDictionary *answer = MPSend(request, token, &body);
+            // Con alt=media quello che torna è il file, non JSON: un
+            // dizionario vuol dire che è andata storta.
+            if (answer[@"error"])
+                problem = answer[@"error"][@"message"];
+            else
+                text = body;
+        }
+        self.problem = problem;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (done)
+                done(text, problem);
+        });
+    });
+}
+
+
+/// Il corpo di un caricamento in due pezzi: prima cosa è, poi cos'è
+/// dentro. Fuori da ogni rete, così si può guardare in una prova.
+NSData *MPGoogleUploadBody(NSString *boundary, NSDictionary *metadata,
+                           NSString *text)
+{
+    NSMutableData *body = [NSMutableData data];
+    void (^put)(NSString *) = ^(NSString *piece) {
+        [body appendData:[piece dataUsingEncoding:NSUTF8StringEncoding]];
+    };
+    NSData *json = [NSJSONSerialization dataWithJSONObject:metadata
+                                                   options:0 error:NULL];
+    put([NSString stringWithFormat:@"--%@\r\n", boundary]);
+    put(@"Content-Type: application/json; charset=UTF-8\r\n\r\n");
+    [body appendData:json];
+    put([NSString stringWithFormat:@"\r\n--%@\r\n", boundary]);
+    put(@"Content-Type: text/markdown; charset=UTF-8\r\n\r\n");
+    put(text ?: @"");
+    put([NSString stringWithFormat:@"\r\n--%@--\r\n", boundary]);
+    return body;
+}
+
+
+- (void)createDocumentNamed:(NSString *)name
+                       text:(NSString *)text
+                 completion:(void (^)(MPCloudDocument *, NSString *))done
+{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSString *problem = nil;
+        NSString *token = [self freshToken:&problem];
+        MPCloudDocument *made = nil;
+        if (token)
+        {
+            NSString *folder = self.placeIdentifier;
+            NSMutableDictionary *metadata =
+                [@{@"name": name ?: @"senza nome.md"} mutableCopy];
+            if (folder.length)
+                metadata[@"parents"] = @[folder];
+
+            NSString *boundary = [NSUUID UUID].UUIDString;
+            NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:
+                [NSURL URLWithString:
+                    @"https://www.googleapis.com/upload/drive/v3/files"
+                    @"?uploadType=multipart&fields=id,name,headRevisionId"]];
+            request.HTTPMethod = @"POST";
+            [request setValue:[NSString stringWithFormat:
+                @"multipart/related; boundary=%@", boundary]
+           forHTTPHeaderField:@"Content-Type"];
+            request.HTTPBody = MPGoogleUploadBody(boundary, metadata, text);
+
+            NSDictionary *answer = MPSend(request, token, NULL);
+            if (answer[@"error"])
+                problem = answer[@"error"][@"message"];
+            else if (answer[@"id"])
+            {
+                made = [[MPCloudDocument alloc] init];
+                made.identifier = answer[@"id"];
+                made.name = answer[@"name"];
+                made.revision = answer[@"headRevisionId"];
+            }
+        }
+        self.problem = problem;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (done)
+                done(made, problem);
+        });
+    });
+}
+
+
+/// Come si chiama la copia che si scrive quando non si può sovrascrivere.
+NSString *MPConflictNameFor(NSString *name, NSDate *when)
+{
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    formatter.dateFormat = @"yyyy-MM-dd HH.mm";
+    formatter.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+    NSString *stamp = [formatter stringFromDate:when ?: [NSDate date]];
+    NSString *stem = name.stringByDeletingPathExtension;
+    NSString *extension = name.pathExtension;
+    NSString *made = [NSString stringWithFormat:@"%@ (copia in conflitto %@)",
+                      stem.length ? stem : @"documento", stamp];
+    return extension.length ? [made stringByAppendingPathExtension:extension]
+                            : made;
+}
+
+
+- (void)writeDocument:(NSString *)identifier
+                 text:(NSString *)text
+         fromRevision:(NSString *)fromRevision
+           completion:(void (^)(NSString *, NSString *, NSString *))done
+{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSString *problem = nil, *conflict = nil, *revision = nil;
+        NSString *token = [self freshToken:&problem];
+        if (token)
+        {
+            // Drive non ha una precondizione da offrire su files.update:
+            // si guarda la versione **subito prima**, e se si è mossa non
+            // si scrive sopra. Non è atomico e non finge di esserlo: è la
+            // finestra più stretta che l'API lasci.
+            NSMutableURLRequest *look = [NSMutableURLRequest requestWithURL:
+                [NSURL URLWithString:[NSString stringWithFormat:
+                    @"https://www.googleapis.com/drive/v3/files/%@"
+                    @"?fields=id,name,headRevisionId", identifier]]];
+            NSDictionary *now = MPSend(look, token, NULL);
+            if (now[@"error"])
+                problem = now[@"error"][@"message"];
+
+            NSString *head = now[@"headRevisionId"];
+            BOOL moved = fromRevision.length && head.length
+                      && ![head isEqualToString:fromRevision];
+
+            if (!problem && moved)
+            {
+                // Accanto, non sopra: quello che c'è là fuori non è più
+                // quello da cui siamo partiti, e qualcuno lo ha scritto.
+                conflict = MPConflictNameFor(now[@"name"], nil);
+                NSString *folder = self.placeIdentifier;
+                NSMutableDictionary *metadata =
+                    [@{@"name": conflict} mutableCopy];
+                if (folder.length)
+                    metadata[@"parents"] = @[folder];
+
+                NSString *boundary = [NSUUID UUID].UUIDString;
+                NSMutableURLRequest *put = [NSMutableURLRequest requestWithURL:
+                    [NSURL URLWithString:
+                        @"https://www.googleapis.com/upload/drive/v3/files"
+                        @"?uploadType=multipart&fields=id,headRevisionId"]];
+                put.HTTPMethod = @"POST";
+                [put setValue:[NSString stringWithFormat:
+                    @"multipart/related; boundary=%@", boundary]
+           forHTTPHeaderField:@"Content-Type"];
+                put.HTTPBody = MPGoogleUploadBody(boundary, metadata, text);
+                NSDictionary *answer = MPSend(put, token, NULL);
+                if (answer[@"error"])
+                    problem = answer[@"error"][@"message"];
+            }
+            else if (!problem)
+            {
+                NSString *boundary = [NSUUID UUID].UUIDString;
+                NSMutableURLRequest *put = [NSMutableURLRequest requestWithURL:
+                    [NSURL URLWithString:[NSString stringWithFormat:
+                        @"https://www.googleapis.com/upload/drive/v3/files/%@"
+                        @"?uploadType=multipart&fields=id,headRevisionId",
+                        identifier]]];
+                put.HTTPMethod = @"PATCH";
+                [put setValue:[NSString stringWithFormat:
+                    @"multipart/related; boundary=%@", boundary]
+           forHTTPHeaderField:@"Content-Type"];
+                put.HTTPBody = MPGoogleUploadBody(boundary, @{}, text);
+                NSDictionary *answer = MPSend(put, token, NULL);
+                if (answer[@"error"])
+                    problem = answer[@"error"][@"message"];
+                else
+                    revision = answer[@"headRevisionId"];
+            }
+        }
+        self.problem = problem;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (done)
+                done(revision, conflict, problem);
+        });
+    });
+}
 
 @end

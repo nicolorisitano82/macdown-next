@@ -11,6 +11,11 @@
 #import <XCTest/XCTest.h>
 
 #import "MPCloudService.h"
+
+extern NSData *MPGoogleUploadBody(NSString *boundary,
+                                  NSDictionary *metadata,
+                                  NSString *text);
+extern NSString *MPConflictNameFor(NSString *name, NSDate *when);
 #import "MPSyncPreferencesViewController.h"
 
 
@@ -163,6 +168,37 @@
     (void)pane.view;
     [pane say:@"Non collegato."];
     XCTAssertFalse([pane.stateText.string containsString:@"\n"]);
+}
+
+
+- (void)testAnUploadIsTwoPiecesInOneBody
+{
+    NSData *body = MPGoogleUploadBody(@"CONFINE",
+        @{@"name": @"nota.md", @"parents": @[@"CARTELLA"]},
+        @"# Titolo\n\nUna riga.\n");
+    NSString *written = [[NSString alloc] initWithData:body
+                                              encoding:NSUTF8StringEncoding];
+
+    // Prima cosa è, poi cos'è dentro, e un confine che chiude.
+    XCTAssertTrue([written hasPrefix:@"--CONFINE\r\n"]);
+    XCTAssertTrue([written containsString:@"application/json"]);
+    XCTAssertTrue([written containsString:@"\"name\":\"nota.md\""]
+                  || [written containsString:@"\"name\": \"nota.md\""]);
+    XCTAssertTrue([written containsString:@"CARTELLA"]);
+    XCTAssertTrue([written containsString:@"text/markdown"]);
+    XCTAssertTrue([written containsString:@"# Titolo"]);
+    XCTAssertTrue([written hasSuffix:@"--CONFINE--\r\n"]);
+}
+
+- (void)testTheConflictCopyIsNamedSoThatBothSurvive
+{
+    NSDate *when = [NSDate dateWithTimeIntervalSince1970:1757800800];
+    NSString *name = MPConflictNameFor(@"verbale.md", when);
+    // Il nome di prima, quello che è successo, e l'estensione: aprendo la
+    // cartella si capisce cos'è senza doverlo chiedere a nessuno.
+    XCTAssertTrue([name hasPrefix:@"verbale (copia in conflitto "]);
+    XCTAssertTrue([name hasSuffix:@".md"]);
+    XCTAssertFalse([name isEqualToString:@"verbale.md"]);
 }
 
 @end

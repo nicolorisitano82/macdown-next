@@ -31,6 +31,7 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 @property (strong, nonatomic) NSTextField *secretNote;
 @property (strong, nonatomic) NSTextField *stateLabel;
 @property (strong, nonatomic) NSButton *linkButton;
+@property (strong, nonatomic) NSButton *documentsButton;
 @property (strong, nonatomic) NSButton *unlinkButton;
 @property (strong, nonatomic) NSButton *checkButton;
 @property (strong, nonatomic) NSTextField *scopeNote;
@@ -115,9 +116,15 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     // premere invece che ricopiare a mano.
     self.stateLabel.allowsEditingTextAttributes = YES;
     self.stateLabel.selectable = YES;
+    // Due gesti, due pulsanti: B0 ha misurato che una cartella non porta
+    // con sé quello che contiene, quindi prometterli insieme sarebbe una
+    // bugia con un bottone sopra.
     self.linkButton = [NSButton buttonWithTitle:NSLocalizedString(
-        @"Connect…", @"Starts the permission flow")
-        target:self action:@selector(link:)];
+        @"Choose a folder…", @"Picks the folder the application writes into")
+        target:self action:@selector(linkFolder:)];
+    self.documentsButton = [NSButton buttonWithTitle:NSLocalizedString(
+        @"Choose documents…", @"Picks the documents to bring in")
+        target:self action:@selector(linkDocuments:)];
     self.unlinkButton = [NSButton buttonWithTitle:NSLocalizedString(
         @"Disconnect", @"Forgets the tokens of a service")
         target:self action:@selector(unlink:)];
@@ -137,7 +144,8 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     self.secretRow.spacing = 8.0;
 
     self.buttons = [NSStackView stackViewWithViews:
-        @[self.linkButton, self.checkButton, self.unlinkButton]];
+        @[self.linkButton, self.documentsButton, self.checkButton,
+          self.unlinkButton]];
     self.buttons.orientation = NSUserInterfaceLayoutOrientationHorizontal;
     self.buttons.spacing = 10.0;
 
@@ -225,6 +233,7 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 {
     MPCloudService *service = [self chosen];
     self.linkButton.enabled = service.isConfigured;
+    self.documentsButton.enabled = service.isConfigured;
 
     if (!service.isConfigured)
     {
@@ -320,13 +329,26 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 }
 
 
-- (void)link:(id)sender
+- (void)linkFolder:(id)sender
+{
+    [self link:MPCloudPickFolder];
+}
+
+
+- (void)linkDocuments:(id)sender
+{
+    [self link:MPCloudPickDocuments];
+}
+
+
+- (void)link:(MPCloudPick)what
 {
     self.linkButton.enabled = NO;
+    self.documentsButton.enabled = NO;
     [self say:NSLocalizedString(@"Waiting for the browser…",
         @"State while the consent screen is open")];
 
-    [[self chosen] linkWithCompletion:
+    [[self chosen] link:what completion:
      ^(MPCloudLinkOutcome outcome, NSString *message) {
         if (outcome == MPCloudLinkDone)
         {

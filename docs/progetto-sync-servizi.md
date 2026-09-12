@@ -243,6 +243,31 @@ stesso, perché l'API mostra solo i file che *quell'applicazione* ha creato o
 che le sono stati passati uno per uno. Una cartella scelta è **una
 destinazione**, non una sorgente.
 
+### Il giro completo, provato sul Drive vero
+
+Il 13 settembre 2026, con le stesse chiamate che fa il codice:
+
+```
+1. creato «prova-macdown.md» dentro «appunti»      id …GHAuv, versione …A1RWlvMnNF
+2. riletto                                          «# Prova / Scritto da MacDown Next.»
+3. riscritto partendo dalla versione giusta         versione …A1RWlvMnNF → …N004RWhz
+4. riscritto partendo da quella **vecchia**         la versione si è mossa
+                                                    → scritto ACCANTO, non sopra:
+                                                    «prova-macdown (copia in conflitto
+                                                     2026-09-13 01.27).md»
+5. nella cartella adesso                            i due file, e l'app li vede entrambi
+```
+
+Il punto 4 è quello che conta: Drive non ha una precondizione da offrire su
+`files.update`, quindi la versione si guarda **subito prima** e, se si è
+mossa, la copia in conflitto la scriviamo noi. Non è atomico e non finge di
+esserlo — è la finestra più stretta che l'API lasci — ma il caso peggiore è
+**un file in più**, che è esattamente la promessa del capitolo 4.
+
+E il punto 5 dice l'altra metà della misura di B0: una cartella scelta è una
+destinazione **che si può rileggere**, perché quello che c'è dentro l'ha
+messo l'applicazione.
+
 ### Cosa diventa B1, di conseguenza
 
 | | Come si fa | Cosa vede l'applicazione |
