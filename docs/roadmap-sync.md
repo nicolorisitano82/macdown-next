@@ -19,7 +19,9 @@ strade: vivere bene dentro un provider (**sì**), le API dei provider
 > metà che non chiede a nessuno di collegare un account. La metà nuova è
 > nelle fasi **B** dell'altro documento: leggere **e scrivere** fin dalla
 > prima, con quattro regole che fanno sì che il caso peggiore sia un file
-> in più, non un file perduto.
+> in più, non un file perduto — e si comincia da **Google Drive**, che è il
+> più difficile dei due, preceduto da una misura che decide la forma della
+> prima fase.
 
 Ogni tappa dice quattro cose: **cosa si vede**, **cosa si scrive**, **come
 si prova**, e **quando è finita**. Una tappa che non ha tutte e quattro non

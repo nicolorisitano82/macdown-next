@@ -151,7 +151,7 @@ Quattro regole, e la scrittura entra dalla prima fase.
 **1. Non si sovrascrive mai alla cieca.** Ogni caricamento porta con sé la
 versione da cui si è partiti.
 
-* **Dropbox** lo fa da solo: `WriteMode` con `update:<rev>` — la
+* **Dropbox** lo fa da solo (e questo, nell'ordine scelto, arriva dopo): `WriteMode` con `update:<rev>` — la
   documentazione dice che la modalità di scrittura *«determina cosa
   costituisce un conflitto e quale sia la strategia di rinomina»*. Con
   `autorename`, una scrittura partita da una versione vecchia **non
@@ -180,16 +180,55 @@ la sa mostrare.
 Con queste quattro, scrivere non è più il pezzo pericoloso: è il pezzo che
 chiede di essere fatto per bene.
 
-## 5. Come la farei, dato che è decisa
+## 5. L'ordine: prima Google Drive
 
-L'ordine è scelto perché ogni passo sia utile da solo e perché il rischio
-cresca dove c'è già una rete.
+È stato chiesto di cominciare da Drive, e va detto cosa comporta, perché
+Drive è **il più difficile dei due** e diventa la prima fase.
+
+| | Dropbox | Google Drive |
+|---|---|---|
+| Come si nomina un file | per **percorso**, come da noi | per **identificatore**: due file possono chiamarsi uguale nella stessa cartella |
+| Scrittura partita da una versione vecchia | **la rifiuta il servizio** (`update:<rev>`) | nessuna precondizione: **la fermiamo noi**, leggendo `headRevisionId` |
+| Cosa si può vedere col permesso stretto | tutta la cartella dell'app | i file che l'app crea, **e quelli che l'utente le dà** |
+
+Cominciare da Drive vuol dire prendere i due problemi di progetto più duri
+per primi — gli identificatori e il conflitto fatto in casa — e trovarseli
+già risolti quando arriva Dropbox, che a quel punto è la metà del lavoro.
+È un ordine difendibile, purché si sappia che la prima fase è la più cara
+delle due, non la più economica.
+
+### La domanda che decide la forma di B1, e non è documentata
+
+Sul desktop il **Picker** — la finestra in cui si scelgono i file da dare
+all'app — funziona così, per documentazione: si apre **in una scheda del
+browser predefinito**, l'utente sceglie, e torna all'applicazione con un
+indirizzo di richiamo. Esiste il parametro `allow_folder_selection=true` che
+«permette all'utente di selezionare anche cartelle».
+
+Quello che la documentazione **non dice** è se scegliere una cartella, con
+il solo `drive.file`, dia accesso anche ai file che ci sono dentro, o solo
+alla cartella. Da questo dipende tutto:
+
+* **se dà accesso al contenuto**: «collega Google Drive» diventa *scegli la
+  cartella dei tuoi appunti*, e funziona con gli appunti che esistono già.
+  È la versione che la gente si aspetta;
+* **se non lo dà**: l'app può lavorare solo in una cartella **creata da
+  lei** — `MacDown Next/` — e chi ha già gli appunti nel Drive li sposta
+  là dentro una volta sola. Funziona, ma va detto in chiaro al primo
+  collegamento.
+
+**Va misurato prima di scrivere B1**, come è stato fatto per M0: un client
+OAuth, il Picker, una cartella scelta, e una chiamata `files.list` per
+vedere cosa risponde. È mezza giornata, e decide il resto.
+
+## 5-bis. Le fasi
 
 | Fase | Cosa | Perché qui |
 |---|---|---|
-| **B1** | **Dropbox, cartella dell'app, in lettura e in scrittura.** Collegamento con PKCE, token nel portachiavi, elenco, scarico, e **salvataggio con `update:<rev>` e `autorename`** | il servizio più semplice, il permesso più stretto, e l'unico dei due in cui il rifiuto di una scrittura vecchia lo fa il servizio |
-| **B2** | **Il delta e lo stato**: `longpoll` + `continue`, la tabella di cosa è già sceso, e il riconoscimento delle copie che il rinomina automatico lascia dietro | è la parte che rende la cosa una sincronizzazione invece di un carica-e-scarica |
-| **B3** | **Google Drive dentro `drive.file`**, lettura e scrittura, con `headRevisionId` letto prima di ogni caricamento e la copia in conflitto **fatta da noi** | si impara il modello a identificatori e l'asimmetria di Drive senza pagare il pedaggio della verifica |
+| **B0** | **La misura**: client OAuth, Picker sul desktop, e la risposta alla domanda qui sopra. Nessun codice dell'applicazione | decide se B1 è «scegli la tua cartella» o «una cartella nostra» |
+| **B1** | **Google Drive, `drive.file`, lettura e scrittura.** PKCE con richiamo su `127.0.0.1`, token nel portachiavi, elenco, scarico, e salvataggio con `headRevisionId` letto subito prima: se si è mosso, la copia in conflitto la facciamo noi | è il servizio chiesto per primo, ed è quello che insegna il modello più difficile |
+| **B2** | **Il delta e lo stato**: `changes.list` con il gettone di partenza, la tabella identificatore ↔ percorso, e cosa fare quando un file cambia nome di là | è la parte che rende la cosa una sincronizzazione invece di un carica-e-scarica |
+| **B3** | **Dropbox, cartella dell'app, lettura e scrittura**: PKCE, `update:<rev>` con `autorename`, `longpoll` + `continue` | con il motore già scritto, qui si aggiunge un servizio, non un sistema |
 | **B4** | **Il conflitto nell'editor**: due colonne, tieni questo / tieni quello / tieni entrambi, sul pannello che già confronta | quando ci sono conflitti veri da mostrare, e non prima |
 | **B5** | *Eventuale*: la **verifica restricted** di Google, se leggere e scrivere in una cartella qualunque del Drive è ciò che si vuole davvero | un video, un'informativa, e una scadenza ogni dodici mesi |
 | **A** | La strada della cartella **resta**, per iCloud e per chi il client ce l'ha | non è un ripiego: è l'unica cosa che funziona con iCloud |
@@ -221,11 +260,14 @@ fuori dalla cartella dell'app. Il giorno in cui un token smette di
 rinnovarsi o un formato cambia, la sincronizzazione si rompe per tutti, e
 non c'è un client di Dropbox a cui dare la colpa.
 
-Detto questo: la richiesta ha una ragione, e la fase **B1** — Dropbox,
-dentro la cartella dell'app, in lettura e in scrittura, con la scrittura che
-porta la sua revisione — è piccola, utile da sola, e le quattro regole del
-capitolo 4 fanno sì che il caso peggiore sia **un file in più con un nome
-strano**, non un file perduto. Si comincia da lì.
+Detto questo: la richiesta ha una ragione, e le quattro regole del capitolo
+4 fanno sì che il caso peggiore sia **un file in più con un nome strano**,
+non un file perduto — su Drive come su Dropbox, con la differenza che su
+Drive quel nome strano lo scriviamo noi.
+
+Si comincia da **B0**, che è mezza giornata e non è codice: senza sapere
+cosa risponde il Picker quando gli si dà una cartella, B1 si scriverebbe due
+volte.
 
 ---
 
