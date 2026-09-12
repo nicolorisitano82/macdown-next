@@ -618,3 +618,26 @@
 "The document has changed since this comparison was made. Read the files again." = "Il documento è cambiato da quando è stato fatto questo confronto. Rileggi i file.";
 "There is nothing to export: the two are the same." = "Non c'è niente da esportare: i due sono uguali.";
 "differences" = "differenze";
+
+/* Il pannello della sincronizzazione */
+"<!doctype html><meta charset=utf-8><title>Done</title><body style=\"font:16px -apple-system;padding:3em\"><p>Done — you can close this tab and go back to MacDown Next." = "<!doctype html><meta charset=utf-8><title>Fatto</title><body style=\"font:16px -apple-system;padding:3em\"><p>Fatto: puoi chiudere questa scheda e tornare a MacDown Next.";
+"A desktop client's secret is not really a secret — it would live inside the application anyway — so the permission is protected by PKCE instead, and Google itself calls the secret optional here. Paste it only if your client refuses without it. It is kept in the keychain, like the tokens; neither ever reaches a preferences file or the log." = "Il segreto di un client desktop non è davvero un segreto — starebbe dentro l'applicazione comunque — e infatti il permesso è protetto da PKCE, e Google stesso qui lo dichiara facoltativo. Incollalo solo se il tuo client si rifiuta senza. Sta nel portachiavi, come i gettoni: né l'uno né gli altri arrivano mai in un file di preferenze o nel diario.";
+"Client ID:" = "ID client:";
+"Client secret:" = "Segreto client:";
+"Connected, on the folder «%@»." = "Collegato, sulla cartella «%@».";
+"Connected." = "Collegato.";
+"Connect…" = "Collega…";
+"Disconnect" = "Scollega";
+"Google did not give the permission" = "Google non ha dato il permesso";
+"How to get one" = "Come si ottiene";
+"In the Google Cloud console: make a project, enable the Google Drive API, then Credentials ▸ Create credentials ▸ OAuth client ID, of type Desktop app. Copy the ID it gives you. There is no redirect address to register: a desktop client is allowed to come back to this Mac on any port." = "Nella console di Google Cloud: crea un progetto, abilita la Google Drive API, poi Credenziali ▸ Crea credenziali ▸ ID client OAuth, di tipo Applicazione desktop. Copia l'ID che ti dà. Non c'è nessun indirizzo di richiamo da registrare: un client desktop può tornare su questo Mac da qualunque porta.";
+"No client ID yet." = "Non c'è ancora un ID client.";
+"No port on this Mac would answer." = "Nessuna porta di questo Mac ha risposto.";
+"Not connected." = "Non collegato.";
+"Open the console…" = "Apri la console…";
+"Sync" = "Sincronizza";
+"There is no client ID yet." = "Non c'è ancora un ID client.";
+"This application does not carry a Google client of its own, and that is on purpose: one client for everybody would mean one verification, one quota and a consent screen with somebody else's name on it. You make your own — it takes five minutes and costs nothing — and from then on the permission is between you and Google." = "Questa applicazione non porta dentro un client Google suo, ed è di proposito: uno solo per tutti vorrebbe dire una verifica sola, una quota sola e una schermata di consenso col nome di qualcun altro. Te ne fai uno tuo — cinque minuti, e non costa niente — e da lì in poi il permesso è fra te e Google.";
+"Waiting for the browser…" = "Aspetto il browser…";
+"What is asked for is the narrowest thing Drive has: the files this application creates, and whatever you hand it in the picker — nothing that resembles «see everything in my Drive». Nothing is read or written until you connect, and Disconnect forgets the tokens for good." = "Quello che si chiede è la cosa più stretta che Drive abbia: i file che questa applicazione crea, e quelli che le dai tu nel selettore — niente che assomigli a «vedi tutto il mio Drive». Finché non colleghi non si legge e non si scrive niente, e Scollega dimentica i gettoni per sempre.";
+"optional" = "facoltativo";

@@ -21,6 +21,7 @@
 #import "MPMarkdownPreferencesViewController.h"
 #import "MPEditorPreferencesViewController.h"
 #import "MPAgentsPreferencesViewController.h"
+#import "MPSyncPreferencesViewController.h"
 #import "MPQuickLookPreferencesViewController.h"
 #import "MPUpdateController.h"
 #import "MPUpdatePreferencesViewController.h"
@@ -112,6 +113,7 @@ NS_INLINE void treat()
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
+
     // Using private API [WebCache setDisabled:YES] to disable WebView's cache
     id webCacheClass = (id)NSClassFromString(@"WebCache");
     if (webCacheClass) {
@@ -409,6 +411,7 @@ static const NSInteger kMPPlugInExportItemTag = 9003;
             [[MPTerminalPreferencesViewController alloc] init],
             [[MPQuickLookPreferencesViewController alloc] init],
             [[MPAgentsPreferencesViewController alloc] init],
+            [[MPSyncPreferencesViewController alloc] init],
             [[MPUpdatePreferencesViewController alloc] init],
         ];
         NSString *title = NSLocalizedString(@"Preferences",

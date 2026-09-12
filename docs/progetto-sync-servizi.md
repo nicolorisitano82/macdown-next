@@ -246,6 +246,27 @@ cui questo passo non si automatizza del tutto. Un client desktop accetta
 `127.0.0.1` su **qualunque porta**, quindi non c'è niente da registrare a
 ogni giro.
 
+### E per questo il client lo porta l'utente, non l'applicazione
+
+Non è un ripiego della misura: è la scelta. Un client OAuth dentro un
+binario lo estrae chiunque; uno solo per tutti vuol dire **una verifica
+sola, una quota sola** e una schermata di consenso che porta il nome di
+qualcun altro. Ognuno si fa il suo — cinque minuti, e non costa niente:
+la Drive API dichiara che *«tutto l'uso standard è senza costi
+aggiuntivi»*, con una soglia giornaliera a cui un editor di appunti non si
+avvicina.
+
+C'è quindi **Impostazioni ▸ Sincronizza**, e dice dove sta cosa:
+
+| | Dove | Perché |
+|---|---|---|
+| ID client | preferenze | è pubblico per costruzione: sta nell'URL del consenso |
+| Segreto (facoltativo) | **portachiavi** | per un client desktop Google lo dichiara facoltativo, ma resta una credenziale incollata da qualcuno |
+| Gettoni | **portachiavi** | non finiscono mai in un file di preferenze, né nel diario |
+
+Il pannello non chiede mai una password: il consenso si dà **nel browser**,
+che è l'unico posto dove ha senso darlo, e torna su `127.0.0.1`.
+
 ## 5-bis. Le fasi
 
 | Fase | Cosa | Perché qui |
