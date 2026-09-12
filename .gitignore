@@ -202,3 +202,4 @@ MacDown/Resources/Styles/GitHub-2020.css
 
 # llama.cpp builds its own static libraries beside its sources.
 Dependency/llama.cpp/build-*/
+Tools/.cache/
