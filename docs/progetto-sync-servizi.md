@@ -131,29 +131,80 @@ Le chiamate sono la settimana facile. Quello che c'è sotto:
 * **Le riprese**: rete che cade a metà, token scaduto durante un caricamento,
   file cambiato mentre saliva. Ogni operazione va pensata come ripetibile.
 
-## 4. Come la farei, dato che è decisa
+## 4. Scrivere, e non poter perdere niente
+
+La prima stesura di questo documento metteva tre fasi in **sola lettura**, e
+la domanda giusta è arrivata subito: perché?
+
+**Non per i permessi.** Scrivere non costa un ambito in più: `drive.file` è
+letteralmente *«crea nuovi file, o modifica quelli che apri con l'app»*, e
+la cartella dell'app di Dropbox è lettura **e** scrittura. Sul piano
+dell'autorizzazione, leggere e scrivere sono la stessa richiesta.
+
+Era per il rischio: l'unico modo di perdere il lavoro di qualcuno è
+scriverci sopra. Ma «prima leggiamo, poi vedremo» rimanda il problema invece
+di risolverlo — e il problema ha una soluzione che si può scrivere subito,
+perché **entrambi i servizi tengono le versioni**.
+
+Quattro regole, e la scrittura entra dalla prima fase.
+
+**1. Non si sovrascrive mai alla cieca.** Ogni caricamento porta con sé la
+versione da cui si è partiti.
+
+* **Dropbox** lo fa da solo: `WriteMode` con `update:<rev>` — la
+  documentazione dice che la modalità di scrittura *«determina cosa
+  costituisce un conflitto e quale sia la strategia di rinomina»*. Con
+  `autorename`, una scrittura partita da una versione vecchia **non
+  sovrascrive**: atterra accanto, rinominata.
+* **Google Drive non ha la stessa cosa**: `files.update` non ha una
+  precondizione documentata. C'è però `headRevisionId`, *«la versione più
+  recente del file»*. Quindi la si legge subito prima di caricare e, se si è
+  mossa, **la copia in conflitto la creiamo noi** invece di scrivere sopra.
+  L'asimmetria va scritta nel codice, non scoperta dopo.
+
+**2. Niente si cancella.** In nessuna fase, per nessun motivo, nemmeno
+quando il file «non serve più». Un file di troppo si butta a mano; uno
+cancellato per conto nostro non torna.
+
+**3. Quello che si sta per sovrascrivere si può guardare prima.** Il
+pannello di confronto c'è già dalla 0.34: quando i due lati non partono
+dalla stessa versione, si aprono affiancati e si decide, invece di
+scegliere noi.
+
+**4. Si può sempre tornare indietro.** Dropbox tiene le revisioni
+(`rev:015a…`, che servono *«per il controllo di versione, per ripristinare
+file cancellati e per gestire le copie in conflitto»*), Drive tiene
+`revisions`. Se sbagliamo, la versione di prima è ancora là — e il pannello
+la sa mostrare.
+
+Con queste quattro, scrivere non è più il pezzo pericoloso: è il pezzo che
+chiede di essere fatto per bene.
+
+## 5. Come la farei, dato che è decisa
 
 L'ordine è scelto perché ogni passo sia utile da solo e perché il rischio
-cresca lentamente. Il primo passo è **sola lettura**, che è anche quello che
-è stato chiesto per primo: *leggere* da Drive e Dropbox.
+cresca dove c'è già una rete.
 
 | Fase | Cosa | Perché qui |
 |---|---|---|
-| **B1** | **Dropbox, sola lettura, cartella dell'app.** Collegamento con PKCE, token nel portachiavi, elenco della cartella, scarico dei documenti in una cartella locale dichiarata. Niente scritture. | il servizio più semplice, il permesso più stretto, e il danno peggiore possibile è un file scaricato di troppo |
-| **B2** | **Il delta e lo stato**: `longpoll` + `continue`, e la tabella che sa cosa è già sceso. Sempre sola lettura. | è la parte che rende la cosa un sincronizzatore invece di uno scaricatore |
-| **B3** | **Google Drive, sola lettura, dentro `drive.file`**: una cartella creata dall'app. Nessuna verifica da affrontare. | si impara il modello a identificatori senza pagare il pedaggio |
-| **B4** | **Le scritture**, un servizio alla volta, con il confronto già nostro a mostrare cosa si sta per sovrascrivere | è qui che si può perdere lavoro, e ci si arriva quando tutto il resto è in uso |
-| **B5** | *Eventuale*: la **verifica restricted** di Google, se leggere una cartella qualunque del Drive è ciò che si vuole davvero | un video, un'informativa, e una scadenza ogni dodici mesi |
+| **B1** | **Dropbox, cartella dell'app, in lettura e in scrittura.** Collegamento con PKCE, token nel portachiavi, elenco, scarico, e **salvataggio con `update:<rev>` e `autorename`** | il servizio più semplice, il permesso più stretto, e l'unico dei due in cui il rifiuto di una scrittura vecchia lo fa il servizio |
+| **B2** | **Il delta e lo stato**: `longpoll` + `continue`, la tabella di cosa è già sceso, e il riconoscimento delle copie che il rinomina automatico lascia dietro | è la parte che rende la cosa una sincronizzazione invece di un carica-e-scarica |
+| **B3** | **Google Drive dentro `drive.file`**, lettura e scrittura, con `headRevisionId` letto prima di ogni caricamento e la copia in conflitto **fatta da noi** | si impara il modello a identificatori e l'asimmetria di Drive senza pagare il pedaggio della verifica |
+| **B4** | **Il conflitto nell'editor**: due colonne, tieni questo / tieni quello / tieni entrambi, sul pannello che già confronta | quando ci sono conflitti veri da mostrare, e non prima |
+| **B5** | *Eventuale*: la **verifica restricted** di Google, se leggere e scrivere in una cartella qualunque del Drive è ciò che si vuole davvero | un video, un'informativa, e una scadenza ogni dodici mesi |
 | **A** | La strada della cartella **resta**, per iCloud e per chi il client ce l'ha | non è un ripiego: è l'unica cosa che funziona con iCloud |
 
-## 5. Il perimetro
+## 6. Il perimetro
 
 Come per il server MCP, la parte che conta è quella che diciamo di no.
 
 * **Una cartella dichiarata per servizio**, non «tutto il Drive», nemmeno
   quando l'ambito lo permetterebbe.
-* **Sola lettura finché non è chiesto altro.** B1, B2 e B3 non scrivono
-  niente da nessuna parte.
+* **Si scrive solo dove si è stati messi**: la cartella dichiarata, e solo
+  quella. Un salvataggio non inventa mai una cartella nuova da qualche altra
+  parte.
+* **Nessuna scrittura parte da una versione che non è più quella**: o la
+  rifiuta il servizio (Dropbox), o la fermiamo noi (Drive).
 * **Niente cancellazioni** per conto nostro, in nessuna fase.
 * **Niente server nostri.** Non è solo una scelta di stile: è la ragione per
   cui la verifica di Google non chiede la valutazione di sicurezza.
@@ -161,7 +212,7 @@ Come per il server MCP, la parte che conta è quella che diciamo di no.
 * **Nessun dato di nessuno esce dal Mac**, se non verso il servizio che
   l'utente ha collegato lui.
 
-## 6. Il dubbio, una volta
+## 7. Il dubbio, una volta
 
 Questa strada mette sulle nostre spalle il pezzo che oggi fa qualcun altro
 meglio di noi, e lo mette lì per sempre: tre servizi, tre modelli di file,
@@ -170,13 +221,16 @@ fuori dalla cartella dell'app. Il giorno in cui un token smette di
 rinnovarsi o un formato cambia, la sincronizzazione si rompe per tutti, e
 non c'è un client di Dropbox a cui dare la colpa.
 
-Detto questo: la richiesta ha una ragione, e la fase **B1** — leggere da
-Dropbox, sola lettura, dentro la cartella dell'app — è piccola, utile da
-sola e non può perdere niente di nessuno. Si comincia da lì.
+Detto questo: la richiesta ha una ragione, e la fase **B1** — Dropbox,
+dentro la cartella dell'app, in lettura e in scrittura, con la scrittura che
+porta la sua revisione — è piccola, utile da sola, e le quattro regole del
+capitolo 4 fanno sì che il caso peggiore sia **un file in più con un nome
+strano**, non un file perduto. Si comincia da lì.
 
 ---
 
 *Le classificazioni degli ambiti di Drive, i requisiti della verifica
-restricted, il PKCE e i token brevi di Dropbox e la soglia dei cinquanta
-utenti sono stati letti sulle documentazioni ufficiali il 12 settembre 2026.
-Microsoft Graph no: quello è ancora da verificare.*
+restricted, il PKCE e i token brevi di Dropbox, la soglia dei cinquanta
+utenti, il `WriteMode` di Dropbox e `headRevisionId` di Drive sono stati
+letti sulle documentazioni ufficiali il 12 settembre 2026. Microsoft Graph
+no: quello è ancora da verificare.*

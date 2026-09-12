@@ -17,7 +17,9 @@ strade: vivere bene dentro un provider (**sì**), le API dei provider
 > che funziona con iCloud, e valgono per chiunque il client ce l'abbia già.
 > Cambia il loro peso — non sono più tutta la sincronizzazione, sono la
 > metà che non chiede a nessuno di collegare un account. La metà nuova è
-> nelle fasi **B** dell'altro documento, e comincia da *leggere*.
+> nelle fasi **B** dell'altro documento: leggere **e scrivere** fin dalla
+> prima, con quattro regole che fanno sì che il caso peggiore sia un file
+> in più, non un file perduto.
 
 Ogni tappa dice quattro cose: **cosa si vede**, **cosa si scrive**, **come
 si prova**, e **quando è finita**. Una tappa che non ha tutte e quattro non
