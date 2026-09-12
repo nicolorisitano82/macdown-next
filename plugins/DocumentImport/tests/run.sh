@@ -43,6 +43,11 @@ echo "Il convertitore"
     tests/word-numbering.xml > "$WORK/word.md" 2> "$WORK/word.err"
 "$WORK/harness" --odt tests/odt-content.xml \
     > "$WORK/odt.md" 2> "$WORK/odt.err"
+# The same document twice: with the styles Word ships, and without them.
+"$WORK/harness" --word tests/word-italiano.xml "" "" tests/word-styles.xml \
+    > "$WORK/italiano.md" 2> /dev/null
+"$WORK/harness" --word tests/word-italiano.xml \
+    > "$WORK/senza-stili.md" 2> /dev/null
 
 if [ "$SHOW" = "--show" ]; then
     echo "--- da .docx ---"; cat "$WORK/word.md"
@@ -64,6 +69,29 @@ ok "le parti in comune escono uguali dai due formati" \
                grep -qxF "$line" "$1" || exit 1
            done' \
     "$WORK/word.md" "$WORK/odt.md"
+
+# Word names its styles in whatever language it was in — Titolo1,
+# Überschrift1 — and only styles.xml carries the English name and the
+# outline level that say «this is a heading». Without it a document in any
+# other language came out with its headings as bold paragraphs.
+ok "i titoli di un documento italiano sono titoli" \
+    diff -q tests/word-italiano-expected.md "$WORK/italiano.md"
+ok "un livello scritto nello stile lo dice anche senza nome" \
+    grep -qxF "## Un sottotitolo" "$WORK/italiano.md"
+ok "e uno stile basato su un altro eredita la profondità" \
+    grep -qxF "## Basato su Titolo2" "$WORK/italiano.md"
+ok "un livello messo a mano sul paragrafo vale lo stesso" \
+    grep -qxF "### Fatto a mano" "$WORK/italiano.md"
+ok "il grassetto di un titolo non si scrive due volte" \
+    sh -c '! grep -q "^# \*\*" "$0"' "$WORK/italiano.md"
+ok "ma quello dentro un paragrafo resta" \
+    grep -qF "**una parola in grassetto**" "$WORK/italiano.md"
+ok "e un paragrafo tutto in grassetto resta grassetto" \
+    grep -qxF "**Un paragrafo tutto in grassetto**" "$WORK/italiano.md"
+# The bug, kept as a check: this is what the reader saw, and what says
+# the styles are not optional.
+ok "senza gli stili quei titoli sarebbero paragrafi in grassetto" \
+    grep -qxF "**Relazione annuale**" "$WORK/senza-stili.md"
 
 ok "le immagini sono elencate col loro nome" \
     grep -q "picture.*rete.png" "$WORK/word.err"

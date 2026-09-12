@@ -218,7 +218,38 @@ static NSDictionary<NSString *, NSString *> *MDWordRelationships(NSString *xml)
 }
 
 
-/// How deep a heading is, from the style Word gave the paragraph.
+/** A line with the emphasis that wraps the whole of it taken off.
+ *
+ * `**Titolo**` on its own is what Word gives for a heading whose runs say
+ * bold as well as the style. Inside a heading that emphasis says nothing —
+ * everything in there is already a heading — and `# **Titolo**` is the
+ * same thing written twice. Emphasis that covers only part of the line is
+ * left alone: there it means something.
+ */
+static NSString *MDImportWithoutWholeEmphasis(NSString *line)
+{
+    NSString *text = line;
+    for (NSString *marker in @[@"**", @"*", @"__", @"_"])
+    {
+        while (text.length > marker.length * 2
+               && [text hasPrefix:marker] && [text hasSuffix:marker])
+        {
+            NSString *inside = [text substringWithRange:NSMakeRange(
+                marker.length, text.length - marker.length * 2)];
+            // Only when the marker is the one pair that wraps everything:
+            // `**a** e **b**` is two of them, and taking the ends off
+            // would leave `a** e **b`.
+            if ([inside rangeOfString:marker].location != NSNotFound)
+                break;
+            text = inside;
+        }
+    }
+    return text;
+}
+
+
+/// How deep a heading is, from a style's *name* — «heading 1», «Title» —
+/// or from an identifier that spells the same thing, «Heading1».
 static NSUInteger MDWordHeadingLevel(NSString *style)
 {
     if (!style.length)
@@ -236,8 +267,97 @@ static NSUInteger MDWordHeadingLevel(NSString *style)
 }
 
 
+/** Which styles are headings, and how deep, read from `word/styles.xml`.
+ *
+ * A paragraph names its style by an identifier, and that identifier is in
+ * the language Word happened to be in: `Titolo1` in Italian, `berschrift1`
+ * in German. The definition of the style, though, carries two things that
+ * are not translated — the built-in name (`heading 1`) and the outline
+ * level — and either of them settles the question.
+ *
+ * `w:basedOn` is followed for a style that says neither: somebody's
+ * «Titolo capitolo» based on `Titolo1` is a heading, and Word writes plenty
+ * of those.
+ */
+static NSDictionary<NSString *, NSNumber *> *MDWordHeadingStyles(NSString *xml)
+{
+    NSMutableDictionary<NSString *, NSNumber *> *levels =
+        [NSMutableDictionary dictionary];
+    if (!xml.length)
+        return levels;
+
+    NSXMLDocument *document = [[NSXMLDocument alloc]
+        initWithXMLString:xml options:NSXMLNodeOptionsNone error:NULL];
+    if (!document)
+        return levels;
+
+    // First pass: what each style says about itself, and what it is based on.
+    NSMutableDictionary<NSString *, NSString *> *basedOn =
+        [NSMutableDictionary dictionary];
+    for (NSXMLElement *style in MDDescendants(document.rootElement, @"w:style"))
+    {
+        NSString *identifier = MDAttribute(style, @"w:styleId");
+        if (!identifier.length)
+            continue;
+        NSString *kind = MDAttribute(style, @"w:type");
+        if (kind.length && ![kind isEqualToString:@"paragraph"])
+            continue;
+
+        NSUInteger level = 0;
+        NSXMLElement *name = MDChild(style, @"w:name");
+        if (name)
+            level = MDWordHeadingLevel(MDAttribute(name, @"w:val"));
+        if (!level)
+        {
+            // An outline level is 0 for the first heading, and a paragraph
+            // that is not a heading at all uses 9.
+            NSXMLElement *properties = MDChild(style, @"w:pPr");
+            NSXMLElement *outline = properties
+                ? MDChild(properties, @"w:outlineLvl") : nil;
+            NSInteger written = outline
+                ? [MDAttribute(outline, @"w:val") integerValue] : -1;
+            if (written >= 0 && written <= 5)
+                level = (NSUInteger)(written + 1);
+        }
+        if (!level)
+            level = MDWordHeadingLevel(identifier);
+
+        if (level)
+            levels[identifier] = @(level);
+        else
+        {
+            NSXMLElement *parent = MDChild(style, @"w:basedOn");
+            NSString *from = parent ? MDAttribute(parent, @"w:val") : nil;
+            if (from.length)
+                basedOn[identifier] = from;
+        }
+    }
+
+    // Second pass: a style that says nothing inherits from the one it is
+    // based on. Ten steps is a chain nobody writes; it is there so that a
+    // style based on itself cannot spin.
+    for (NSString *identifier in basedOn)
+    {
+        NSString *walk = basedOn[identifier];
+        for (NSUInteger step = 0; step < 10 && walk.length; step++)
+        {
+            NSNumber *level = levels[walk];
+            if (level)
+            {
+                levels[identifier] = level;
+                break;
+            }
+            walk = basedOn[walk];
+        }
+    }
+    return levels;
+}
+
+
 @interface MDWordReader : NSObject
 @property (nonatomic) NSDictionary<NSString *, NSString *> *targets;
+/// style identifier → heading level, from styles.xml.
+@property (nonatomic) NSDictionary<NSString *, NSNumber *> *headings;
 @property (nonatomic) NSDictionary<NSString *, NSNumber *> *numbered;
 @property (nonatomic) NSString *pictureFolder;
 @property (nonatomic) NSMutableArray<MDImportPicture *> *pictures;
@@ -246,6 +366,33 @@ static NSUInteger MDWordHeadingLevel(NSString *style)
 
 
 @implementation MDWordReader
+
+/** How deep this paragraph's heading is, or zero.
+ *
+ * Three answers, in the order they can be trusted: what styles.xml says
+ * about the style the paragraph names; the outline level the paragraph
+ * carries itself, which is how a heading made by hand says so; and the
+ * identifier read as if it were a name, which is all there is when the
+ * document arrives without its styles.
+ */
+- (NSUInteger)headingLevelOf:(NSString *)styleName
+                  properties:(NSXMLElement *)properties
+{
+    NSNumber *known = styleName.length ? self.headings[styleName] : nil;
+    if (known)
+        return known.unsignedIntegerValue;
+
+    NSXMLElement *outline = properties ? MDChild(properties, @"w:outlineLvl")
+                                       : nil;
+    if (outline)
+    {
+        NSInteger written = [MDAttribute(outline, @"w:val") integerValue];
+        if (written >= 0 && written <= 5)
+            return (NSUInteger)(written + 1);
+    }
+    return MDWordHeadingLevel(styleName);
+}
+
 
 /// One paragraph's runs, as Markdown, with the links and pictures in place.
 - (NSString *)inlineOf:(NSXMLElement *)paragraph
@@ -465,13 +612,16 @@ static NSUInteger MDWordHeadingLevel(NSString *style)
         if (!text.length)
             continue;
 
-        NSUInteger heading = MDWordHeadingLevel(styleName);
+        NSUInteger heading = [self headingLevelOf:styleName
+                                       properties:properties];
         if (heading)
         {
             NSString *hashes = [@"" stringByPaddingToLength:heading
                 withString:@"#" startingAtIndex:0];
+            // Word's heading styles are bold, and the runs usually say so
+            // as well: `# **Titolo**` is the same heading written twice.
             MDImportAppendBlock(out, [NSString stringWithFormat:@"%@ %@",
-                                      hashes, text]);
+                                      hashes, MDImportWithoutWholeEmphasis(text)]);
             continue;
         }
         if ([styleName.lowercaseString containsString:@"quote"])
@@ -491,6 +641,7 @@ static NSUInteger MDWordHeadingLevel(NSString *style)
 MDImportResult *MDMarkdownFromWordXML(NSString *documentXML,
                                       NSString *relationshipsXML,
                                       NSString *numberingXML,
+                                      NSString *stylesXML,
                                       NSString *pictureFolder)
 {
     MDImportResult *result = [[MDImportResult alloc] init];
@@ -513,6 +664,7 @@ MDImportResult *MDMarkdownFromWordXML(NSString *documentXML,
     MDWordReader *reader = [[MDWordReader alloc] init];
     reader.targets = MDWordRelationships(relationshipsXML);
     reader.numbered = MDWordNumbering(numberingXML);
+    reader.headings = MDWordHeadingStyles(stylesXML);
     reader.pictureFolder = pictureFolder ?: @"media";
     reader.pictures = [NSMutableArray array];
     reader.lost = [NSMutableOrderedSet orderedSet];

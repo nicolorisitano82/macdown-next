@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- What settles it: the identifier is Italian, the name is not. Word
+     writes the built-in name in English whatever language it is in, and
+     the outline level is a number. -->
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+ <w:style w:type="paragraph" w:styleId="Normale"><w:name w:val="Normal"/></w:style>
+ <w:style w:type="paragraph" w:styleId="Titolo"><w:name w:val="Title"/></w:style>
+ <w:style w:type="paragraph" w:styleId="Titolo1"><w:name w:val="heading 1"/><w:pPr><w:outlineLvl w:val="0"/></w:pPr></w:style>
+ <!-- No name at all: only the outline level, which is how a style renamed
+      by hand usually arrives. -->
+ <w:style w:type="paragraph" w:styleId="Titolo2"><w:pPr><w:outlineLvl w:val="1"/></w:pPr></w:style>
+ <w:style w:type="paragraph" w:styleId="TitoloCapitolo"><w:name w:val="Titolo capitolo"/><w:basedOn w:val="Titolo2"/></w:style>
+ <w:style w:type="character" w:styleId="Titolo9"><w:name w:val="heading 9"/></w:style>
+</w:styles>

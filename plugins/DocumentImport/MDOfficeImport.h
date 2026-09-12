@@ -43,12 +43,21 @@
  * `word/numbering.xml`, which says whether a list is bulleted or numbered;
  * without it every list is bulleted, which is the safer guess.
  *
+ * `styles` is `word/styles.xml`, and it is the one that decides whether a
+ * heading is a heading. A paragraph points at a style by an identifier
+ * that is in the *language Word was in* when the document was written —
+ * `Titolo1`, `berschrift1`, `Ttulo1` — while the style's own definition
+ * carries the built-in English name, `heading 1`, and an outline level.
+ * Without this file a document written in anything but English comes out
+ * with its headings as ordinary bold paragraphs, which is what happened.
+ *
  * `pictureFolder` is the name of the folder the pictures will be written
  * into, and only ends up inside the links.
  */
 extern MDImportResult *MDMarkdownFromWordXML(NSString *documentXML,
                                              NSString *relationshipsXML,
                                              NSString *numberingXML,
+                                             NSString *stylesXML,
                                              NSString *pictureFolder);
 
 /** An OpenDocument text's XML turned into Markdown.

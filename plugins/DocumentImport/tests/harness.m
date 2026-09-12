@@ -7,7 +7,7 @@
 //  and whatever was left behind on the standard error, so that a check can
 //  look at either one.
 //
-//      harness --word document.xml [rels.xml [numbering.xml]]
+//      harness --word document.xml [rels.xml [numbering.xml [styles.xml]]]
 //      harness --odt content.xml
 //
 //  The folder the picture links point at is «media», which is what the
@@ -37,7 +37,8 @@ int main(int argc, const char *argv[])
         {
             result = MDMarkdownFromWordXML(read(argv[2]),
                 argc > 3 ? read(argv[3]) : nil,
-                argc > 4 ? read(argv[4]) : nil, @"media");
+                argc > 4 ? read(argv[4]) : nil,
+                argc > 5 ? read(argv[5]) : nil, @"media");
         }
         else
         {

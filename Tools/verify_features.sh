@@ -883,6 +883,10 @@ mkdir -p "$DOCX/word/_rels" "$DOCX/_rels"
 cp plugins/DocumentImport/tests/word-document.xml "$DOCX/word/document.xml"
 cp plugins/DocumentImport/tests/word-rels.xml "$DOCX/word/_rels/document.xml.rels"
 cp plugins/DocumentImport/tests/word-numbering.xml "$DOCX/word/numbering.xml"
+# Written as Word writes it in Italian: the style is «Titolo1» and only
+# styles.xml knows that means a heading.
+cp plugins/DocumentImport/tests/word-italiano.xml "$DOCX/word/document.xml"
+cp plugins/DocumentImport/tests/word-styles.xml "$DOCX/word/styles.xml"
 printf '<?xml version="1.0"?><Relationships/>' > "$DOCX/_rels/.rels"
 (cd "$DOCX" && zip -q -r "$WORK/verbale.docx" .)
 
@@ -898,14 +902,26 @@ if command -v clang > /dev/null 2>&1 \
             plugins/DocumentImport/MDOfficeImport.m > /dev/null 2>&1; then
     "$WORK/import-probe" --word "$WORK/aperto/word/document.xml" \
         "$WORK/aperto/word/_rels/document.xml.rels" \
-        "$WORK/aperto/word/numbering.xml" > "$WORK/importato.md" 2>/dev/null
+        "$WORK/aperto/word/numbering.xml" \
+        "$WORK/aperto/word/styles.xml" > "$WORK/importato.md" 2>/dev/null
+    ok "e i titoli di un documento italiano sono titoli" \
+        sh -c 'grep -qxF "# Relazione annuale" "$0" \
+               && grep -qxF "## Un sottotitolo" "$0"' "$WORK/importato.md"
+    ok "senza scrivere il grassetto due volte" \
+        sh -c '! grep -q "^# \*\*" "$0"' "$WORK/importato.md"
+
+    # And the older fixture, which is the one with lists and pictures.
+    "$WORK/import-probe" --word plugins/DocumentImport/tests/word-document.xml \
+        plugins/DocumentImport/tests/word-rels.xml \
+        plugins/DocumentImport/tests/word-numbering.xml \
+        > "$WORK/importato2.md" 2>/dev/null
     ok "e quello che ne esce è il documento, in Markdown" \
-        contains "$WORK/importato.md" "# Verbale della riunione"
+        contains "$WORK/importato2.md" "# Verbale della riunione"
     ok "con gli elenchi ancora due" \
         sh -c 'grep -q "^- Si adotta" "$0" && grep -q "^1\. Primo passo" "$0"' \
-        "$WORK/importato.md"
+        "$WORK/importato2.md"
     ok "e l'immagine collegata dove sarà scritta" \
-        contains "$WORK/importato.md" "](media/rete.png)"
+        contains "$WORK/importato2.md" "](media/rete.png)"
 else
     skip "la conversione di un .docx vero (clang non ha costruito l'arnese)"
 fi

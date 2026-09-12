@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A document as Word writes it when Word is in Italian: the styles are
+     named in Italian and the headings' runs carry bold of their own. The
+     only thing in here that says «heading» is the identifier, and it says
+     it in a language nobody can parse. -->
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+ <w:body>
+  <w:p><w:pPr><w:pStyle w:val="Titolo"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Relazione annuale</w:t></w:r></w:p>
+  <w:p><w:r><w:t>Una riga di prosa.</w:t></w:r></w:p>
+  <w:p><w:pPr><w:pStyle w:val="Titolo1"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Primo capitolo</w:t></w:r></w:p>
+  <w:p><w:r><w:t xml:space="preserve">Con </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>una parola in grassetto</w:t></w:r><w:r><w:t xml:space="preserve"> dentro.</w:t></w:r></w:p>
+  <w:p><w:pPr><w:pStyle w:val="Titolo2"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Un sottotitolo</w:t></w:r></w:p>
+  <w:p><w:pPr><w:pStyle w:val="TitoloCapitolo"/></w:pPr><w:r><w:t>Basato su Titolo2</w:t></w:r></w:p>
+  <w:p><w:pPr><w:outlineLvl w:val="2"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Fatto a mano</w:t></w:r></w:p>
+  <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Un paragrafo tutto in grassetto</w:t></w:r></w:p>
+ </w:body>
+</w:document>

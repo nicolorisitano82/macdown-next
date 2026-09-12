@@ -35,7 +35,7 @@ Foundation.
 
 | | da Word | da OpenDocument |
 |---|---|---|
-| Titoli | `Heading 1…6`, `Title` | `text:h` col suo livello |
+| Titoli | lo stile, in qualunque lingua | `text:h` col suo livello |
 | Grassetto, corsivo | `w:b`, `w:i` | dagli stili automatici |
 | Barrato, codice | `w:strike`, carattere a spaziatura fissa | idem |
 | Elenchi, anche annidati | `w:numPr` + `numbering.xml` | `text:list` annidate |
@@ -44,6 +44,27 @@ Foundation.
 | Citazioni | stile `Quote` | stile di citazione |
 | Collegamenti | `w:hyperlink` + `document.xml.rels` | `text:a` |
 | Immagini | `w:drawing` + i rels | `draw:image` |
+
+### I titoli, e perché serve `styles.xml`
+
+Un paragrafo di Word dice il suo stile con un identificatore, e quello è
+**nella lingua in cui era Word** quando il documento è stato scritto:
+`Titolo1` in italiano, `Überschrift1` in tedesco. Guardando solo lì, un
+documento non inglese arriva con i titoli ridotti a **paragrafi in
+grassetto** — è successo.
+
+La definizione dello stile, in `word/styles.xml`, porta invece due cose che
+non si traducono: il nome incorporato (`heading 1`) e il **livello di
+struttura**. Basta una delle due. E se lo stile non dice né l'uno né
+l'altro si guarda quello da cui deriva (`w:basedOn`), perché un «Titolo
+capitolo» costruito sopra `Titolo1` è un titolo.
+
+Vale anche un livello messo a mano sul singolo paragrafo (`w:outlineLvl`).
+
+Gli stili dei titoli di Word sono in grassetto, e spesso lo sono anche le
+loro parole: `# **Titolo**` sarebbe la stessa cosa scritta due volte, e il
+grassetto che avvolge **tutto** il titolo viene tolto. Quello che ne copre
+solo un pezzo resta: lì significa qualcosa.
 
 Il testo alternativo di un'immagine viene da `wp:docPr@descr` e da
 `draw:name`: se il documento ne aveva uno, il Markdown ce l'ha.
@@ -97,6 +118,6 @@ qualcun altro:
     ./plugins/DocumentImport/tests/run.sh          # le prove
     ./plugins/DocumentImport/tests/run.sh --show   # e cosa è uscito
 
-Tredici controlli su due documenti finti, più quello che succede quando il
+Ventuno controlli su tre documenti finti, più quello che succede quando il
 file non è XML, non è un documento, o non è nemmeno uno zip.
 `Tools/verify_features.sh` li rifà sull'applicazione costruita.

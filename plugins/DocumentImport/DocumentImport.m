@@ -287,6 +287,7 @@ static DocumentImport *sImporter = nil;
                                 [self textOf:folder
                                        entry:@"word/_rels/document.xml.rels"],
                                 [self textOf:folder entry:@"word/numbering.xml"],
+                                [self textOf:folder entry:@"word/styles.xml"],
                                 pictureFolder)
         : MDMarkdownFromOpenDocumentXML([self textOf:folder entry:@"content.xml"],
                                         pictureFolder);
