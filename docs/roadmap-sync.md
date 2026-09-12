@@ -171,8 +171,9 @@ Mac risponde `Local`.
 
 **Cosa si vede**: sotto il titolo del documento, dove oggi c'è «nessuna
 segnalazione», una parola in più quando il file è dentro un provider: *in
-arrivo*, *non scaricato*, *da caricare*. Quando è tutto a posto, **niente**:
-un'applicazione che dice «sincronizzato» ogni tre secondi è rumore.
+arrivo*, *non scaricato*, *da caricare*, *non leggibile*. Quando è tutto a
+posto, **niente** — è la decisione 1, e vale anche per lo stato
+`Downloaded`: quello non si mostra mai.
 
 **Cosa si scrive**: la riga nel controller del documento, e un
 `NSFilePresenter` che già c'è per i cambi sotto il documento — lo stato si
@@ -229,7 +230,10 @@ per il primo caso. Non «0 risultati», che è una bugia due volte.
   invece di camminare per conto loro;
 * nel **server MCP** la stessa cosa, e la sua risposta lo deve dire nel
   testo: un assistente che riceve «nessun risultato» non ha modo di sapere
-  che mezza cartella era in cielo. Questo tocca `MDMCPIndex` e le sue prove.
+  che mezza cartella era in cielo. Questo tocca `MDMCPIndex` e le sue prove
+  — e per la decisione 3 il server **non scarica niente in nessun caso**,
+  il che è un controllo da scrivere: `MDMCPTools` non nomina mai
+  `startDownloadingUbiquitousItemAtURL:`.
 
 **Come si prova**: una cartella finta in cui alcuni file sono dichiarati
 non-locali da una funzione iniettata (non serve un provider per provare la
@@ -316,6 +320,8 @@ entrambi*, sul pannello che già confronta due documenti.
 * Un repository dentro un provider si può fare, ma **si avvisa**: Dropbox
   che copia mentre git scrive dentro `.git` è il modo classico di rovinare
   un repository.
+* **Niente download che non abbia un gesto dietro** (decisione 2), e
+  **niente download dal server MCP, mai** (decisione 3).
 
 ## L'ordine, in una riga
 
@@ -328,21 +334,45 @@ l'applicazione può fare un danno vero — scaricare gigabyte che nessuno ha
 chiesto — e l'unica dove oggi dice una cosa falsa, «nessun risultato», di
 una cartella che semplicemente non ha guardato.
 
+## Cosa è stato deciso
+
+Tre risposte, e valgono da qui in avanti. Non sono preferenze da mettere in
+un pannello: sono il modo in cui questa parte si comporta.
+
+**1. Lo stato si mostra solo quando è interessante.** Quando il documento è
+qui ed è caricato, la barra non dice niente. Un'applicazione che ripete
+«sincronizzato» sta occupando spazio per dire che non è successo niente.
+
+**2. Non si scarica mai da soli.** Una ricerca che incontra documenti non
+scesi li **conta e lo dice**; scaricarli è un pulsante che preme chi legge.
+
+> La riga di confine, perché le due cose sembrano contraddirsi: **aprire un
+> documento lo si è chiesto** — M3 scarica *quel* file perché è esattamente
+> quello che l'utente ha appena domandato. **Camminare una cartella non lo
+> si è chiesto**: lì non parte niente. Il discrimine è se c'è un gesto
+> dietro, non se il codice è nostro.
+
+**3. Il server MCP non scarica, mai.** «Per ora», ed è la formula giusta:
+è un processo senza finestre che parla con un assistente, e nessuno sarebbe
+lì a vedere partire dieci giga. Dice quanti documenti non ha potuto
+guardare e perché — non scesi, oppure cartella che non si apre — e si ferma
+lì. Niente interruttore per accenderlo: un'opzione che permette a un
+programma esterno di far scaricare una cartella intera è un'opzione che
+prima o poi qualcuno lascia accesa.
+
+Conseguenze immediate, da portarsi dentro M4: la risposta del server dice i
+due conti **nel testo**, perché un assistente che riceve «nessun risultato»
+non ha modo di sapere che mezza cartella era in cielo; e `MDMCPTools` non
+chiama mai `startDownloadingUbiquitousItemAtURL:`, il che è una riga di
+prova nella sua suite, non un'intenzione.
+
 ## Cosa resta da decidere
 
-1. **Lo stato lo mostriamo sempre o solo quando è interessante?** Propendo
-   per *solo quando è interessante*: niente etichetta quando il file è qui e
-   caricato.
-2. **Quando una ricerca trova documenti non scesi, li scarichiamo?**
-   Propendo per *mai da soli*: lo si dice e c'è il pulsante.
-3. **Il server MCP scarica?** Propendo per *no, mai*: è un processo senza
-   finestre che parla con un assistente, ed è l'ultimo posto dove far
-   partire un download di gigabyte. Dice quanti non ha guardato e basta.
-4. **M0 quando?** ~~Serve un Mac con Dropbox o Google Drive installato.~~
-   Fatta a metà: iCloud misurato, OneDrive caratterizzato mentre **non**
-   gira — che si è rivelato il caso più istruttivo — Dropbox e Drive
-   ancora da guardare, e un file non sceso pure. M1 si può scrivere
-   comunque; M3 e M5 aspettano il resto della tabella.
+1. **M0 quando si chiude?** Fatta a metà: iCloud misurato, OneDrive
+   caratterizzato mentre **non** gira — che si è rivelato il caso più
+   istruttivo — Dropbox e Drive ancora da guardare, e un file non sceso
+   pure. M1 si può scrivere comunque; M3 e M5 aspettano il resto della
+   tabella.
 
 ---
 
