@@ -20,8 +20,9 @@ strade: vivere bene dentro un provider (**sì**), le API dei provider
 > nelle fasi **B** dell'altro documento: leggere **e scrivere** fin dalla
 > prima, con quattro regole che fanno sì che il caso peggiore sia un file
 > in più, non un file perduto — e si comincia da **Google Drive**, che è il
-> più difficile dei due, preceduto da una misura che decide la forma della
-> prima fase.
+> più difficile dei due. La misura che doveva decidere la forma della prima
+> fase è stata fatta, e ha risposto **no**: una cartella scelta è una
+> destinazione, non una sorgente.
 
 Ogni tappa dice quattro cose: **cosa si vede**, **cosa si scrive**, **come
 si prova**, e **quando è finita**. Una tappa che non ha tutte e quattro non

@@ -217,6 +217,50 @@ alla cartella. Da questo dipende tutto:
   là dentro una volta sola. Funziona, ma va detto in chiaro al primo
   collegamento.
 
+### La risposta, misurata — ed è **no**
+
+Un client vero, il Picker, una cartella scelta (`appunti`), e poi le
+domande. Il 13 settembre 2026:
+
+```
+cosa vede l'applicazione, in tutto:   2 cose
+  appunti                             la cartella scelta
+  Copy of Income Statement            un file scelto
+
+i figli di «appunti»:                 0
+i permessi sulla cartella:            canListChildren  true
+                                      canAddChildren   true
+                                      canEdit          true
+```
+
+La cartella era vuota, quindi lo zero non provava niente: ci è stato messo
+dentro **un file dalla pagina di Drive**, e la domanda è stata rifatta.
+Ancora **zero**, e l'universo visibile è rimasto di due cose.
+
+Quindi: **scegliere una cartella non dà accesso a quello che contiene.** Il
+diritto di elencare c'è (`canListChildren` è vero) e l'elenco torna vuoto lo
+stesso, perché l'API mostra solo i file che *quell'applicazione* ha creato o
+che le sono stati passati uno per uno. Una cartella scelta è **una
+destinazione**, non una sorgente.
+
+### Cosa diventa B1, di conseguenza
+
+| | Come si fa | Cosa vede l'applicazione |
+|---|---|---|
+| **Dove scrivere** | si sceglie una cartella nel Picker | ci scrive, e rilegge quello che ha scritto lei |
+| **Cosa portare dentro** | si scelgono **i documenti** nel Picker, anche molti insieme | quelli, e restano accessibili |
+| ~~Leggere una cartella che esiste già~~ | `drive.readonly` o `drive` | **restricted**: verifica, video, ricertificazione ogni dodici mesi |
+
+Non è la versione che uno si aspetta, ed è esattamente per questo che il
+pannello deve dirlo al primo collegamento invece di lasciarlo scoprire a chi
+non trova i suoi appunti.
+
+La metà buona: `canAddChildren` e `canEdit` sono veri, quindi **scrivere
+nella cartella scelta si può**, che era la richiesta. Quello che non si
+eredita è il passato.
+
+---
+
 **Va misurato prima di scrivere B1**, come è stato fatto per M0 — e
 l'arnese per farlo adesso c'è:
 [`Tools/drive_probe.m`](../Tools/drive_probe.m), un file solo.
@@ -304,7 +348,7 @@ che è l'unico posto dove ha senso darlo, e torna su `127.0.0.1`.
 
 | Fase | Cosa | Perché qui |
 |---|---|---|
-| **B0** | **La misura**: client OAuth, Picker sul desktop, e la risposta alla domanda qui sopra. Nessun codice dell'applicazione | decide se B1 è «scegli la tua cartella» o «una cartella nostra» |
+| ~~**B0**~~ | **Fatta**: scegliere una cartella **non** dà accesso al contenuto. Una cartella è dove si scrive; i documenti che esistono già si scelgono uno per uno | decideva se B1 fosse «scegli la tua cartella» o «scegli i tuoi documenti»: è la seconda |
 | **B1** | **Google Drive, `drive.file`, lettura e scrittura.** PKCE con richiamo su `127.0.0.1`, token nel portachiavi, elenco, scarico, e salvataggio con `headRevisionId` letto subito prima: se si è mosso, la copia in conflitto la facciamo noi | è il servizio chiesto per primo, ed è quello che insegna il modello più difficile |
 | **B2** | **Il delta e lo stato**: `changes.list` con il gettone di partenza, la tabella identificatore ↔ percorso, e cosa fare quando un file cambia nome di là | è la parte che rende la cosa una sincronizzazione invece di un carica-e-scarica |
 | **B3** | **Dropbox, cartella dell'app, lettura e scrittura**: PKCE, `update:<rev>` con `autorename`, `longpoll` + `continue` | con il motore già scritto, qui si aggiunge un servizio, non un sistema |
