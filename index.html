@@ -279,7 +279,8 @@
       punctuation. Diagrams that render — in the window, in the exports and
       in the Finder. A model that writes on your own Mac. A comparison that
       does not call a re-wrapped paragraph a hundred and eighty changes.
-      Everything here was measured before it was claimed.
+      A Word file read into the document instead of retyped. Everything
+      here was measured before it was claimed.
     </p>
     <div class="actions">
       <a class="btn btn-primary"
@@ -577,6 +578,54 @@
       </div>
 
       <div class="card">
+        <p class="tag">Importing</p>
+        <h3>A Word file, read into the document</h3>
+        <p>
+          Somebody sends a <code>.docx</code>. The choice was to retype it or
+          to keep a format you cannot read without the program that wrote it.
+          <b>File ▸ Import</b> is the third way: headings, lists, tables,
+          quotations, links and pictures come across as Markdown, at the
+          insertion point, in one step of undo. OpenDocument
+          (<code>.odt</code>) too.
+        </p>
+        <p>
+          Both formats are a zip of XML, so nothing here needs a library —
+          and the styles are read, not guessed: a paragraph names its style
+          in whatever language Word was in, <code>Titolo1</code> or
+          <code>Überschrift1</code>, and only the style sheet inside the file
+          knows that means a heading.
+        </p>
+        <p>
+          What cannot come across — footnotes, comments, tracked changes —
+          is listed in a panel rather than left for you to discover later.
+        </p>
+      </div>
+
+      <div class="card">
+        <p class="tag">Colour</p>
+        <h3>What a word looks like, said in Markdown</h3>
+        <p>
+          Markdown says what a thing <em>is</em>, not how it looks, so it has
+          no colour of its own. The two languages that grew out of it and do
+          say it — Djot and Pandoc — spell it the same way, and so does this:
+          <code>[acceso]{style="color:#c00"}</code>.
+        </p>
+        <p>
+          Select some words, right-click, <b>Style ▸</b>: the colour of the
+          words, the colour behind them, four sizes. Click inside words that
+          are already styled and the same menu changes them, starting from
+          the colour that is already there.
+        </p>
+        <p>
+          In the editor the braces hide until the caret reaches them, the way
+          a link's destination does, and the words are drawn in the colour
+          they ask for. Only attributes that describe are let through to the
+          page — an event handler stays on the page as you typed it, because
+          the preview is a web view and the file is often somebody else's.
+        </p>
+      </div>
+
+      <div class="card">
         <p class="tag">Agents</p>
         <h3>A folder an assistant can read</h3>
         <p>
@@ -622,6 +671,29 @@
              alt="The same comparison by paragraph: 9 differences">
         <figcaption><b>9 differenze</b> — the real ones, with the words that
           differ marked inside the paragraph.</figcaption>
+      </figure>
+    </div>
+
+    <div class="shot-pair">
+      <figure class="shot-in">
+        <img src="assets/colore.png"
+             alt="The editor and the preview, with a word in red, one
+                  highlighted and one larger">
+        <figcaption>
+          <code>[venerdì]{style="font-size:1.4em;color:#c0392b"}</code> — the
+          editor draws it as the page will, and hides the braces until the
+          caret reaches them.
+        </figcaption>
+      </figure>
+      <figure class="shot-in">
+        <img src="assets/importa.png"
+             alt="A Word document imported: headings, nested lists, a table,
+                  a quotation and a linked picture">
+        <figcaption>
+          A <code>.docx</code> after <b>File ▸ Import</b>: the headings are
+          headings, the nested list is nested, the table is a table, and the
+          picture is beside the document.
+        </figcaption>
       </figure>
     </div>
 
@@ -756,6 +828,20 @@
              selection made in the preview takes those words out of the
              source; a selection that cannot be placed with certainty leaves
              the editor alone and says so.</p>
+        </div>
+      </div>
+
+      <div class="ba-row">
+        <div class="ba-cell ba-before">
+          <p class="ba-label">Before</p>
+          <p>A Word file arriving in your inbox meant retyping it, or keeping
+             a format you cannot read without the program that wrote it.</p>
+        </div>
+        <div class="ba-cell ba-after">
+          <p class="ba-label">Now</p>
+          <p>File ▸ Import reads a <code>.docx</code> or an <code>.odt</code>
+             into the document where the cursor is, with its headings, lists,
+             tables and pictures — and says what it could not carry over.</p>
         </div>
       </div>
 
