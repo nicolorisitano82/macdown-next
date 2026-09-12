@@ -300,6 +300,40 @@ invisible there.
 
 
 
+## A folder that lives in a service
+
+**Settings ▸ Sync** connects a Google Drive of yours. There is no client of
+mine inside the application, on purpose: one client for everybody would mean
+one verification, one quota and a consent screen carrying somebody else's
+name. You make your own in the Google Cloud console — five minutes, and
+standard use of the Drive API costs nothing — and from then on the
+permission is between you and Google. The client ID lives in preferences
+because it is public by construction; the secret and the tokens live in the
+keychain, and neither ever reaches a preferences file or a log.
+
+Two choices, because they are two different things:
+
+* **Choose a folder…** says where I may write.
+* **Choose documents…** says which documents that already exist I may see.
+
+That distinction is not a design preference, it is what the permission
+actually does: handing over a folder hands over the folder — the right to
+write in it and to read back what I put there — and **not** what was already
+inside it. Documents that exist already have to be handed over one at a
+time, in the picker.
+
+Then, in **File**:
+
+* **Open from the Connected Service…** lists what is up there and opens one.
+* **Put a Copy on the Connected Service** sends a local document up, the
+  first time.
+
+A document opened from a service saves back to it with **⌘S** — no save
+panel, because where it came from is already known — and the edited dot
+clears the way it does for a file. If somebody wrote there while you were
+working, nothing of theirs is overwritten: what you had is written beside
+it, as a copy whose name says so.
+
 ## <a name="rendering-pane"></a>The Rendering Preference Pane
 This is where I keep preferences relating to how I render and style the parsed markdown in the preview window.  
 ### CSS

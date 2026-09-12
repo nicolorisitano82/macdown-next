@@ -344,6 +344,11 @@ entrambi*, sul pannello che già confronta due documenti.
 
 ## L'ordine, in una riga
 
+**B0 → B1 → B2 sono fatte**, e vivono nel branch `sync`: il pannello con le
+credenziali di chi usa l'applicazione, il Picker nelle sue due forme, la
+lettura e la scrittura con la versione controllata, il registro e il delta,
+e ⌘S che su un documento aperto da un servizio torna lì.
+
 **M0 → M1 → M2 → M3 → M4 → M5** è la parte che riguarda le cartelle dei
 provider, si può fermare in qualsiasi punto e ogni tappa da sola migliora
 qualcosa. **M6 → M7 → M8** è git. **B1 → B5**, nell'[altro

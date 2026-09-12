@@ -268,6 +268,31 @@ E il punto 5 dice l'altra metà della misura di B0: una cartella scelta è una
 destinazione **che si può rileggere**, perché quello che c'è dentro l'ha
 messo l'applicazione.
 
+### Come si usa, adesso che c'è
+
+**Impostazioni ▸ Sincronizza** tiene le credenziali di chi usa
+l'applicazione e due scelte, che sono due gesti diversi:
+
+* **Scegli una cartella…** — dove l'applicazione scriverà;
+* **Scegli documenti…** — quali documenti che esistono già può vedere.
+
+Poi, in **Archivio**:
+
+* **Apri dal servizio collegato…** apre una finestrella con l'elenco di
+  quello che il servizio tiene, e ne apre uno;
+* **Metti una copia sul servizio collegato** manda là un documento locale,
+  la prima volta. Si offre solo per i documenti che non vengono già di là.
+
+E la regola che conta, arrivata da chi lo stava usando: **un documento
+aperto da un servizio si salva lì con ⌘S**. Una cartella collegata deve
+comportarsi come una cartella, non come un posto da cui si esporta. Senza,
+un documento aperto dalla rete è un documento senza file, e ⌘S aprirebbe il
+pannello di salvataggio a chiedere dove metterlo — che è la domanda
+sbagliata, perché da dove viene si sa già. Quando il salvataggio riesce il
+pallino di modifica se ne va, come per un file; quando la versione là fuori
+si è mossa non si sovrascrive niente e il pannello dice dove è finita la
+copia.
+
 ### Cosa diventa B1, di conseguenza
 
 | | Come si fa | Cosa vede l'applicazione |
