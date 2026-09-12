@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D1D00000000000000000000A /* MPSpanStyler.m in Sources */ = {isa = PBXBuildFile; fileRef = D1D000000000000000000002 /* MPSpanStyler.m */; };
 		D1C00000000000000000000A /* MPAttributedSpans.m in Sources */ = {isa = PBXBuildFile; fileRef = D1C000000000000000000002 /* MPAttributedSpans.m */; };
 		D1C00000000000000000000B /* MPAttributedSpans.m in Sources */ = {isa = PBXBuildFile; fileRef = D1C000000000000000000002 /* MPAttributedSpans.m */; };
 		D1C00000000000000000000C /* MPAttributedSpansTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D1C000000000000000000003 /* MPAttributedSpansTests.m */; };
@@ -343,6 +344,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D1D000000000000000000001 /* MPSpanStyler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPSpanStyler.h; sourceTree = "<group>"; };
+		D1D000000000000000000002 /* MPSpanStyler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPSpanStyler.m; sourceTree = "<group>"; };
 		D1C000000000000000000001 /* MPAttributedSpans.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPAttributedSpans.h; sourceTree = "<group>"; };
 		D1C000000000000000000002 /* MPAttributedSpans.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPAttributedSpans.m; sourceTree = "<group>"; };
 		D1C000000000000000000003 /* MPAttributedSpansTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPAttributedSpansTests.m; sourceTree = "<group>"; };
@@ -1217,6 +1220,8 @@
 				D0C1E00100000000000000C1 /* MPMarkerHider.m */,
 				D0C1C00200000000000000A1 /* MPSemanticStyler.h */,
 				D0C1C00100000000000000A1 /* MPSemanticStyler.m */,
+				D1D000000000000000000001 /* MPSpanStyler.h */,
+				D1D000000000000000000002 /* MPSpanStyler.m */,
 				1F396E6519B0EA17000D3EFC /* MPEditorView.m */,
 				7DA2311453239F0973310049 /* MPProseIssuesViewController.h */,
 				7DA2311453239F0973310050 /* MPProseIssuesViewController.m */,
@@ -2031,6 +2036,7 @@
 				D0C1F00300000000000000D1 /* MPBlockStyler.m in Sources */,
 				D0C1E00300000000000000C1 /* MPMarkerHider.m in Sources */,
 				D0C1C00300000000000000A1 /* MPSemanticStyler.m in Sources */,
+				D1D00000000000000000000A /* MPSpanStyler.m in Sources */,
 				1F396E6619B0EA17000D3EFC /* MPEditorView.m in Sources */,
 				F55A342A5A01CEBCC9F60047 /* MPProseIssuesViewController.m in Sources */,
 				F55A342A5A01CEBCC9F60050 /* MPBacklinksViewController.m in Sources */,

@@ -256,9 +256,24 @@ the attributes in braces right after.
 Rosso: [acceso]{style="color:#c00"}, e [in classe]{.avviso}.
 ```
 
-Select some words, right-click, and **Choose a Colour…** opens the colour
-panel and writes that for you. `.class` and `#id` work too, and need a
-style sheet of your own to do anything.
+Select some words and right-click: **Style ▸** has the colour of the
+words, the colour behind them, and four sizes. Click inside words that are
+already styled — no selection needed — and the same menu *changes* them:
+the colour panel even opens on the colour that is already there, and
+**Take the Style Off** puts them back.
+
+`.class` and `#id` work too, and need a style sheet of your own to do
+anything. Nothing you wrote yourself is thrown away when the menu changes
+something: a class, an identifier, a declaration this knows nothing about
+— they are all still there afterwards.
+
+In the editor a span is treated as every other piece of markup is: the
+braces are hidden until the caret reaches them, the way a link's
+destination is, and the words are shown in the colour they ask for, the
+way `**this**` is shown bold. I can paint a colour written as `#c00`,
+`#cc0000`, `rgb(…)` or one of the colour words — `background-color` too —
+and a `font-size` in `pt`, `px`, `em`, `rem` or a percentage. Anything
+fancier the preview still renders and the editor leaves alone.
 
 Only attributes that *describe* are let through — `class`, `id`, `style`,
 `title`, `lang`, `dir` and `data-…`. An event handler is not one of them

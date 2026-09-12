@@ -7,6 +7,8 @@
 //
 
 #import "MPEditorView.h"
+
+#import "MPAttributedSpans.h"
 #import "MPProseChecker.h"
 #import "MPMarkerHider.h"
 #import "MPMarkdownFromRichText.h"
@@ -705,6 +707,78 @@ NS_INLINE BOOL MPAreRectsEqual(NSRect r1, NSRect r2)
  * Two more appear only when they apply: giving a table its separator row,
  * and repairing one whose dashes are not hyphens.
  */
+/// Whether the caret, or the selection, is inside a span already.
+- (BOOL)isInsideASpan
+{
+    NSRange selection = self.selectedRange;
+    if (selection.location > self.string.length)
+        return NO;
+    for (MPAttributedSpan *span in MPAttributedSpansIn(self.string))
+    {
+        if (NSLocationInRange(selection.location, span.range))
+            return YES;
+    }
+    return NO;
+}
+
+
+/** **Style ▸**: the colour of the words, the colour behind them, the size.
+ *
+ * Markdown has none of these and the document says them in the spelling
+ * the preview understands; what the menu adds is not having to type it.
+ * One submenu rather than five items at the top, because a right-click
+ * menu with five ways to colour something at the top of it is a menu
+ * nobody reads.
+ *
+ * Every target is nil, so each item walks the responder chain to the
+ * document — which is what knows whether there is anything to style, and
+ * whether the document is being read rather than written.
+ */
+- (NSMenuItem *)styleItem
+{
+    NSMenu *submenu = [[NSMenu alloc] initWithTitle:
+        NSLocalizedString(@"Style", @"Editor context menu")];
+
+    NSMenuItem *(^add)(NSString *, SEL, id) =
+        ^(NSString *title, SEL action, id represented) {
+        NSMenuItem *item = [submenu addItemWithTitle:title action:action
+                                       keyEquivalent:@""];
+        item.target = nil;
+        item.representedObject = represented;
+        return item;
+    };
+
+    add(NSLocalizedString(@"Text Colour…", @"Editor context menu"),
+        @selector(chooseColourForSelection:), nil);
+    add(NSLocalizedString(@"Highlight Colour…", @"Editor context menu"),
+        @selector(chooseHighlightForSelection:), nil);
+    [submenu addItem:[NSMenuItem separatorItem]];
+
+    // Relative sizes: a quarter bigger than whatever is around it stays a
+    // quarter bigger when the reader changes the editor font.
+    add(NSLocalizedString(@"Smaller", @"Editor context menu: text size"),
+        @selector(setSpanFontSize:), @"0.85em");
+    add(NSLocalizedString(@"The Usual Size",
+                          @"Editor context menu: text size"),
+        @selector(setSpanFontSize:), nil);
+    add(NSLocalizedString(@"Bigger", @"Editor context menu: text size"),
+        @selector(setSpanFontSize:), @"1.25em");
+    add(NSLocalizedString(@"Much Bigger",
+                          @"Editor context menu: text size"),
+        @selector(setSpanFontSize:), @"1.6em");
+    [submenu addItem:[NSMenuItem separatorItem]];
+
+    add(NSLocalizedString(@"Take the Style Off", @"Editor context menu"),
+        @selector(removeSpanStyle:), nil);
+
+    NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:
+        NSLocalizedString(@"Style", @"Editor context menu")
+        action:NULL keyEquivalent:@""];
+    item.submenu = submenu;
+    return item;
+}
+
+
 - (NSMenu *)menuForEvent:(NSEvent *)event
 {
     NSMenu *menu = [super menuForEvent:event];
@@ -727,17 +801,16 @@ NS_INLINE BOOL MPAreRectsEqual(NSRect r1, NSRect r2)
             action:@selector(linkToNewMarkdownFile:) keyEquivalent:@""];
         link.target = nil;
         [menu insertItem:link atIndex:0];
+        [menu insertItem:[NSMenuItem separatorItem] atIndex:1];
+    }
 
-        // The colour of the words, which Markdown itself does not have and
-        // the document says in the spelling the preview understands. Above
-        // the link because colouring is the commoner of the two, and with
-        // the target left nil so a read-only document can refuse it.
-        NSMenuItem *colour = [[NSMenuItem alloc] initWithTitle:
-            NSLocalizedString(@"Choose a Colour…", @"Editor context menu")
-            action:@selector(chooseColourForSelection:) keyEquivalent:@""];
-        colour.target = nil;
-        [menu insertItem:colour atIndex:0];
-        [menu insertItem:[NSMenuItem separatorItem] atIndex:2];
+    // Styling needs something to style: a selection, or a caret sitting in
+    // words that are already styled — clicking in them is how you change
+    // them rather than colour them a second time.
+    if (self.selectedRange.length > 0 || [self isInsideASpan])
+    {
+        [menu insertItem:[self styleItem] atIndex:0];
+        [menu insertItem:[NSMenuItem separatorItem] atIndex:1];
     }
 
     /* A diagram described in words, where the diagram is going to go.

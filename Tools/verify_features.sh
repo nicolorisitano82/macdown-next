@@ -814,7 +814,15 @@ ok "e l'estensione dell'anteprima la stessa" \
     sh -c 'nm "$0" 2>/dev/null | grep -q MPMarkdownWithAttributedSpans' \
     "$APPEX/Contents/MacOS/MacDownQuickLook"
 ok "il menu contestuale offre di scegliere un colore" \
-    contains MacDown/Code/View/MPEditorView.m "chooseColourForSelection:"
+    contains MacDown/Code/View/MPEditorView.m "chooseHighlightForSelection:"
+# In the editor the span is treated as the other markup is: the braces are
+# hidden until the caret arrives, and the words are painted. Both are in
+# the application's binary, and neither has a preference of its own.
+ok "nell'editor le graffe si nascondono come il resto dei marcatori" \
+    contains MacDown/Code/View/MPMarkerHider.m "addAttributedSpans:"
+ok "e le parole prendono il colore che chiedono" \
+    sh -c 'nm "$0" 2>/dev/null | grep -q MPColourFromCSS' \
+    "$APP/Contents/MacOS/MacDown Next"
 
 if clang -fobjc-arc -framework Foundation \
          -I MacDown/Code/Utility -o "$WORK/spans" \
@@ -832,6 +840,10 @@ if clang -fobjc-arc -framework Foundation \
                = "[x]{style=\"background:url(http://e.it)\"}" ]' "$WORK/spans"
     ok "un collegamento resta un collegamento" \
         sh -c '[ "$("$0" "[testo](http://e.it)")" = "[testo](http://e.it)" ]' \
+        "$WORK/spans"
+    ok "una parola con lo sfondo e la dimensione arriva intera" \
+        sh -c '[ "$("$0" "[x]{style=\"background-color:#ff0;font-size:1.5em\"}")" \
+               = "<span style=\"background-color:#ff0;font-size:1.5em\">x</span>" ]' \
         "$WORK/spans"
 else
     skip "la riscrittura provata a parte (clang non ha costruito l'arnese)"

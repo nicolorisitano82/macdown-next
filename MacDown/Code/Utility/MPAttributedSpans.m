@@ -82,9 +82,18 @@ NS_INLINE BOOL MPIsNameCharacter(unichar c)
 }
 
 
-NSDictionary<NSString *, NSString *> *MPAttributesFromBraces(NSString *inside)
+/** Reads the braces, and says whether they are attributes at all.
+ *
+ * Two different questions live in here and the difference matters: whether
+ * what is written *is* an attribute list, and how much of it a document is
+ * allowed to say. `{onclick="…"}` is the first without being any of the
+ * second — well formed, and nothing survives — and the two callers want
+ * different answers about it.
+ */
+static BOOL MPParseBraces(NSString *inside,
+                          NSMutableDictionary<NSString *, NSString *> *into)
 {
-    NSMutableDictionary *attributes = [NSMutableDictionary dictionary];
+    NSMutableDictionary *attributes = into ?: [NSMutableDictionary dictionary];
     NSMutableArray<NSString *> *classes = [NSMutableArray array];
     NSUInteger length = inside.length;
     NSUInteger i = 0;
@@ -106,7 +115,7 @@ NSDictionary<NSString *, NSString *> *MPAttributesFromBraces(NSString *inside)
             while (i < length && MPIsNameCharacter([inside characterAtIndex:i]))
                 i++;
             if (i == start)
-                return nil;             // a lone dot is not an attribute
+                return NO;             // a lone dot is not an attribute
             NSString *name = [inside substringWithRange:
                 NSMakeRange(start, i - start)];
             if (c == '.')
@@ -122,13 +131,13 @@ NSDictionary<NSString *, NSString *> *MPAttributesFromBraces(NSString *inside)
         while (i < length && MPIsNameCharacter([inside characterAtIndex:i]))
             i++;
         if (i == start || i >= length || [inside characterAtIndex:i] != '=')
-            return nil;                 // not attributes: leave it written
+            return NO;                 // not attributes: leave it written
         NSString *key = [[inside substringWithRange:NSMakeRange(start, i - start)]
             lowercaseString];
         i++;                            // the =
 
         if (i >= length)
-            return nil;
+            return NO;
         NSString *value = nil;
         unichar quote = [inside characterAtIndex:i];
         if (quote == '"' || quote == '\'')
@@ -157,7 +166,7 @@ NSDictionary<NSString *, NSString *> *MPAttributesFromBraces(NSString *inside)
                 i++;
             }
             if (!closed)
-                return nil;             // a quote nobody closed
+                return NO;             // a quote nobody closed
             value = read;
         }
         else
@@ -169,7 +178,7 @@ NSDictionary<NSString *, NSString *> *MPAttributesFromBraces(NSString *inside)
             value = [inside substringWithRange:NSMakeRange(from, i - from)];
         }
         if (!value.length)
-            return nil;
+            return NO;
 
         sawSomething = YES;
         if (!MPAttributeIsAllowed(key))
@@ -183,10 +192,28 @@ NSDictionary<NSString *, NSString *> *MPAttributesFromBraces(NSString *inside)
     }
 
     if (!sawSomething)
-        return nil;                     // {} is not an attribute list
+        return NO;                      // {} is not an attribute list
     if (classes.count)
         attributes[@"class"] = [classes componentsJoinedByString:@" "];
+    return YES;
+}
+
+
+NSDictionary<NSString *, NSString *> *MPAttributesFromBraces(NSString *inside)
+{
+    NSMutableDictionary *attributes = [NSMutableDictionary dictionary];
+    if (!MPParseBraces(inside, attributes))
+        return nil;
+    // Well formed and nothing left: the document asked for things it may
+    // not have, and what it wrote stays written.
     return attributes.count ? attributes : nil;
+}
+
+
+/// Whether the braces are an attribute list, whatever survives of it.
+NS_INLINE BOOL MPBracesAreWellFormed(NSString *inside)
+{
+    return MPParseBraces(inside, nil);
 }
 
 
@@ -303,10 +330,16 @@ NS_INLINE BOOL MPRangeIsInside(NSUInteger location, NSArray<NSValue *> *ranges)
 }
 
 
-static NSString *MPSpansInText(NSString *text, NSUInteger depth)
+@implementation MPAttributedSpan
+@end
+
+
+NSArray<MPAttributedSpan *> *MPAttributedSpansIn(NSString *text)
 {
-    if (!text.length || [text rangeOfString:@"{"].location == NSNotFound)
-        return text;
+    NSMutableArray<MPAttributedSpan *> *found = [NSMutableArray array];
+    NSUInteger length = text.length;
+    if (!length || [text rangeOfString:@"{"].location == NSNotFound)
+        return found;
 
     NSMutableArray<NSValue *> *code =
         [MPMarkdownCodeRanges(text) mutableCopy];
@@ -317,9 +350,6 @@ static NSString *MPSpansInText(NSString *text, NSUInteger depth)
         return one < two ? NSOrderedAscending
              : one > two ? NSOrderedDescending : NSOrderedSame;
     }];
-    NSMutableString *out = [NSMutableString stringWithCapacity:text.length];
-    NSUInteger length = text.length;
-    NSUInteger copied = 0;
 
     for (NSUInteger i = 0; i < length; i++)
     {
@@ -359,13 +389,35 @@ static NSString *MPSpansInText(NSString *text, NSUInteger depth)
             continue;
         }
 
-        NSString *inner = [text substringWithRange:
-            NSMakeRange(i + 1, close - i - 1)];
+        MPAttributedSpan *span = [[MPAttributedSpan alloc] init];
+        span.range = NSMakeRange(i, end - i + 1);
+        span.content = NSMakeRange(i + 1, close - i - 1);
+        span.attributes = attributes;
+        [found addObject:span];
+        i = end;
+    }
+    return found;
+}
+
+
+static NSString *MPSpansInText(NSString *text, NSUInteger depth)
+{
+    NSArray<MPAttributedSpan *> *spans = MPAttributedSpansIn(text);
+    if (!spans.count)
+        return text;
+
+    NSMutableString *out = [NSMutableString stringWithCapacity:text.length];
+    NSUInteger copied = 0;
+
+    for (MPAttributedSpan *span in spans)
+    {
+        NSDictionary *attributes = span.attributes;
+        NSString *inner = [text substringWithRange:span.content];
         if (depth < kMPSpanDepth)
             inner = MPSpansInText(inner, depth + 1);
 
         [out appendString:[text substringWithRange:
-            NSMakeRange(copied, i - copied)]];
+            NSMakeRange(copied, span.range.location - copied)]];
         [out appendString:@"<span"];
         // In a fixed order, so that the same document always gives the same
         // HTML — a preview that reshuffles its own attributes is a diff
@@ -387,12 +439,9 @@ static NSString *MPSpansInText(NSString *text, NSUInteger depth)
         }
         [out appendFormat:@">%@</span>", inner];
 
-        copied = end + 1;
-        i = end;
+        copied = NSMaxRange(span.range);
     }
 
-    if (!copied)
-        return text;
     [out appendString:[text substringFromIndex:copied]];
     return out;
 }
@@ -406,13 +455,190 @@ NSString *MPMarkdownWithAttributedSpans(NSString *text)
 
 #pragma mark - Writing one
 
-NSString *MPSpanColouring(NSString *text, NSString *colour)
+NSString *MPStyleDeclaration(NSString *style, NSString *property)
+{
+    for (NSString *one in [style componentsSeparatedByString:@";"])
+    {
+        NSRange colon = [one rangeOfString:@":"];
+        if (colon.location == NSNotFound)
+            continue;
+        NSCharacterSet *blank =
+            [NSCharacterSet whitespaceAndNewlineCharacterSet];
+        NSString *name = [[one substringToIndex:colon.location]
+            stringByTrimmingCharactersInSet:blank];
+        if ([name.lowercaseString isEqualToString:property.lowercaseString])
+        {
+            return [[one substringFromIndex:colon.location + 1]
+                stringByTrimmingCharactersInSet:blank];
+        }
+    }
+    return nil;
+}
+
+
+/** Where one attribute is inside the braces, as written.
+ *
+ * `item` covers `name=value` and `value` covers what is between the
+ * quotes, both in the braces' own spelling. Everything that reads or
+ * edits the braces goes through here, so there is one idea of where an
+ * attribute begins and ends.
+ */
+static BOOL MPBracesFindAttribute(NSString *braces, NSString *name,
+                                  NSRange *item, NSRange *value)
+{
+    NSUInteger length = braces.length;
+    NSUInteger at = 0;
+
+    while (at < length)
+    {
+        unichar c = [braces characterAtIndex:at];
+        if (MPCharacterIsWhitespace(c))
+        {
+            at++;
+            continue;
+        }
+        // A class or an identifier: a name, and on to the next.
+        if (c == '.' || c == '#')
+        {
+            at++;
+            while (at < length && MPIsNameCharacter([braces characterAtIndex:at]))
+                at++;
+            continue;
+        }
+
+        NSUInteger start = at;
+        while (at < length && MPIsNameCharacter([braces characterAtIndex:at]))
+            at++;
+        if (at == start)
+        {
+            at++;                   // something unreadable: step over it
+            continue;
+        }
+        NSString *found = [[braces substringWithRange:
+            NSMakeRange(start, at - start)] lowercaseString];
+        NSRange inside = NSMakeRange(NSNotFound, 0);
+
+        if (at < length && [braces characterAtIndex:at] == '=')
+        {
+            at++;
+            if (at < length && ([braces characterAtIndex:at] == '"'
+                                || [braces characterAtIndex:at] == '\''))
+            {
+                unichar closing = [braces characterAtIndex:at++];
+                NSUInteger from = at;
+                while (at < length)
+                {
+                    unichar in = [braces characterAtIndex:at];
+                    if (in == '\\' && at + 1 < length)
+                        at++;
+                    else if (in == closing)
+                        break;
+                    at++;
+                }
+                inside = NSMakeRange(from, at - from);
+                if (at < length)
+                    at++;           // the closing quote
+            }
+            else
+            {
+                NSUInteger from = at;
+                while (at < length
+                       && !MPCharacterIsWhitespace([braces characterAtIndex:at]))
+                    at++;
+                inside = NSMakeRange(from, at - from);
+            }
+        }
+
+        if ([found isEqualToString:name.lowercaseString])
+        {
+            if (item)
+                *item = NSMakeRange(start, at - start);
+            if (value)
+                *value = inside;
+            return YES;
+        }
+    }
+    return NO;
+}
+
+
+/// One attribute of a span's braces, exactly as it was written.
+NS_INLINE NSString *MPRawAttribute(NSString *braces, NSString *name)
+{
+    NSRange value = NSMakeRange(NSNotFound, 0);
+    if (!MPBracesFindAttribute(braces, name, NULL, &value)
+            || value.location == NSNotFound)
+        return nil;
+    return [braces substringWithRange:value];
+}
+
+
+/** The braces with their style declaration replaced.
+ *
+ * Edited **as written** rather than rebuilt from what was understood.
+ * Rebuilding would quietly delete whatever this does not handle — an
+ * attribute it will not let through to the page, a declaration it has
+ * never heard of — and a colour is no reason to throw away what somebody
+ * else put in their own document.
+ */
+NS_INLINE NSString *MPBracesWithStyle(NSString *braces, NSString *style)
+{
+    NSString *written = style.length
+        ? [NSString stringWithFormat:@"style=\"%@\"", style] : @"";
+    NSRange item = NSMakeRange(NSNotFound, 0);
+
+    if (!MPBracesFindAttribute(braces, @"style", &item, NULL))
+    {
+        if (!written.length)
+            return braces;
+        return braces.length
+            ? [NSString stringWithFormat:@"%@ %@", braces, written]
+            : written;
+    }
+
+    NSMutableString *out = [braces mutableCopy];
+    [out replaceCharactersInRange:item withString:written];
+    return [out stringByTrimmingCharactersInSet:
+        [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+}
+
+
+/// A style with one declaration put in, replaced, or taken out. Every
+/// other declaration is kept, spelling and order included: this does not
+/// know what they mean and has no business rewriting them.
+NS_INLINE NSString *MPStyleSetting(NSString *style, NSString *property,
+                                   NSString *value)
+{
+    NSMutableArray<NSString *> *kept = [NSMutableArray array];
+    for (NSString *one in [style componentsSeparatedByString:@";"])
+    {
+        NSString *trimmed = [one stringByTrimmingCharactersInSet:
+            [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if (!trimmed.length)
+            continue;
+        NSRange colon = [trimmed rangeOfString:@":"];
+        NSString *name = colon.location == NSNotFound ? trimmed
+            : [[trimmed substringToIndex:colon.location]
+                stringByTrimmingCharactersInSet:
+                    [NSCharacterSet whitespaceCharacterSet]];
+        if ([name.lowercaseString isEqualToString:property.lowercaseString])
+            continue;               // the old one, on its way out
+        [kept addObject:trimmed];
+    }
+    if (value.length)
+        [kept addObject:[NSString stringWithFormat:@"%@:%@", property, value]];
+    return [kept componentsJoinedByString:@";"];
+}
+
+
+NSString *MPSpanWithStyle(NSString *text, NSString *property, NSString *value)
 {
     NSString *body = text ?: @"";
-    // Text that is already a span of its own gets the colour put into it
-    // rather than a second span wrapped around the first: two spans deep
-    // is what happens when somebody changes their mind twice.
-    if ([body hasPrefix:@"["] )
+
+    // Words that are already a span are edited rather than wrapped again:
+    // somebody who sets a colour and then a highlight should end up with
+    // one span saying both.
+    if ([body hasPrefix:@"["])
     {
         NSUInteger close = MPEndOfBrackets(body, 0);
         if (close != NSNotFound && close + 1 < body.length
@@ -421,50 +647,35 @@ NSString *MPSpanColouring(NSString *text, NSString *colour)
         {
             NSString *braces = [body substringWithRange:
                 NSMakeRange(close + 2, body.length - close - 3)];
-            NSDictionary *attributes = MPAttributesFromBraces(braces);
-            if (attributes)
+            // Well formed is enough here: a span this will not let
+            // through to the page is still a span somebody wrote, and
+            // wrapping a second one round it would be a way of losing it.
+            if (MPBracesAreWellFormed(braces))
             {
-                NSMutableArray *kept = [NSMutableArray array];
-                NSString *style = attributes[@"style"];
-                NSMutableArray *declarations = [NSMutableArray array];
-                for (NSString *one in [style componentsSeparatedByString:@";"])
-                {
-                    NSString *trimmed = [one stringByTrimmingCharactersInSet:
-                        [NSCharacterSet whitespaceCharacterSet]];
-                    if (trimmed.length
-                            && ![trimmed.lowercaseString hasPrefix:@"color:"])
-                        [declarations addObject:trimmed];
-                }
-                [declarations addObject:
-                    [NSString stringWithFormat:@"color:%@", colour]];
-                if (attributes[@"id"])
-                    [kept addObject:[@"#" stringByAppendingString:
-                        attributes[@"id"]]];
-                for (NSString *name in [attributes[@"class"]
-                        componentsSeparatedByString:@" "])
-                {
-                    if (name.length)
-                        [kept addObject:[@"." stringByAppendingString:name]];
-                }
-                [kept addObject:[NSString stringWithFormat:@"style=\"%@\"",
-                    [declarations componentsJoinedByString:@";"]]];
-                for (NSString *key in [attributes.allKeys sortedArrayUsingSelector:
-                                           @selector(compare:)])
-                {
-                    if ([key isEqualToString:@"id"]
-                            || [key isEqualToString:@"class"]
-                            || [key isEqualToString:@"style"])
-                        continue;
-                    [kept addObject:[NSString stringWithFormat:@"%@=\"%@\"",
-                        key, attributes[key]]];
-                }
                 NSString *inner = [body substringWithRange:
                     NSMakeRange(1, close - 1)];
+                NSString *style = MPStyleSetting(
+                    MPRawAttribute(braces, @"style") ?: @"", property, value);
+                NSString *changed = MPBracesWithStyle(braces, style);
+                // Braces left saying nothing are not braces: the words come
+                // back as they were, which is what taking a colour off a
+                // plain span should give.
+                if (!changed.length)
+                    return inner;
                 return [NSString stringWithFormat:@"[%@]{%@}", inner,
-                    [kept componentsJoinedByString:@" "]];
+                        changed];
             }
         }
     }
-    return [NSString stringWithFormat:@"[%@]{style=\"color:%@\"}",
-            body, colour];
+
+    NSString *style = MPStyleSetting(@"", property, value);
+    if (!style.length)
+        return body;
+    return [NSString stringWithFormat:@"[%@]{style=\"%@\"}", body, style];
+}
+
+
+NSString *MPSpanColouring(NSString *text, NSString *colour)
+{
+    return MPSpanWithStyle(text, @"color", colour);
 }

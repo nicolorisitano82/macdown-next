@@ -288,7 +288,13 @@
 /* Collega a un nuovo file */
 "A new file is made in the same folder as this one, and this one has no folder yet." = "Il nuovo file viene creato nella stessa cartella di questo, e questo non ha ancora una cartella.";
 "A new, empty Markdown file beside this one" = "Un nuovo file Markdown vuoto, accanto a questo";
-"Choose a Colour…" = "Scegli colore…";
+"Text Colour…" = "Colore del testo…";
+"Highlight Colour…" = "Colore dell'evidenziazione…";
+"Smaller" = "Più piccolo";
+"The Usual Size" = "Dimensione normale";
+"Bigger" = "Più grande";
+"Much Bigger" = "Molto più grande";
+"Take the Style Off" = "Togli lo stile";
 "Link to a New Markdown File" = "Collega a un nuovo file Markdown";
 "Save this document first" = "Salva prima questo documento";
 "Select the words the link should say, and they will name the file too." = "Seleziona le parole che il collegamento deve dire: daranno il nome anche al file.";

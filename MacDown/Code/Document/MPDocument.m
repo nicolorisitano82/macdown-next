@@ -32,6 +32,7 @@
 #import "MPPreviewSchemeHandler.h"
 #import "MPProseChecker.h"
 #import "MPSemanticStyler.h"
+#import "MPSpanStyler.h"
 #import "MPMarkerHider.h"
 #import "MPBlockStyler.h"
 #import "MPTableSource.h"
@@ -250,6 +251,8 @@ NS_INLINE NSString *MPRectStringForAutosaveName(NSString *name)
 @property (copy, nonatomic) NSString *colouringOriginal;
 /// Where in the document the span written so far is.
 @property (assign, nonatomic) NSRange colouringRange;
+/// Which declaration the panel is setting: the ink or what is behind it.
+@property (copy, nonatomic) NSString *colouringProperty;
 
 typedef NS_ENUM(NSUInteger, MPWordCountType) {
     MPWordCountTypeWord,
@@ -298,6 +301,8 @@ typedef NS_ENUM(NSUInteger, MPWordCountType) {
 @property (strong) MPSemanticStyler *semanticStyler;
 @property (strong) MPMarkerHider *markerHider;
 @property (strong) MPBlockStyler *blockStyler;
+/// Paints `[testo]{style="color:…"}` in the colour it asks for.
+@property (strong) MPSpanStyler *spanStyler;
 @property (strong) MPRenderer *renderer;
 @property CGFloat previousSplitRatio;
 @property BOOL manualRender;
@@ -1402,12 +1407,17 @@ static NSString * const kMPScrollReporterSource =
     self.markerHider = [[MPMarkerHider alloc] initWithTextView:self.editor];
     self.editor.markerHider = self.markerHider;
     self.blockStyler = [[MPBlockStyler alloc] initWithTextView:self.editor];
+    self.spanStyler = [[MPSpanStyler alloc] initWithTextView:self.editor];
     self.semanticStyler.themeStyles = self.highlighter.styles;
     __weak MPDocument *weakSelf = self;
     self.highlighter.elementsDidChange = ^(pmh_element **elements) {
         [weakSelf.semanticStyler applyToElements:elements];
         [weakSelf.markerHider updateWithElements:elements];
         [weakSelf.blockStyler applyToElements:elements];
+        // Last, and with no preference of its own: the colour is not a
+        // decoration the editor adds, it is what the document says, the
+        // way `**forte**` is bold because the document says so.
+        [weakSelf.spanStyler apply];
     };
     self.renderer = [[MPRenderer alloc] init];
     self.renderer.dataSource = self;
@@ -1994,8 +2004,21 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
     }
     if (action == @selector(linkToNewMarkdownFile:))
         return self.fileURL != nil && self.editor.selectedRange.length > 0;
-    if (action == @selector(chooseColourForSelection:))
-        return self.editor.selectedRange.length > 0 && !self.readOnly;
+    if (action == @selector(chooseColourForSelection:)
+            || action == @selector(chooseHighlightForSelection:)
+            || action == @selector(setSpanFontSize:))
+    {
+        return [self rangeToStyle].location != NSNotFound && !self.readOnly;
+    }
+    if (action == @selector(removeSpanStyle:))
+    {
+        NSRange range = [self rangeToStyle];
+        if (range.location == NSNotFound || self.readOnly)
+            return NO;
+        // Only where there is something to take off.
+        return [[self.editor.string substringWithRange:range]
+                    hasPrefix:@"["];
+    }
 
     // There is nothing to go back to when the file has gone: the command
     // stays offered, and says so rather than failing as a save.
@@ -5453,21 +5476,127 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
  * span. Markdown has no colour of its own, so the alternative was raw HTML
  * typed by hand.
  */
-- (IBAction)chooseColourForSelection:(id)sender
+/** What the colour panel, or a size, is about to be applied to.
+ *
+ * The selection, or — when the caret is inside one, with nothing selected
+ * or with part of it selected — the whole span it is in. That is what
+ * makes clicking in coloured words *change* them rather than colour them
+ * again: the span is the thing, and the words inside it are only its
+ * middle.
+ */
+- (NSRange)rangeToStyle
 {
     NSRange selection = self.editor.selectedRange;
-    if (!selection.length)
+    NSString *text = self.editor.string;
+    if (selection.location > text.length)
+        return NSMakeRange(NSNotFound, 0);
+
+    for (MPAttributedSpan *span in MPAttributedSpansIn(text))
+    {
+        if (NSLocationInRange(selection.location, span.range)
+                && NSMaxRange(selection) <= NSMaxRange(span.range))
+            return span.range;
+    }
+    return selection.length ? selection : NSMakeRange(NSNotFound, 0);
+}
+
+
+/// The colour a span already asks for, so the panel opens on it rather
+/// than on whatever somebody last picked in another application.
+- (NSColor *)colourOfRange:(NSRange)range property:(NSString *)property
+{
+    NSString *text = [self.editor.string substringWithRange:range];
+    for (MPAttributedSpan *span in MPAttributedSpansIn(text))
+    {
+        if (span.range.location != 0)
+            continue;
+        NSString *style = span.attributes[@"style"];
+        return MPColourFromCSS(MPStyleDeclaration(style, property));
+    }
+    return nil;
+}
+
+
+- (void)askForColourOf:(NSString *)property sender:(id)sender
+{
+    NSRange range = [self rangeToStyle];
+    if (range.location == NSNotFound)
         return;
 
-    self.colouringOriginal = [self.editor.string substringWithRange:selection];
-    self.colouringRange = selection;
+    self.colouringOriginal = [self.editor.string substringWithRange:range];
+    self.colouringRange = range;
+    self.colouringProperty = property;
 
     NSColorPanel *panel = [NSColorPanel sharedColorPanel];
     panel.showsAlpha = NO;      // a half-transparent word is not a colour
+    NSColor *already = [self colourOfRange:range property:property];
+    if (already)
+        panel.color = already;
     panel.target = self;
     panel.action = @selector(colourChosen:);
     MPSetDocumentColouring(self);
     [panel orderFront:sender];
+}
+
+
+- (IBAction)chooseColourForSelection:(id)sender
+{
+    [self askForColourOf:@"color" sender:sender];
+}
+
+
+/// The colour behind the words — a highlighter pen, in CSS terms.
+- (IBAction)chooseHighlightForSelection:(id)sender
+{
+    [self askForColourOf:@"background-color" sender:sender];
+}
+
+
+/** A size, from the menu: the item carries it, `nil` meaning the body's.
+ *
+ * Relative on purpose — `1.25em` is a quarter bigger than whatever is
+ * around it, and stays so when the reader changes the editor font.
+ */
+- (IBAction)setSpanFontSize:(id)sender
+{
+    NSRange range = [self rangeToStyle];
+    if (range.location == NSNotFound)
+        return;
+    NSString *size = [sender respondsToSelector:@selector(representedObject)]
+        ? [sender representedObject] : nil;
+    [self replaceRange:range
+                  with:MPSpanWithStyle(
+                           [self.editor.string substringWithRange:range],
+                           @"font-size", size)];
+}
+
+
+/// Takes off what this menu puts on, and leaves everything else — a class,
+/// an identifier, a declaration nobody here understands.
+- (IBAction)removeSpanStyle:(id)sender
+{
+    NSRange range = [self rangeToStyle];
+    if (range.location == NSNotFound)
+        return;
+    NSString *text = [self.editor.string substringWithRange:range];
+    for (NSString *property in @[@"color", @"background-color",
+                                 @"background", @"font-size"])
+        text = MPSpanWithStyle(text, property, nil);
+    [self replaceRange:range with:text];
+}
+
+
+/// One edit, through the editor, so that ⌘Z takes it back.
+- (BOOL)replaceRange:(NSRange)range with:(NSString *)text
+{
+    if (NSMaxRange(range) > self.editor.string.length)
+        return NO;
+    if (![self.editor shouldChangeTextInRange:range replacementString:text])
+        return NO;
+    [self.editor.textStorage replaceCharactersInRange:range withString:text];
+    [self.editor didChangeText];
+    self.editor.selectedRange = NSMakeRange(range.location, text.length);
+    return YES;
 }
 
 
@@ -5492,17 +5621,17 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
         return;
     }
 
-    NSString *replacement = MPSpanColouring(self.colouringOriginal,
-                                            MPHexForColour(panel.color));
-    if (![self.editor shouldChangeTextInRange:range
-                            replacementString:replacement])
+    NSString *replacement = MPSpanWithStyle(
+        self.colouringOriginal, self.colouringProperty ?: @"color",
+        MPHexForColour(panel.color));
+    if (![self replaceRange:range with:replacement])
         return;
-    [self.editor.textStorage replaceCharactersInRange:range
-                                           withString:replacement];
-    [self.editor didChangeText];
 
+    // What the next colour is applied to is what is there now, so turning
+    // the wheel changes one declaration over and over instead of adding a
+    // span for every shade it passes through.
+    self.colouringOriginal = replacement;
     self.colouringRange = NSMakeRange(range.location, replacement.length);
-    self.editor.selectedRange = self.colouringRange;
 }
 
 

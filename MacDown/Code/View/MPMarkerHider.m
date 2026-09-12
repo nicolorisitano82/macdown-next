@@ -4,6 +4,8 @@
 //
 
 #import "MPMarkerHider.h"
+
+#import "MPAttributedSpans.h"
 #import "MPEditorView.h"
 
 
@@ -228,6 +230,32 @@
     return YES;
 }
 
+/** The two ends of `[testo]{...}`, which the parser knows nothing about.
+ *
+ * The same treatment as an inline link, and for the same reason: the words
+ * are what the document says, the braces are how it says it. So the
+ * opening bracket goes and everything from the closing one to the last
+ * brace goes with it, until the caret arrives.
+ *
+ * pmh has never heard of this syntax, so the ranges come from the reading
+ * that does the rewriting — one reading, one answer.
+ */
+- (void)addAttributedSpans:(NSString *)text
+{
+    for (MPAttributedSpan *span in MPAttributedSpansIn(text))
+    {
+        // Nothing left to look at once both ends are hidden.
+        if (!span.content.length)
+            continue;
+        [self addConstruct:span.range
+                   opening:NSMakeRange(span.range.location, 1)
+                   closing:NSMakeRange(NSMaxRange(span.content),
+                                       NSMaxRange(span.range)
+                                           - NSMaxRange(span.content))];
+    }
+}
+
+
 /** The hashes at the front of a heading, and any at the back.
  *
  * ATX only — `# Titolo`. A setext heading is underlined on the line below,
@@ -404,6 +432,8 @@
                                              cursor->end - cursor->pos)
                             text:text];
         }
+
+        [self addAttributedSpans:text];
 
         pmh_element_type types[] = {pmh_EMPH, pmh_STRONG, pmh_CODE,
                                     pmh_LINK};

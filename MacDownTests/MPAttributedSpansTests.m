@@ -11,6 +11,7 @@
 #import <XCTest/XCTest.h>
 
 #import "MPAttributedSpans.h"
+#import "MPSpanStyler.h"
 
 
 @interface MPAttributedSpansTests : XCTestCase
@@ -179,6 +180,78 @@
         @"[ciao]{style=\"color:#00aa00\"}");
 }
 
+- (void)testTheHighlightAndTheColourLiveInTheSameSpan
+{
+    // Somebody who colours the words and then highlights them should end
+    // up with one span saying both, not two nested.
+    NSString *coloured = MPSpanWithStyle(@"ciao", @"color", @"#cc0000");
+    NSString *both = MPSpanWithStyle(coloured, @"background-color",
+                                     @"#ffff00");
+    XCTAssertEqualObjects(both,
+        @"[ciao]{style=\"color:#cc0000;background-color:#ffff00\"}");
+    [self assert:both gives:@"<span style=\"color:#cc0000;"
+                            @"background-color:#ffff00\">ciao</span>"];
+}
+
+- (void)testASizeIsJustAnotherDeclaration
+{
+    XCTAssertEqualObjects(
+        MPSpanWithStyle(@"[ciao]{style=\"color:red\"}", @"font-size", @"1.6em"),
+        @"[ciao]{style=\"color:red;font-size:1.6em\"}");
+}
+
+- (void)testWhatThisDoesNotHandleIsNotThrownAway
+{
+    // The one thing a document must be able to count on: an attribute or a
+    // declaration this knows nothing about is still there afterwards.
+    NSString *written = @"[x]{#q .a data-n=\"1\" onclick=\"alert(1)\" "
+                        @"style=\"letter-spacing:2px;color:#000\"}";
+    NSString *after = MPSpanWithStyle(written, @"color", @"#0a0");
+    XCTAssertEqualObjects(after,
+        @"[x]{#q .a data-n=\"1\" onclick=\"alert(1)\" "
+        @"style=\"letter-spacing:2px;color:#0a0\"}");
+}
+
+- (void)testTakingOneDeclarationOffLeavesTheRest
+{
+    NSString *written = @"[x]{.a style=\"letter-spacing:2px;color:#000\"}";
+    XCTAssertEqualObjects(MPSpanWithStyle(written, @"color", nil),
+                          @"[x]{.a style=\"letter-spacing:2px\"}");
+}
+
+- (void)testASpanLeftSayingNothingGivesBackTheWords
+{
+    XCTAssertEqualObjects(
+        MPSpanWithStyle(@"[ciao]{style=\"color:#000\"}", @"color", nil),
+        @"ciao");
+    // But one that still says something stays a span.
+    XCTAssertEqualObjects(
+        MPSpanWithStyle(@"[ciao]{.a style=\"color:#000\"}", @"color", nil),
+        @"[ciao]{.a}");
+}
+
+- (void)testEditingASpanThisWouldNotRenderStillEditsIt
+{
+    // The style is refused by the page — it fetches — so nothing of it
+    // survives the sanitising. It is still a span somebody wrote, and
+    // wrapping a second one round it would be a way of losing it.
+    NSString *written = @"[x]{style=\"background:url(http://e.it)\"}";
+    XCTAssertEqualObjects(MPSpanWithStyle(written, @"color", @"#0a0"),
+        @"[x]{style=\"background:url(http://e.it);color:#0a0\"}");
+}
+
+- (void)testASizeInEveryFormSomebodyWrites
+{
+    XCTAssertEqualWithAccuracy(MPSizeFromCSS(@"1.5em", 14.0), 21.0, 0.01);
+    XCTAssertEqualWithAccuracy(MPSizeFromCSS(@"150%", 14.0), 21.0, 0.01);
+    XCTAssertEqualWithAccuracy(MPSizeFromCSS(@"18pt", 14.0), 18.0, 0.01);
+    XCTAssertEqualWithAccuracy(MPSizeFromCSS(@"18px", 14.0), 18.0, 0.01);
+    XCTAssertEqualWithAccuracy(MPSizeFromCSS(@"larger", 10.0), 12.0, 0.01);
+    // A unit this does not know is left to the preview, not guessed at.
+    XCTAssertEqual(MPSizeFromCSS(@"2vw", 14.0), 0.0);
+    XCTAssertEqual(MPSizeFromCSS(@"", 14.0), 0.0);
+}
+
 - (void)testColouringKeepsTheOtherAttributes
 {
     XCTAssertEqualObjects(MPSpanColouring(@"[ciao]{.avviso}", @"#00aa00"),
@@ -193,6 +266,71 @@
     NSString *written = MPSpanColouring(@"parola", @"#123456");
     [self assert:written
            gives:@"<span style=\"color:#123456\">parola</span>"];
+}
+
+
+#pragma mark - Where they are, for the editor
+
+- (void)testTheScannerSaysWhereTheWordsAre
+{
+    NSString *text = @"Una [parola]{style=\"color:#c00\"} qui";
+    NSArray<MPAttributedSpan *> *spans = MPAttributedSpansIn(text);
+    XCTAssertEqual(spans.count, 1u);
+
+    MPAttributedSpan *span = spans.firstObject;
+    // The whole construct, and the words inside it: the editor hides the
+    // first and paints the second, so both have to be right.
+    XCTAssertEqualObjects([text substringWithRange:span.range],
+                          @"[parola]{style=\"color:#c00\"}");
+    XCTAssertEqualObjects([text substringWithRange:span.content], @"parola");
+    XCTAssertEqualObjects(span.attributes[@"style"], @"color:#c00");
+}
+
+- (void)testTheScannerAndTheRewritingAgree
+{
+    // Two readings of the same syntax would be two answers: the editor
+    // would hide braces the preview had not turned into anything.
+    NSString *text = @"[a]{.x} e [b](http://e.it) e `[c]{.y}` e [d]{#z}";
+    NSArray<MPAttributedSpan *> *spans = MPAttributedSpansIn(text);
+    XCTAssertEqual(spans.count, 2u);
+    XCTAssertEqualObjects([text substringWithRange:spans[0].content], @"a");
+    XCTAssertEqualObjects([text substringWithRange:spans[1].content], @"d");
+}
+
+- (void)testWhatTheScannerFindsInNothing
+{
+    XCTAssertEqual(MPAttributedSpansIn(@"").count, 0u);
+    XCTAssertEqual(MPAttributedSpansIn(@"niente di niente").count, 0u);
+}
+
+
+#pragma mark - The colour the editor paints
+
+- (void)testAColourInEveryFormSomebodyWrites
+{
+    NSColor *red = [NSColor colorWithSRGBRed:1.0 green:0.0 blue:0.0 alpha:1.0];
+    for (NSString *written in @[@"#f00", @"#ff0000", @"red", @"RED",
+                               @"  #FF0000 ", @"rgb(255, 0, 0)"])
+    {
+        NSColor *found = MPColourFromCSS(written);
+        XCTAssertNotNil(found, @"«%@»", written);
+        XCTAssertEqualWithAccuracy(found.redComponent, red.redComponent,
+                                   0.01, @"«%@»", written);
+        XCTAssertEqualWithAccuracy(found.greenComponent, 0.0, 0.01,
+                                   @"«%@»", written);
+    }
+}
+
+- (void)testAColourThisDoesNotReadIsNotGuessedAt
+{
+    // The preview still shows these; the editor leaves them alone rather
+    // than painting something that is not what was asked for.
+    XCTAssertNil(MPColourFromCSS(@"linear-gradient(red, blue)"));
+    XCTAssertNil(MPColourFromCSS(@"color-mix(in srgb, red, blue)"));
+    XCTAssertNil(MPColourFromCSS(@"#ff00"));
+    XCTAssertNil(MPColourFromCSS(@"#zzzzzz"));
+    XCTAssertNil(MPColourFromCSS(@""));
+    XCTAssertNil(MPColourFromCSS(nil));
 }
 
 @end
