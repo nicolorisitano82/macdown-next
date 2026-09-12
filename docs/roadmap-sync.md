@@ -59,20 +59,78 @@ facendo**. È il filo rosso di M1, M4 e M5.
 
 ---
 
-## M0 — Verificare su Dropbox e su Google Drive
+## M0 — Verificare, provider per provider · *fatta a metà*
 
 **Cosa si vede**: niente. È una misura.
 
-**Cosa si scrive**: niente. Si installa un client, si mette un file in una
-cartella, lo si toglie dal locale («rendi disponibile online»), e si
-leggono le chiavi con lo stesso arnese usato per OneDrive.
+**Cosa si scrive**: l'arnese per misurare, che adesso c'è —
+[`Tools/provider_probe.m`](../Tools/provider_probe.m), un file solo, si
+compila da sé:
 
-**Come si prova**: da sé.
+```bash
+clang -fobjc-arc -framework Foundation -o probe Tools/provider_probe.m
+./probe --file ~/Percorso/documento.md            # le cinque chiavi, e in quanti ms
+./probe --cartella ~/Percorso --secondi 10        # cammina e conta, senza aprire niente
+```
 
-**Quando è finita**: quando in questo file c'è una tabella con tre righe —
-Dropbox, Google Drive, OneDrive — e cosa risponde ognuno per un file
-scaricato e per uno che non lo è. Se uno dei tre risponde diverso, tutto il
-resto della roadmap cambia forma, ed è meglio saperlo adesso che a M4.
+La seconda forma **è** il banco della tappa M4: cammina chiedendo le chiavi
+all'enumeratore e non apre un file.
+
+### Quello che risponde questo Mac
+
+| Provider | Stato | Le cinque chiavi | La camminata |
+|---|---|---|---|
+| **iCloud Drive** (`~/Library/Mobile Documents/com~apple~CloudDocs`) | attivo | tutte, in **16 ms** | **949 file, 22 cartelle in 1,1 s**, zero scaricati |
+| **OneDrive** | installato, **non in esecuzione** | — | le sottocartelle **non si aprono**: «The file "Documenti" couldn't be opened», 0,2 s |
+| `CloudStorage/iCloudDrive-… (data)` ×3 | residui di migrazione | **nessuna** | cartelle locali normali |
+| **Dropbox** | **non installato** | da fare | da fare |
+| **Google Drive** | **non installato** | da fare | da fare |
+
+Un file vero di iCloud Drive, per esteso:
+
+```
+NSURLIsUbiquitousItemKey                  1
+NSURLUbiquitousItemDownloadingStatusKey   …StatusCurrent
+NSURLUbiquitousItemIsDownloadingKey       0
+NSURLUbiquitousItemIsUploadedKey          1
+NSURLUbiquitousItemIsUploadingKey         0
+```
+
+### Tre cose che non sapevamo, e che cambiano le tappe dopo
+
+**1. Un provider che non gira non risponde «vuoto»: rifiuta, una cartella
+alla volta.** OneDrive non è in esecuzione su questo Mac, e le sue
+sottocartelle danno un errore *per directory* — con `ls`, prima, la
+chiamata è rimasta appesa **circa venticinque secondi** e poi ha detto
+«Operation timed out». Quindi una camminata ha bisogno di **tre** cose: un
+gestore d'errore per cartella (che tira avanti invece di fermarsi), una
+**scadenza**, e un terzo conto oltre a «scesi» e «non scesi»: **non
+leggibili**. Una cartella che non si è potuta aprire non è una cartella
+vuota, ed è l'errore che «0 risultati» nasconderebbe due volte.
+
+**2. Camminare 949 file costa 1,1 secondi e non scarica niente**, se le
+chiavi si chiedono all'enumeratore. La regola di M4 regge, misurata — e
+«non apre niente» è controllato, non sperato: l'ora di ultimo accesso dei
+file camminati non cambia.
+
+**3. `IsUploaded` non vuol dire la stessa cosa dappertutto**: 1 sul file
+iCloud misurato oggi, **0** sul file OneDrive misurato per il progetto —
+e quel file era a posto. «Da caricare» non si deduce da una chiave sola:
+serve anche `IsUploading`, e nel dubbio non si mostra niente.
+
+### Quello che manca ancora
+
+* **Dropbox e Google Drive**: nessuno dei due è installato qui. Che
+  rispondano le stesse chiavi è vero per costruzione — sono File Provider
+  come OneDrive — ma **non l'ho visto**, e finché non lo vedo resta scritto
+  così.
+* **Un file non sceso**: su questo Mac non ce n'è nemmeno uno (949 file di
+  iCloud, tutti con i byte). Lo stato `NotDownloaded` è quello su cui poggia
+  M3, e va guardato per davvero prima di scrivere M3 — basta un file messo
+  «disponibile solo online» dal Finder.
+
+**Quando è finita**: quando la tabella qui sopra ha cinque righe piene e una
+riga in più per un file non sceso.
 
 ## M1 — Sapere dove si è (una funzione pura)
 
@@ -87,9 +145,14 @@ typedef NS_ENUM(NSUInteger, MPCloudState) {
     MPCloudStateDownloading,  // sta arrivando
     MPCloudStateNotLocal,     // esiste, ma i byte non ci sono
     MPCloudStateUploading,    // salvato, non ancora partito
+    MPCloudStateUnreadable,   // il provider non risponde: da M0, e succede
 };
 MPCloudState MPCloudStateOfURL(NSURL *url);
 ```
+
+Sei stati, non cinque: l'ultimo è quello che M0 ha trovato per terra — un
+client non in esecuzione rifiuta di aprire le sue cartelle. E
+`IsUploaded == 0` **da solo** non basta a dire «da caricare», sempre da M0.
 
 Dentro: `resourceValuesForKeys:` con le cinque chiavi, e la regola del
 fatto 2 — assente vuol dire `Local`. Nessuna finestra, nessuna rete,
@@ -101,7 +164,7 @@ si prova con una tabella di dizionari, compresi quelli vuoti e quelli
 contraddittori. Più un controllo nella suite su un file vero, che su questo
 Mac risponde `Local`.
 
-**Quando è finita**: quando i cinque stati hanno una prova ciascuno e
+**Quando è finita**: quando i sei stati hanno una prova ciascuno e
 `MPCloudStateOfURL` non apre mai un file.
 
 ## M2 — Dirlo, in una riga
@@ -150,17 +213,20 @@ documento vuoto. Quello è il difetto che stiamo togliendo.
 oggi camminano una cartella e **aprono ogni file**.
 
 **Cosa si vede**: in fondo ai risultati, una riga onesta — *«12 documenti
-non sono ancora scesi e non sono stati cercati»*, con un pulsante
-**Scaricali** che li chiede e rifà la ricerca. Non «0 risultati», che è una
-bugia.
+non sono ancora scesi e non sono stati cercati»*, o *«3 cartelle non si sono
+potute aprire: OneDrive non è in esecuzione»*, con un pulsante **Scaricali**
+per il primo caso. Non «0 risultati», che è una bugia due volte.
 
 **Cosa si scrive**:
 
 * una passata sola che, mentre cammina, chiede a ogni file **le chiavi** e
   non il contenuto: i non-locali finiscono in un elenco a parte invece di
-  essere letti;
-* `MPFolderScan`, un risultato che porta con sé *quanti ne ha saltati*, e
-  che tutte e quattro le funzioni usano invece di camminare per conto loro;
+  essere letti. Misurato a M0: 949 file in 1,1 secondi, zero scaricati;
+* `MPFolderScan`, un risultato che porta con sé **due** conti — quanti non
+  sono scesi e quante cartelle **non si sono potute aprire** — e una
+  scadenza, perché una cartella di un provider fermo può restare appesa
+  venticinque secondi (misurato a M0). Tutte e quattro le funzioni lo usano
+  invece di camminare per conto loro;
 * nel **server MCP** la stessa cosa, e la sua risposta lo deve dire nel
   testo: un assistente che riceve «nessun risultato» non ha modo di sapere
   che mezza cartella era in cielo. Questo tocca `MDMCPIndex` e le sue prove.
@@ -272,9 +338,11 @@ una cartella che semplicemente non ha guardato.
 3. **Il server MCP scarica?** Propendo per *no, mai*: è un processo senza
    finestre che parla con un assistente, ed è l'ultimo posto dove far
    partire un download di gigabyte. Dice quanti non ha guardato e basta.
-4. **M0 quando?** Serve un Mac con Dropbox o Google Drive installato. Finché
-   non c'è, M1 si scrive lo stesso — la funzione pura non cambia — ma M5 (i
-   nomi delle copie in conflitto) resta incompleta.
+4. **M0 quando?** ~~Serve un Mac con Dropbox o Google Drive installato.~~
+   Fatta a metà: iCloud misurato, OneDrive caratterizzato mentre **non**
+   gira — che si è rivelato il caso più istruttivo — Dropbox e Drive
+   ancora da guardare, e un file non sceso pure. M1 si può scrivere
+   comunque; M3 e M5 aspettano il resto della tabella.
 
 ---
 
