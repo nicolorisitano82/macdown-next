@@ -217,9 +217,34 @@ alla cartella. Da questo dipende tutto:
   là dentro una volta sola. Funziona, ma va detto in chiaro al primo
   collegamento.
 
-**Va misurato prima di scrivere B1**, come è stato fatto per M0: un client
-OAuth, il Picker, una cartella scelta, e una chiamata `files.list` per
-vedere cosa risponde. È mezza giornata, e decide il resto.
+**Va misurato prima di scrivere B1**, come è stato fatto per M0 — e
+l'arnese per farlo adesso c'è:
+[`Tools/drive_probe.m`](../Tools/drive_probe.m), un file solo.
+
+```bash
+clang -fobjc-arc -framework Foundation -o drive_probe Tools/drive_probe.m
+./drive_probe --client-id <il tuo>.apps.googleusercontent.com
+```
+
+Apre il browser sul consenso **con il Picker acceso**
+(`trigger_onepick=true`, `allow_folder_selection=true`), ascolta il richiamo
+su `127.0.0.1`, scambia il codice con PKCE, e poi fa la domanda: `files.get`
+su quello che è stato scelto e, se è una cartella, `files.list` sui figli.
+Stampa la risposta in chiaro.
+
+Non salva niente, non scrive niente su Drive, e il gettone muore col
+processo.
+
+Provato fin dove si può senza credenziali — ascolto, indirizzo costruito,
+richiamo letto, scambio tentato — con un `--senza-browser` che serve
+esattamente a questo: con un client finto, Google risponde
+`invalid_client`, che è la prova che tutto il resto della catena funziona.
+
+**Quello che manca è il client OAuth**, di tipo «applicazione desktop»: sta
+sotto l'account di chi prova, non sotto il nostro, ed è la sola ragione per
+cui questo passo non si automatizza del tutto. Un client desktop accetta
+`127.0.0.1` su **qualunque porta**, quindi non c'è niente da registrare a
+ogni giro.
 
 ## 5-bis. Le fasi
 
