@@ -278,12 +278,26 @@ static NSDictionary *MPAcceptCallback(int listener)
     [defaults setObject:name ?: @"" forKey:[self defaultsKey:@"placeName"]];
 }
 
+- (NSInteger)visibleInPlace
+{
+    NSNumber *count = [[NSUserDefaults standardUserDefaults]
+        objectForKey:[self defaultsKey:@"visible"]];
+    return count ? count.integerValue : -1;
+}
+
+- (void)rememberVisible:(NSInteger)count
+{
+    [[NSUserDefaults standardUserDefaults] setObject:@(count)
+        forKey:[self defaultsKey:@"visible"]];
+}
+
 - (void)unlink
 {
     MPKeychainWrite([self keychainAccount:@"refresh"], nil);
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     [defaults removeObjectForKey:[self defaultsKey:@"place"]];
     [defaults removeObjectForKey:[self defaultsKey:@"placeName"]];
+    [defaults removeObjectForKey:[self defaultsKey:@"visible"]];
 }
 
 
@@ -529,21 +543,13 @@ NSURL *MPCloudConsentURL(MPCloudService *service, NSString *redirect,
 }
 
 
-/// Drive rimanda indietro quello che è stato scelto: si chiede come si
-/// chiama, così il pannello dice «Appunti» invece di un identificatore.
-- (void)rememberFromCallback:(NSDictionary *)callback token:(NSString *)token
+/// Una GET aspettata: siamo su una coda di fondo, e questo pezzo di
+/// collegamento è fatto di tre domande in fila.
+static NSDictionary *MPGet(NSString *address, NSString *token)
 {
-    NSString *first = [callback[@"picked_file_ids"]
-        componentsSeparatedByString:@","].firstObject;
-    if (!first.length)
-        return;
-
-    NSString *address = [NSString stringWithFormat:
-        @"https://www.googleapis.com/drive/v3/files/%@?fields=id,name,mimeType",
-        first];
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:
         [NSURL URLWithString:address]];
-    [request setValue:[@"Bearer " stringByAppendingString:token]
+    [request setValue:[@"Bearer " stringByAppendingString:token ?: @""]
    forHTTPHeaderField:@"Authorization"];
 
     __block NSData *got = nil;
@@ -555,10 +561,49 @@ NSURL *MPCloudConsentURL(MPCloudService *service, NSString *redirect,
     }] resume];
     dispatch_semaphore_wait(done, dispatch_time(DISPATCH_TIME_NOW,
                                                 20 * NSEC_PER_SEC));
-    NSDictionary *file = got
-        ? [NSJSONSerialization JSONObjectWithData:got options:0 error:NULL] : nil;
-    if ([file isKindOfClass:[NSDictionary class]] && file[@"id"])
-        [self rememberPlace:file[@"id"] named:file[@"name"]];
+    id parsed = got ? [NSJSONSerialization JSONObjectWithData:got options:0
+                                                        error:NULL] : nil;
+    return [parsed isKindOfClass:[NSDictionary class]] ? parsed : nil;
+}
+
+
+/// Drive rimanda indietro quello che è stato scelto: si chiede come si
+/// chiama, così il pannello dice «Appunti» invece di un identificatore — e
+/// se è una cartella si chiede anche **cosa ci si vede dentro**, che è la
+/// domanda a cui la documentazione non risponde.
+- (void)rememberFromCallback:(NSDictionary *)callback token:(NSString *)token
+{
+    NSString *first = [callback[@"picked_file_ids"]
+        componentsSeparatedByString:@","].firstObject;
+    if (!first.length)
+        return;
+
+    NSDictionary *file = MPGet([NSString stringWithFormat:
+        @"https://www.googleapis.com/drive/v3/files/%@?fields=id,name,mimeType",
+        first], token);
+    if (!file[@"id"])
+        return;
+    [self rememberPlace:file[@"id"] named:file[@"name"]];
+
+    if (![file[@"mimeType"]
+            isEqualToString:@"application/vnd.google-apps.folder"])
+    {
+        [self rememberVisible:-1];      // un file solo: non c'è un dentro
+        return;
+    }
+
+    // La domanda: con il solo `drive.file`, una cartella passata dal Picker
+    // porta con sé quello che contiene? Si chiede una volta, al
+    // collegamento, e la risposta resta scritta.
+    NSString *query = [[NSString stringWithFormat:
+        @"'%@' in parents and trashed = false", file[@"id"]]
+        stringByAddingPercentEncodingWithAllowedCharacters:
+            [NSCharacterSet URLQueryAllowedCharacterSet]];
+    NSDictionary *children = MPGet([NSString stringWithFormat:
+        @"https://www.googleapis.com/drive/v3/files?q=%@"
+        @"&fields=files(id)&pageSize=100", query], token);
+    NSArray *files = children[@"files"];
+    [self rememberVisible:files ? (NSInteger)files.count : 0];
 }
 
 @end

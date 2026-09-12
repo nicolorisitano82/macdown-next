@@ -89,6 +89,18 @@ typedef NS_ENUM(NSUInteger, MPCloudLinkOutcome) {
 @property (readonly, copy, nonatomic) NSString *placeIdentifier;
 @property (readonly, copy, nonatomic) NSString *placeName;
 
+/** Quanti documenti si vedono là dentro, o -1 se non è una domanda che ha
+ * senso per questo servizio.
+ *
+ * Su Drive è **la** domanda: il permesso stretto dà accesso ai file che
+ * l'applicazione crea e a quelli che la persona le passa, e se quello che
+ * passa è una *cartella* la documentazione non dice se il contenuto venga
+ * con essa. Lo si chiede al servizio al primo collegamento, una volta, e
+ * la risposta decide come sarà fatto il resto: «scegli la cartella degli
+ * appunti» oppure «una cartella che facciamo noi».
+ */
+@property (readonly, nonatomic) NSInteger visibleInPlace;
+
 /** Apre il consenso nel browser e aspetta il richiamo su 127.0.0.1.
  *
  * Il consenso si dà nel browser, che è l'unico posto dove ha senso darlo:

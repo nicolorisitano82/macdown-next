@@ -230,11 +230,40 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
         return;
     }
     NSString *place = service.placeName.length ? service.placeName : nil;
-    self.stateLabel.stringValue = place
-        ? [NSString stringWithFormat:NSLocalizedString(
-              @"Connected, on «%@».",
-              @"State: connected, and what the connection covers"), place]
-        : NSLocalizedString(@"Connected.", @"State: connected to a service");
+    if (!place)
+    {
+        self.stateLabel.stringValue = NSLocalizedString(
+            @"Connected.", @"State: connected to a service");
+        return;
+    }
+
+    // Quello che si vede là dentro è la domanda che decide tutto il resto,
+    // e la risposta si è avuta collegandosi: vale la pena dirla, e dire
+    // cosa fare quando è «niente».
+    NSInteger visible = service.visibleInPlace;
+    if (visible > 0)
+    {
+        self.stateLabel.stringValue = [NSString stringWithFormat:
+            NSLocalizedString(@"Connected, on «%@» — %ld documents in there.",
+                @"State: connected, the chosen folder and what is visible"),
+            place, (long)visible];
+    }
+    else if (visible == 0)
+    {
+        self.stateLabel.stringValue = [NSString stringWithFormat:
+            NSLocalizedString(
+                @"Connected, on «%@» — but nothing inside it is visible: "
+                @"choose the documents instead of the folder, or let this "
+                @"application make a folder of its own.",
+                @"State: the folder came across but not its contents"),
+            place];
+    }
+    else
+    {
+        self.stateLabel.stringValue = [NSString stringWithFormat:
+            NSLocalizedString(@"Connected, on «%@».",
+                @"State: connected, and what the connection covers"), place];
+    }
 }
 
 

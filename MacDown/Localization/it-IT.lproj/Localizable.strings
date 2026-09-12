@@ -652,3 +652,5 @@
 "What is asked for is the narrowest thing Drive has — the files this application creates and whatever you hand it in the picker — and not anything resembling «see everything in my Drive», which Google classes as restricted and which would need a yearly verification." = "Quello che si chiede è la cosa più stretta che Drive abbia — i file che questa applicazione crea e quelli che le dai tu nel selettore — e niente che assomigli a «vedi tutto il mio Drive», che Google classifica come restricted e che vorrebbe una verifica ogni anno.";
 "Open the Dropbox App Console…" = "Apri la App Console di Dropbox…";
 "Open the Google Cloud console…" = "Apri la console di Google Cloud…";
+"Connected, on «%@» — %ld documents in there." = "Collegato, su «%@» — %ld documenti là dentro.";
+"Connected, on «%@» — but nothing inside it is visible: choose the documents instead of the folder, or let this application make a folder of its own." = "Collegato, su «%@» — ma di quello che c'è dentro non si vede niente: scegli i documenti invece della cartella, oppure lascia che sia l'applicazione a farsene una.";
