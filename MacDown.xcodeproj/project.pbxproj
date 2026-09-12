@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		D2A00000000000000000000A /* MPSyncPaneTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2A000000000000000000001 /* MPSyncPaneTests.m */; };
-		D1F000000000000000000014 /* MPGoogleDrive.m in Sources */ = {isa = PBXBuildFile; fileRef = D1F000000000000000000002 /* MPGoogleDrive.m */; };
+		D1F000000000000000000014 /* MPCloudService.m in Sources */ = {isa = PBXBuildFile; fileRef = D1F000000000000000000002 /* MPCloudService.m */; };
 		D1F000000000000000000015 /* MPSyncPreferencesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = D1F000000000000000000004 /* MPSyncPreferencesViewController.m */; };
 		D1E00000000000000000000A /* MPSpanStylerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D1E000000000000000000001 /* MPSpanStylerTests.m */; };
 		D1D00000000000000000000A /* MPSpanStyler.m in Sources */ = {isa = PBXBuildFile; fileRef = D1D000000000000000000002 /* MPSpanStyler.m */; };
@@ -349,8 +349,8 @@
 
 /* Begin PBXFileReference section */
 		D2A000000000000000000001 /* MPSyncPaneTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPSyncPaneTests.m; sourceTree = "<group>"; };
-		D1F000000000000000000001 /* MPGoogleDrive.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPGoogleDrive.h; sourceTree = "<group>"; };
-		D1F000000000000000000002 /* MPGoogleDrive.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPGoogleDrive.m; sourceTree = "<group>"; };
+		D1F000000000000000000001 /* MPCloudService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPCloudService.h; sourceTree = "<group>"; };
+		D1F000000000000000000002 /* MPCloudService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudService.m; sourceTree = "<group>"; };
 		D1F000000000000000000003 /* MPSyncPreferencesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPSyncPreferencesViewController.h; sourceTree = "<group>"; };
 		D1F000000000000000000004 /* MPSyncPreferencesViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPSyncPreferencesViewController.m; sourceTree = "<group>"; };
 		D1E000000000000000000001 /* MPSpanStylerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPSpanStylerTests.m; sourceTree = "<group>"; };
@@ -1161,8 +1161,8 @@
 				7DA2311453239F0973310004 /* MPRemoteImageFetch.m */,
 				D1C000000000000000000001 /* MPAttributedSpans.h */,
 				D1C000000000000000000002 /* MPAttributedSpans.m */,
-				D1F000000000000000000001 /* MPGoogleDrive.h */,
-				D1F000000000000000000002 /* MPGoogleDrive.m */,
+				D1F000000000000000000001 /* MPCloudService.h */,
+				D1F000000000000000000002 /* MPCloudService.m */,
 				1F0D9E01000000000000F1 /* MPMarkdownText.h */,
 				1F0D9E01000000000000F2 /* MPMarkdownText.m */,
 				1F0D9D63194AC7CF008E1856 /* MPUtilities.h */,
@@ -2111,7 +2111,7 @@
 				D0C1A1000000000000000033 /* MPSidebarController.m in Sources */,
 				1F0D9D67194AC7CF008E1856 /* MPUtilities.m in Sources */,
 				1F0D9E0100000000000F2A /* MPMarkdownText.m in Sources */,
-				D1F000000000000000000014 /* MPGoogleDrive.m in Sources */,
+				D1F000000000000000000014 /* MPCloudService.m in Sources */,
 				D1C00000000000000000000A /* MPAttributedSpans.m in Sources */,
 				852D523C1E260A6400BA7162 /* MPTerminalPreferencesViewController.m in Sources */,
 				1F0D9D78194AC7F7008E1856 /* MPHtmlPreferencesViewController.m in Sources */,

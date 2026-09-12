@@ -5,7 +5,7 @@
 
 #import "MPSyncPreferencesViewController.h"
 
-#import "MPGoogleDrive.h"
+#import "MPCloudService.h"
 
 
 static const CGFloat kMPPanelWidth = 560.0;
@@ -18,11 +18,24 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 
 @interface MPSyncPreferencesViewController ()
 
+@property (strong, nonatomic) NSSegmentedControl *picker;
+@property (strong, nonatomic) NSTextField *soon;
+@property (strong, nonatomic) NSTextField *explanation;
+@property (strong, nonatomic) NSTextField *howTitle;
+@property (strong, nonatomic) NSTextField *how;
+@property (strong, nonatomic) NSButton *console;
+@property (strong, nonatomic) NSTextField *clientTitle;
 @property (strong, nonatomic) NSTextField *clientField;
+@property (strong, nonatomic) NSTextField *secretTitle;
 @property (strong, nonatomic) NSSecureTextField *secretField;
+@property (strong, nonatomic) NSTextField *secretNote;
 @property (strong, nonatomic) NSTextField *stateLabel;
 @property (strong, nonatomic) NSButton *linkButton;
 @property (strong, nonatomic) NSButton *unlinkButton;
+@property (strong, nonatomic) NSTextField *scopeNote;
+@property (strong, nonatomic) NSStackView *clientRow;
+@property (strong, nonatomic) NSStackView *secretRow;
+@property (strong, nonatomic) NSStackView *buttons;
 
 @end
 
@@ -37,100 +50,102 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 
 #pragma mark - Il pannello
 
+/// Il servizio che si sta guardando.
+- (MPCloudService *)chosen
+{
+    NSArray *services = [MPCloudService services];
+    NSInteger index = self.picker.selectedSegment;
+    if (index < 0 || (NSUInteger)index >= services.count)
+        index = 0;
+    return services[index];
+}
+
+
 - (void)loadView
 {
     NSView *view = [[NSView alloc] initWithFrame:
-        NSMakeRect(0.0, 0.0, kMPPanelWidth, 420.0)];
+        NSMakeRect(0.0, 0.0, kMPPanelWidth, 460.0)];
 
-    NSTextField *what = [self paragraph:NSLocalizedString(
-        @"This application does not carry a Google client of its own, and "
-        @"that is on purpose: one client for everybody would mean one "
-        @"verification, one quota and a consent screen with somebody else's "
-        @"name on it. You make your own — it takes five minutes and costs "
-        @"nothing — and from then on the permission is between you and "
-        @"Google.",
-        @"What the sync preference pane is about")];
+    NSArray<MPCloudService *> *services = [MPCloudService services];
+    self.picker = [NSSegmentedControl segmentedControlWithLabels:
+        [services valueForKey:@"name"]
+        trackingMode:NSSegmentSwitchTrackingSelectOne
+        target:self action:@selector(pickService:)];
+    // Un servizio che non c'è ancora si vede e non si preme: nasconderlo
+    // vorrebbe dire far cercare alla gente una cosa che è in programma.
+    for (NSUInteger i = 0; i < services.count; i++)
+        [self.picker setEnabled:services[i].available forSegment:(NSInteger)i];
+    self.picker.selectedSegment = 0;
 
-    NSTextField *howTitle = [self label:NSLocalizedString(
-        @"How to get one", @"Title above the steps to create an OAuth client")];
-    NSTextField *how = [self paragraph:NSLocalizedString(
-        @"In the Google Cloud console: make a project, enable the Google "
-        @"Drive API, then Credentials ▸ Create credentials ▸ OAuth client "
-        @"ID, of type Desktop app. Copy the ID it gives you. There is no "
-        @"redirect address to register: a desktop client is allowed to come "
-        @"back to this Mac on any port.",
-        @"The steps to create a Google OAuth client")];
-    NSButton *console = [NSButton buttonWithTitle:NSLocalizedString(
-        @"Open the console…", @"Opens the Google Cloud credentials page")
+    self.soon = [self paragraph:@""];
+    self.soon.font = [NSFont systemFontOfSize:11.0];
+    self.explanation = [self paragraph:@""];
+    self.howTitle = [self label:NSLocalizedString(
+        @"How to get one", @"Title above the steps to register an app")];
+    self.how = [self paragraph:@""];
+    self.console = [NSButton buttonWithTitle:@""
         target:self action:@selector(openConsole:)];
 
-    NSTextField *clientTitle = [self label:NSLocalizedString(
-        @"Client ID:", @"Field for the Google OAuth client identifier")];
+    self.clientTitle = [self label:NSLocalizedString(
+        @"Client ID:", @"Field for the client identifier")];
     self.clientField = [NSTextField textFieldWithString:@""];
-    self.clientField.placeholderString = @"…apps.googleusercontent.com";
     self.clientField.delegate = self;
     [self.clientField.widthAnchor constraintEqualToConstant:330.0].active = YES;
 
-    NSTextField *secretTitle = [self label:NSLocalizedString(
-        @"Client secret:", @"Field for the Google OAuth client secret")];
+    self.secretTitle = [self label:NSLocalizedString(
+        @"Client secret:", @"Field for the client secret")];
     self.secretField = [[NSSecureTextField alloc] init];
     self.secretField.placeholderString = NSLocalizedString(
         @"optional", @"Placeholder: the client secret is not required");
     self.secretField.delegate = self;
     [self.secretField.widthAnchor constraintEqualToConstant:330.0].active = YES;
 
-    // Perché è facoltativo, detto dove serve saperlo.
-    NSTextField *secretNote = [self paragraph:NSLocalizedString(
+    self.secretNote = [self paragraph:NSLocalizedString(
         @"A desktop client's secret is not really a secret — it would live "
         @"inside the application anyway — so the permission is protected by "
-        @"PKCE instead, and Google itself calls the secret optional here. "
-        @"Paste it only if your client refuses without it. It is kept in "
-        @"the keychain, like the tokens; neither ever reaches a preferences "
-        @"file or the log.",
+        @"PKCE instead. Paste it only if your client refuses without it. It "
+        @"is kept in the keychain, like the tokens; neither ever reaches a "
+        @"preferences file or the log.",
         @"Why the client secret is optional")];
 
     self.stateLabel = [self label:@""];
     self.linkButton = [NSButton buttonWithTitle:NSLocalizedString(
-        @"Connect…", @"Starts the Google Drive permission flow")
+        @"Connect…", @"Starts the permission flow")
         target:self action:@selector(link:)];
     self.unlinkButton = [NSButton buttonWithTitle:NSLocalizedString(
-        @"Disconnect", @"Forgets the Google Drive tokens")
+        @"Disconnect", @"Forgets the tokens of a service")
         target:self action:@selector(unlink:)];
+    self.scopeNote = [self paragraph:@""];
 
-    NSTextField *scopeNote = [self paragraph:NSLocalizedString(
-        @"What is asked for is the narrowest thing Drive has: the files "
-        @"this application creates, and whatever you hand it in the picker "
-        @"— nothing that resembles «see everything in my Drive». Nothing is "
-        @"read or written until you connect, and Disconnect forgets the "
-        @"tokens for good.",
-        @"What the drive.file scope means")];
+    self.clientRow = [NSStackView stackViewWithViews:
+        @[self.clientTitle, self.clientField]];
+    self.clientRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    self.clientRow.spacing = 8.0;
 
-    NSStackView *clientRow = [NSStackView stackViewWithViews:
-        @[clientTitle, self.clientField]];
-    clientRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
-    clientRow.spacing = 8.0;
+    self.secretRow = [NSStackView stackViewWithViews:
+        @[self.secretTitle, self.secretField]];
+    self.secretRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    self.secretRow.spacing = 8.0;
 
-    NSStackView *secretRow = [NSStackView stackViewWithViews:
-        @[secretTitle, self.secretField]];
-    secretRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
-    secretRow.spacing = 8.0;
-
-    NSStackView *buttons = [NSStackView stackViewWithViews:
+    self.buttons = [NSStackView stackViewWithViews:
         @[self.linkButton, self.unlinkButton]];
-    buttons.orientation = NSUserInterfaceLayoutOrientationHorizontal;
-    buttons.spacing = 10.0;
+    self.buttons.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    self.buttons.spacing = 10.0;
 
     NSStackView *column = [NSStackView stackViewWithViews:
-        @[what, howTitle, how, console, clientRow, secretRow, secretNote,
-          self.stateLabel, buttons, scopeNote]];
+        @[self.picker, self.soon, self.explanation, self.howTitle, self.how, self.console,
+          self.clientRow, self.secretRow, self.secretNote, self.stateLabel,
+          self.buttons, self.scopeNote]];
     column.orientation = NSUserInterfaceLayoutOrientationVertical;
     column.alignment = NSLayoutAttributeLeading;
     column.spacing = 12.0;
     column.translatesAutoresizingMaskIntoConstraints = NO;
-    [column setCustomSpacing:4.0 afterView:howTitle];
-    [column setCustomSpacing:18.0 afterView:console];
-    [column setCustomSpacing:4.0 afterView:secretRow];
-    [column setCustomSpacing:18.0 afterView:secretNote];
+    [column setCustomSpacing:6.0 afterView:self.picker];
+    [column setCustomSpacing:18.0 afterView:self.soon];
+    [column setCustomSpacing:4.0 afterView:self.howTitle];
+    [column setCustomSpacing:18.0 afterView:self.console];
+    [column setCustomSpacing:4.0 afterView:self.secretRow];
+    [column setCustomSpacing:18.0 afterView:self.secretNote];
     [column setCustomSpacing:6.0 afterView:self.stateLabel];
 
     [view addSubview:column];
@@ -145,67 +160,108 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
                                                      constant:-kMPPanelPadding],
     ]];
     self.view = view;
+    [self showService];
 }
 
 
 - (void)viewWillAppear
 {
     [super viewWillAppear];
-    MPGoogleDrive *drive = [MPGoogleDrive sharedDrive];
-    self.clientField.stringValue = drive.clientIdentifier;
-    self.secretField.stringValue = drive.clientSecret;
-    [self showState];
+    [self showService];
+}
+
+
+/// Tutto quello che cambia quando si cambia servizio, in un posto solo.
+- (void)showService
+{
+    MPCloudService *service = [self chosen];
+
+    // Quello che c'è ma non si può ancora premere lo dice qui, una riga:
+    // una scheda grigia senza spiegazione è una domanda lasciata aperta.
+    NSMutableArray<NSString *> *waiting = [NSMutableArray array];
+    for (MPCloudService *other in [MPCloudService services])
+    {
+        if (!other.available)
+            [waiting addObject:[NSString stringWithFormat:@"%@ — %@",
+                                other.name, other.explanation]];
+    }
+    self.soon.stringValue = [waiting componentsJoinedByString:@"\n"];
+    self.soon.hidden = !waiting.count;
+
+    self.explanation.stringValue = service.explanation;
+    self.how.stringValue = service.howToGetAClient;
+    self.scopeNote.stringValue = service.scopeExplanation;
+    self.clientField.placeholderString = service.clientPlaceholder;
+    self.clientField.stringValue = service.clientIdentifier;
+    self.secretField.stringValue = service.clientSecret;
+    self.console.title = service.consoleButtonTitle;
+
+    // Un segnaposto mostra il perché e niente su cui mettere le mani.
+    BOOL ready = service.available;
+    for (NSView *row in @[self.howTitle, self.how, self.console, self.clientRow,
+                          self.secretRow, self.secretNote, self.stateLabel,
+                          self.buttons, self.scopeNote])
+        row.hidden = !ready;
+
+    if (ready)
+        [self showState];
 }
 
 
 /// Una riga sola, e dice solo quello che è successo davvero.
 - (void)showState
 {
-    MPGoogleDrive *drive = [MPGoogleDrive sharedDrive];
-    self.linkButton.enabled = drive.isConfigured;
+    MPCloudService *service = [self chosen];
+    self.linkButton.enabled = service.isConfigured;
 
-    if (!drive.isConfigured)
+    if (!service.isConfigured)
     {
         self.stateLabel.stringValue = NSLocalizedString(
             @"No client ID yet.",
-            @"State: the pane has no Google client identifier");
+            @"State: the pane has no client identifier");
         self.unlinkButton.enabled = NO;
         return;
     }
-    self.unlinkButton.enabled = drive.isLinked;
-    if (!drive.isLinked)
+    self.unlinkButton.enabled = service.isLinked;
+    if (!service.isLinked)
     {
         self.stateLabel.stringValue = NSLocalizedString(
-            @"Not connected.", @"State: no Google Drive permission yet");
+            @"Not connected.", @"State: no permission yet");
         return;
     }
-    NSString *folder = drive.folderName.length ? drive.folderName : nil;
-    self.stateLabel.stringValue = folder
+    NSString *place = service.placeName.length ? service.placeName : nil;
+    self.stateLabel.stringValue = place
         ? [NSString stringWithFormat:NSLocalizedString(
-              @"Connected, on the folder «%@».",
-              @"State: connected to Google Drive, with the chosen folder"),
-           folder]
-        : NSLocalizedString(@"Connected.",
-                            @"State: connected to Google Drive");
+              @"Connected, on «%@».",
+              @"State: connected, and what the connection covers"), place]
+        : NSLocalizedString(@"Connected.", @"State: connected to a service");
 }
 
 
-#pragma mark - Quello che fanno i pulsanti
+#pragma mark - Quello che fanno i comandi
+
+- (void)pickService:(id)sender
+{
+    [self showService];
+}
+
 
 - (void)controlTextDidChange:(NSNotification *)notification
 {
-    MPGoogleDrive *drive = [MPGoogleDrive sharedDrive];
+    MPCloudService *service = [self chosen];
     if (notification.object == self.clientField)
-        drive.clientIdentifier = self.clientField.stringValue;
+        service.clientIdentifier = self.clientField.stringValue;
     else if (notification.object == self.secretField)
-        drive.clientSecret = self.secretField.stringValue;
+        service.clientSecret = self.secretField.stringValue;
     [self showState];
 }
 
 
 - (void)openConsole:(id)sender
 {
-    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:kMPConsole]];
+    NSURL *url = [self chosen].consoleURL;
+    if (url)
+        [[NSWorkspace sharedWorkspace] openURL:url];
 }
 
 
@@ -214,25 +270,20 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     self.linkButton.enabled = NO;
     self.stateLabel.stringValue = NSLocalizedString(
         @"Waiting for the browser…",
-        @"State while the Google consent screen is open");
+        @"State while the consent screen is open");
 
-    [[MPGoogleDrive sharedDrive] linkWithCompletion:
-     ^(MPGoogleLinkOutcome outcome, NSString *message) {
-        if (outcome == MPGoogleLinkDone)
-        {
-            [self showState];
-            return;
-        }
+    [[self chosen] linkWithCompletion:
+     ^(MPCloudLinkOutcome outcome, NSString *message) {
         [self showState];
-        if (outcome == MPGoogleLinkCancelled)
-            return;             // chiusa la finestra: non è successo niente
+        if (outcome == MPCloudLinkDone || outcome == MPCloudLinkCancelled)
+            return;             // riuscito, o chiuso: non è successo niente
 
-        // Le parole di Google, non le nostre: «client sbagliato» e
+        // Le parole del servizio, non le nostre: «client sbagliato» e
         // «permesso negato» si distinguono solo così.
         NSAlert *alert = [[NSAlert alloc] init];
         alert.messageText = NSLocalizedString(
-            @"Google did not give the permission",
-            @"Title of the alert when linking Google Drive fails");
+            @"The permission was not given",
+            @"Title of the alert when linking a service fails");
         alert.informativeText = message ?: @"";
         [alert runModal];
     }];
@@ -241,7 +292,7 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 
 - (void)unlink:(id)sender
 {
-    [[MPGoogleDrive sharedDrive] unlink];
+    [[self chosen] unlink];
     [self showState];
 }
 

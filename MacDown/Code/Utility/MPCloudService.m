@@ -1,0 +1,604 @@
+//
+//  MPCloudService.m
+//  MacDown
+//
+
+#import "MPCloudService.h"
+
+#import <AppKit/AppKit.h>
+#import <Security/Security.h>
+#import <netinet/in.h>
+#import <sys/socket.h>
+#import <unistd.h>
+
+#include <CommonCrypto/CommonDigest.h>
+
+
+static NSString *const kMPKeychainService = @"MacDown Next — spazi in rete";
+
+
+#pragma mark - Il portachiavi
+
+/// Una password generica per servizio e conto. Il portachiavi è l'unico
+/// posto in cui queste cose hanno il diritto di stare.
+static NSString *MPKeychainRead(NSString *account)
+{
+    NSDictionary *query = @{
+        (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
+        (__bridge id)kSecAttrService: kMPKeychainService,
+        (__bridge id)kSecAttrAccount: account,
+        (__bridge id)kSecReturnData: @YES,
+        (__bridge id)kSecMatchLimit: (__bridge id)kSecMatchLimitOne,
+    };
+    CFTypeRef found = NULL;
+    if (SecItemCopyMatching((__bridge CFDictionaryRef)query, &found) != errSecSuccess)
+        return nil;
+    NSData *data = CFBridgingRelease(found);
+    return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+}
+
+
+static void MPKeychainWrite(NSString *account, NSString *value)
+{
+    NSDictionary *what = @{
+        (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
+        (__bridge id)kSecAttrService: kMPKeychainService,
+        (__bridge id)kSecAttrAccount: account,
+    };
+    SecItemDelete((__bridge CFDictionaryRef)what);
+    if (!value.length)
+        return;
+
+    NSMutableDictionary *item = [what mutableCopy];
+    item[(__bridge id)kSecValueData] =
+        [value dataUsingEncoding:NSUTF8StringEncoding];
+    // Solo quando questo Mac è sbloccato, e senza sincronizzarsi altrove:
+    // un gettone che gira fra i dispositivi di qualcuno non è affare
+    // nostro.
+    item[(__bridge id)kSecAttrAccessible] =
+        (__bridge id)kSecAttrAccessibleWhenUnlocked;
+    SecItemAdd((__bridge CFDictionaryRef)item, NULL);
+}
+
+
+#pragma mark - PKCE
+
+static NSString *MPBase64URL(NSData *data)
+{
+    NSString *text = [data base64EncodedStringWithOptions:0];
+    text = [text stringByReplacingOccurrencesOfString:@"+" withString:@"-"];
+    text = [text stringByReplacingOccurrencesOfString:@"/" withString:@"_"];
+    return [text stringByReplacingOccurrencesOfString:@"=" withString:@""];
+}
+
+
+NSString *MPCloudPKCEChallenge(NSString *verifier)
+{
+    NSData *data = [verifier dataUsingEncoding:NSASCIIStringEncoding];
+    uint8_t digest[CC_SHA256_DIGEST_LENGTH];
+    CC_SHA256(data.bytes, (CC_LONG)data.length, digest);
+    return MPBase64URL([NSData dataWithBytes:digest length:sizeof(digest)]);
+}
+
+
+static NSString *MPRandomVerifier(void)
+{
+    uint8_t bytes[48];
+    arc4random_buf(bytes, sizeof(bytes));
+    return MPBase64URL([NSData dataWithBytes:bytes length:sizeof(bytes)]);
+}
+
+
+#pragma mark - L'ascolto del richiamo
+
+/// Una porta sola su 127.0.0.1, scelta dal sistema: un client desktop è
+/// ammesso sul loopback da qualunque porta, quindi non c'è niente da
+/// registrare a ogni giro.
+static int MPListenOnLoopback(uint16_t *outPort)
+{
+    int handle = socket(AF_INET, SOCK_STREAM, 0);
+    if (handle < 0)
+        return -1;
+    int yes = 1;
+    setsockopt(handle, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+
+    struct sockaddr_in address = {0};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (bind(handle, (struct sockaddr *)&address, sizeof(address)) < 0
+            || listen(handle, 1) < 0)
+    {
+        close(handle);
+        return -1;
+    }
+    socklen_t size = sizeof(address);
+    getsockname(handle, (struct sockaddr *)&address, &size);
+    *outPort = ntohs(address.sin_port);
+    return handle;
+}
+
+
+static NSDictionary *MPAcceptCallback(int listener)
+{
+    int client = accept(listener, NULL, NULL);
+    if (client < 0)
+        return nil;
+
+    char buffer[8192];
+    ssize_t got = read(client, buffer, sizeof(buffer) - 1);
+    if (got <= 0)
+    {
+        close(client);
+        return nil;
+    }
+    buffer[got] = '\0';
+
+    NSString *line = [@(buffer) componentsSeparatedByString:@"\r\n"].firstObject;
+    NSArray *parts = [line componentsSeparatedByString:@" "];
+    NSString *path = parts.count > 1 ? parts[1] : @"/";
+
+    NSString *body = NSLocalizedString(
+        @"<!doctype html><meta charset=utf-8><title>Done</title>"
+        @"<body style=\"font:16px -apple-system;padding:3em\">"
+        @"<p>Done — you can close this tab and go back to MacDown Next.",
+        @"The page the browser shows after the permission is handed back");
+    NSString *response = [NSString stringWithFormat:
+        @"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n"
+        @"Content-Length: %lu\r\nConnection: close\r\n\r\n%@",
+        (unsigned long)[body lengthOfBytesUsingEncoding:NSUTF8StringEncoding],
+        body];
+    NSData *out = [response dataUsingEncoding:NSUTF8StringEncoding];
+    write(client, out.bytes, out.length);
+    close(client);
+
+    NSURLComponents *url = [NSURLComponents componentsWithString:
+        [@"http://127.0.0.1" stringByAppendingString:path]];
+    NSMutableDictionary *values = [NSMutableDictionary dictionary];
+    for (NSURLQueryItem *item in url.queryItems)
+        values[item.name] = item.value ?: @"";
+    return values;
+}
+
+
+#pragma mark - Quello che ogni servizio deve saper dire
+
+@interface MPCloudService ()
+@property (assign, nonatomic) BOOL linking;
+@end
+
+
+@implementation MPCloudService
+
++ (NSArray<MPCloudService *> *)services
+{
+    static NSArray *services = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        services = @[[[NSClassFromString(@"MPGoogleDriveService") alloc] init],
+                     [[NSClassFromString(@"MPDropboxService") alloc] init]];
+    });
+    return services;
+}
+
+
+#pragma mark Da riempire nelle sottoclassi
+
+- (NSString *)name { return @""; }
+- (NSString *)identifier { return @""; }
+/// Se il pannello lo lascia toccare. Un servizio che non c'è ancora si
+/// mostra lo stesso: nasconderlo vorrebbe dire far cercare alla gente una
+/// cosa che è in programma.
+- (BOOL)available { return YES; }
+- (NSString *)consoleButtonTitle { return @""; }
+- (NSURL *)consoleURL { return nil; }
+- (NSString *)explanation { return @""; }
+- (NSString *)howToGetAClient { return @""; }
+- (NSString *)clientPlaceholder { return @""; }
+- (NSString *)scopeExplanation { return @""; }
+
+/// L'indirizzo del consenso, senza le parti comuni.
+- (NSURLComponents *)consentComponentsWithRedirect:(NSString *)redirect
+                                         challenge:(NSString *)challenge
+{
+    return nil;
+}
+
+- (NSURL *)tokenURL { return nil; }
+
+/// Cosa fare col richiamo, oltre allo scambio del codice: Drive ci mette
+/// dentro quello che la persona ha scelto, Dropbox no.
+- (void)rememberFromCallback:(NSDictionary *)callback
+                       token:(NSString *)token { }
+
+
+#pragma mark Quello che vale per tutti
+
+- (NSString *)defaultsKey:(NSString *)what
+{
+    return [NSString stringWithFormat:@"cloud.%@.%@", self.identifier, what];
+}
+
+- (NSString *)keychainAccount:(NSString *)what
+{
+    return [NSString stringWithFormat:@"%@/%@", self.identifier, what];
+}
+
+- (NSString *)clientIdentifier
+{
+    return [[NSUserDefaults standardUserDefaults]
+        stringForKey:[self defaultsKey:@"client"]] ?: @"";
+}
+
+- (void)setClientIdentifier:(NSString *)identifier
+{
+    NSString *clean = [identifier stringByTrimmingCharactersInSet:
+        [NSCharacterSet whitespaceAndNewlineCharacterSet]] ?: @"";
+    [[NSUserDefaults standardUserDefaults] setObject:clean
+        forKey:[self defaultsKey:@"client"]];
+}
+
+- (NSString *)clientSecret
+{
+    return MPKeychainRead([self keychainAccount:@"secret"]) ?: @"";
+}
+
+- (void)setClientSecret:(NSString *)secret
+{
+    MPKeychainWrite([self keychainAccount:@"secret"],
+                    [secret stringByTrimmingCharactersInSet:
+                        [NSCharacterSet whitespaceAndNewlineCharacterSet]]);
+}
+
+- (BOOL)isConfigured
+{
+    return self.clientIdentifier.length >= 8;
+}
+
+- (BOOL)isLinked
+{
+    return MPKeychainRead([self keychainAccount:@"refresh"]).length > 0;
+}
+
+- (NSString *)placeIdentifier
+{
+    return [[NSUserDefaults standardUserDefaults]
+        stringForKey:[self defaultsKey:@"place"]];
+}
+
+- (NSString *)placeName
+{
+    return [[NSUserDefaults standardUserDefaults]
+        stringForKey:[self defaultsKey:@"placeName"]];
+}
+
+- (void)rememberPlace:(NSString *)identifier named:(NSString *)name
+{
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    [defaults setObject:identifier ?: @"" forKey:[self defaultsKey:@"place"]];
+    [defaults setObject:name ?: @"" forKey:[self defaultsKey:@"placeName"]];
+}
+
+- (void)unlink
+{
+    MPKeychainWrite([self keychainAccount:@"refresh"], nil);
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    [defaults removeObjectForKey:[self defaultsKey:@"place"]];
+    [defaults removeObjectForKey:[self defaultsKey:@"placeName"]];
+}
+
+
+#pragma mark Il collegamento, uguale per tutti
+
+- (void)linkWithCompletion:(void (^)(MPCloudLinkOutcome, NSString *))done
+{
+    void (^answer)(MPCloudLinkOutcome, NSString *) =
+        ^(MPCloudLinkOutcome outcome, NSString *message) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.linking = NO;
+            if (done)
+                done(outcome, message);
+        });
+    };
+
+    if (!self.isConfigured)
+    {
+        answer(MPCloudLinkBroken, NSLocalizedString(
+            @"There is no client ID yet.",
+            @"Refusing to link a service without a client ID"));
+        return;
+    }
+    if (self.linking)
+        return;
+    self.linking = YES;
+
+    NSString *verifier = MPRandomVerifier();
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        uint16_t port = 0;
+        int listener = MPListenOnLoopback(&port);
+        if (listener < 0)
+        {
+            answer(MPCloudLinkBroken, NSLocalizedString(
+                @"No port on this Mac would answer.",
+                @"The loopback listener could not be opened"));
+            return;
+        }
+        NSString *redirect = [NSString stringWithFormat:
+            @"http://127.0.0.1:%u/macdown-%@", port, self.identifier];
+
+        NSURL *consent = MPCloudConsentURL(self, redirect,
+                                           MPCloudPKCEChallenge(verifier));
+        if (!consent)
+        {
+            close(listener);
+            answer(MPCloudLinkBroken, nil);
+            return;
+        }
+        [[NSWorkspace sharedWorkspace] openURL:consent];
+
+        NSDictionary *callback = MPAcceptCallback(listener);
+        close(listener);
+        if (!callback)
+        {
+            answer(MPCloudLinkCancelled, nil);
+            return;
+        }
+        if (callback[@"error"])
+        {
+            answer(MPCloudLinkRefused,
+                   callback[@"error_description"] ?: callback[@"error"]);
+            return;
+        }
+        [self exchange:callback verifier:verifier redirect:redirect
+                answer:answer];
+    });
+}
+
+
+- (void)exchange:(NSDictionary *)callback
+        verifier:(NSString *)verifier
+        redirect:(NSString *)redirect
+          answer:(void (^)(MPCloudLinkOutcome, NSString *))answer
+{
+    NSMutableArray *fields = [NSMutableArray arrayWithArray:@[
+        [NSString stringWithFormat:@"client_id=%@", self.clientIdentifier],
+        [NSString stringWithFormat:@"code=%@", callback[@"code"] ?: @""],
+        [NSString stringWithFormat:@"code_verifier=%@", verifier],
+        @"grant_type=authorization_code",
+        [NSString stringWithFormat:@"redirect_uri=%@",
+         [redirect stringByAddingPercentEncodingWithAllowedCharacters:
+          [NSCharacterSet alphanumericCharacterSet]]],
+    ]];
+    NSString *secret = self.clientSecret;
+    if (secret.length)
+        [fields addObject:[NSString stringWithFormat:@"client_secret=%@",
+                           secret]];
+
+    NSMutableURLRequest *request =
+        [NSMutableURLRequest requestWithURL:self.tokenURL];
+    request.HTTPMethod = @"POST";
+    [request setValue:@"application/x-www-form-urlencoded"
+   forHTTPHeaderField:@"Content-Type"];
+    request.HTTPBody = [[fields componentsJoinedByString:@"&"]
+        dataUsingEncoding:NSUTF8StringEncoding];
+
+    [[[NSURLSession sharedSession] dataTaskWithRequest:request
+        completionHandler:^(NSData *data, NSURLResponse *response, NSError *e) {
+        NSDictionary *tokens = data
+            ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL]
+            : nil;
+        if (![tokens isKindOfClass:[NSDictionary class]]
+                || !tokens[@"access_token"])
+        {
+            // Le parole del servizio, non le nostre: un client sbagliato e
+            // un permesso negato si distinguono solo così.
+            NSString *said = tokens[@"error_description"] ?: tokens[@"error"]
+                          ?: tokens[@"error_summary"] ?: e.localizedDescription;
+            answer(MPCloudLinkRefused, said);
+            return;
+        }
+        if (tokens[@"refresh_token"])
+            MPKeychainWrite([self keychainAccount:@"refresh"],
+                            tokens[@"refresh_token"]);
+
+        [self rememberFromCallback:callback token:tokens[@"access_token"]];
+        answer(MPCloudLinkDone, nil);
+    }] resume];
+}
+
+@end
+
+
+#pragma mark - L'indirizzo del consenso
+
+NSURL *MPCloudConsentURL(MPCloudService *service, NSString *redirect,
+                         NSString *challenge)
+{
+    NSURLComponents *url = [service consentComponentsWithRedirect:redirect
+                                                        challenge:challenge];
+    if (!url)
+        return nil;
+    NSMutableArray *items = [url.queryItems mutableCopy] ?: [NSMutableArray array];
+    // Le tre che valgono per tutti e due, aggiunte qui così nessuno se le
+    // dimentica in una sottoclasse.
+    [items addObject:[NSURLQueryItem queryItemWithName:@"client_id"
+                                                 value:service.clientIdentifier]];
+    [items addObject:[NSURLQueryItem queryItemWithName:@"redirect_uri"
+                                                 value:redirect]];
+    [items addObject:[NSURLQueryItem queryItemWithName:@"response_type"
+                                                 value:@"code"]];
+    [items addObject:[NSURLQueryItem queryItemWithName:@"code_challenge"
+                                                 value:challenge]];
+    [items addObject:[NSURLQueryItem queryItemWithName:@"code_challenge_method"
+                                                 value:@"S256"]];
+    url.queryItems = items;
+    return url.URL;
+}
+
+
+#pragma mark - Google Drive
+
+@interface MPGoogleDriveService : MPCloudService
+@end
+
+@implementation MPGoogleDriveService
+
+- (NSString *)name { return @"Google Drive"; }
+- (NSString *)identifier { return @"google"; }
+- (NSString *)consoleButtonTitle
+{
+    return NSLocalizedString(@"Open the Google Cloud console…",
+                             @"Opens the page where a Google client is made");
+}
+- (NSURL *)consoleURL
+{
+    return [NSURL URLWithString:
+        @"https://console.cloud.google.com/apis/credentials"];
+}
+
+- (NSString *)explanation
+{
+    return NSLocalizedString(
+        @"Google asks for an application of its own, and this one does not "
+        @"carry one: a client inside a program is a client anybody can take "
+        @"out, and one for everybody would mean a single verification, a "
+        @"single quota and a consent screen with somebody else's name on "
+        @"it. Standard use of the Drive API costs nothing.",
+        @"Why you bring your own Google client");
+}
+
+- (NSString *)howToGetAClient
+{
+    return NSLocalizedString(
+        @"Make a project, enable the Google Drive API, then Credentials ▸ "
+        @"Create credentials ▸ OAuth client ID, of type Desktop app. Copy "
+        @"the ID. There is no redirect address to register: a desktop "
+        @"client may come back to this Mac on any port.",
+        @"How to make a Google OAuth client");
+}
+
+- (NSString *)clientPlaceholder { return @"…apps.googleusercontent.com"; }
+
+- (NSString *)scopeExplanation
+{
+    return NSLocalizedString(
+        @"What is asked for is the narrowest thing Drive has — the files "
+        @"this application creates and whatever you hand it in the picker "
+        @"— and not anything resembling «see everything in my Drive», "
+        @"which Google classes as restricted and which would need a yearly "
+        @"verification.",
+        @"What the drive.file scope means");
+}
+
+- (BOOL)isConfigured
+{
+    return [self.clientIdentifier containsString:@"apps.googleusercontent.com"];
+}
+
+- (NSURL *)tokenURL
+{
+    return [NSURL URLWithString:@"https://oauth2.googleapis.com/token"];
+}
+
+- (NSURLComponents *)consentComponentsWithRedirect:(NSString *)redirect
+                                         challenge:(NSString *)challenge
+{
+    NSURLComponents *url = [NSURLComponents componentsWithString:
+        @"https://accounts.google.com/o/oauth2/v2/auth"];
+    url.queryItems = @[
+        [NSURLQueryItem queryItemWithName:@"scope"
+            value:@"https://www.googleapis.com/auth/drive.file"],
+        [NSURLQueryItem queryItemWithName:@"access_type" value:@"offline"],
+        [NSURLQueryItem queryItemWithName:@"prompt" value:@"consent"],
+        // Le due che, su desktop, *sono* il Picker: la scelta dei file
+        // avviene dentro la schermata di consenso, nel browser.
+        [NSURLQueryItem queryItemWithName:@"trigger_onepick" value:@"true"],
+        [NSURLQueryItem queryItemWithName:@"allow_folder_selection"
+                                    value:@"true"],
+    ];
+    return url;
+}
+
+
+/// Drive rimanda indietro quello che è stato scelto: si chiede come si
+/// chiama, così il pannello dice «Appunti» invece di un identificatore.
+- (void)rememberFromCallback:(NSDictionary *)callback token:(NSString *)token
+{
+    NSString *first = [callback[@"picked_file_ids"]
+        componentsSeparatedByString:@","].firstObject;
+    if (!first.length)
+        return;
+
+    NSString *address = [NSString stringWithFormat:
+        @"https://www.googleapis.com/drive/v3/files/%@?fields=id,name,mimeType",
+        first];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:
+        [NSURL URLWithString:address]];
+    [request setValue:[@"Bearer " stringByAppendingString:token]
+   forHTTPHeaderField:@"Authorization"];
+
+    __block NSData *got = nil;
+    dispatch_semaphore_t done = dispatch_semaphore_create(0);
+    [[[NSURLSession sharedSession] dataTaskWithRequest:request
+        completionHandler:^(NSData *body, NSURLResponse *r, NSError *e) {
+        got = body;
+        dispatch_semaphore_signal(done);
+    }] resume];
+    dispatch_semaphore_wait(done, dispatch_time(DISPATCH_TIME_NOW,
+                                                20 * NSEC_PER_SEC));
+    NSDictionary *file = got
+        ? [NSJSONSerialization JSONObjectWithData:got options:0 error:NULL] : nil;
+    if ([file isKindOfClass:[NSDictionary class]] && file[@"id"])
+        [self rememberPlace:file[@"id"] named:file[@"name"]];
+}
+
+@end
+
+
+#pragma mark - Dropbox
+
+/** Un segnaposto, e lo dice.
+ *
+ * Dropbox è la fase dopo — nella roadmap è B3 — e questo è quanto se ne sa
+ * oggi: come si chiama, dove si registra un'applicazione, e che il permesso
+ * stretto è «cartella dell'app». Scrivere adesso il resto vorrebbe dire
+ * scrivere un giro OAuth che nessuno ha ancora provato contro il servizio
+ * vero, e sarebbe codice che sembra finito senza esserlo.
+ *
+ * Finché `available` dice di no, il pannello lo mostra e non lo lascia
+ * toccare.
+ */
+@interface MPDropboxService : MPCloudService
+@end
+
+@implementation MPDropboxService
+
+- (NSString *)name { return @"Dropbox"; }
+- (NSString *)identifier { return @"dropbox"; }
+- (BOOL)available { return NO; }
+
+- (NSString *)consoleButtonTitle
+{
+    return NSLocalizedString(@"Open the Dropbox App Console…",
+                             @"Opens the page where a Dropbox app is made");
+}
+- (NSURL *)consoleURL
+{
+    return [NSURL URLWithString:@"https://www.dropbox.com/developers/apps"];
+}
+
+- (NSString *)explanation
+{
+    return NSLocalizedString(
+        @"Dropbox comes after Drive, and for one reason: Drive is the "
+        @"harder of the two — files named by identifier rather than by "
+        @"path, and no way to make it refuse a write that started from an "
+        @"old version — so what is learned there makes this one half the "
+        @"work.",
+        @"Why the Dropbox section is a placeholder");
+}
+
+- (NSString *)howToGetAClient { return @""; }
+- (NSString *)clientPlaceholder { return @""; }
+- (NSString *)scopeExplanation { return @""; }
+
+@end
