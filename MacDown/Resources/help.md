@@ -275,6 +275,11 @@ way `**this**` is shown bold. I can paint a colour written as `#c00`,
 and a `font-size` in `pt`, `px`, `em`, `rem` or a percentage. Anything
 fancier the preview still renders and the editor leaves alone.
 
+A size waits until the braces are hidden. While you are editing them the
+words go back to the size of the line: markup at one size beside words at
+twice it is a line nobody can read, and it would rewrap under the caret as
+you typed. The colour stays on throughout — it moves nothing.
+
 Only attributes that *describe* are let through — `class`, `id`, `style`,
 `title`, `lang`, `dir` and `data-…`. An event handler is not one of them
 and stays on the page as you typed it, because a document is often

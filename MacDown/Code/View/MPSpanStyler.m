@@ -6,6 +6,7 @@
 #import "MPSpanStyler.h"
 
 #import "MPAttributedSpans.h"
+#import "MPMarkerHider.h"
 
 
 #pragma mark - Reading a colour
@@ -147,8 +148,23 @@ CGFloat MPSizeFromCSS(NSString *value, CGFloat base)
 
 #pragma mark - Putting it in the editor
 
+/// A span that asks for a size, and the font that was there before.
+@interface MPSizedSpan : NSObject
+@property (assign, nonatomic) NSRange range;        // the whole construct
+@property (assign, nonatomic) NSRange content;      // the words in it
+@property (strong, nonatomic) NSFont *before;
+@property (strong, nonatomic) NSFont *sized;
+@property (assign, nonatomic) BOOL applied;
+@end
+
+@implementation MPSizedSpan
+@end
+
+
 @interface MPSpanStyler ()
 @property (weak, nonatomic) NSTextView *textView;
+/// The spans that ask for a size, from the last pass over the document.
+@property (strong, nonatomic) NSMutableArray<MPSizedSpan *> *sizes;
 @end
 
 
@@ -160,6 +176,7 @@ CGFloat MPSizeFromCSS(NSString *value, CGFloat base)
     if (!self)
         return nil;
     _textView = textView;
+    _sizes = [NSMutableArray array];
     return self;
 }
 
@@ -175,6 +192,7 @@ CGFloat MPSizeFromCSS(NSString *value, CGFloat base)
     if (!spans.count)
         return;
 
+    [self.sizes removeAllObjects];
     [storage beginEditing];
     for (MPAttributedSpan *span in spans)
     {
@@ -211,18 +229,63 @@ CGFloat MPSizeFromCSS(NSString *value, CGFloat base)
                               effectiveRange:NULL] ?: self.textView.font;
         CGFloat size = MPSizeFromCSS(MPStyleDeclaration(style, @"font-size"),
                                      current.pointSize);
-        if (current && size > 0.0 && fabs(size - current.pointSize) > 0.01)
+        if (!current || size <= 0.0 || fabs(size - current.pointSize) < 0.01)
+            continue;
+        NSFont *sized = [[NSFontManager sharedFontManager]
+            convertFont:current toSize:size];
+        if (!sized)
+            continue;
+
+        MPSizedSpan *remembered = [[MPSizedSpan alloc] init];
+        remembered.range = span.range;
+        remembered.content = range;
+        remembered.before = current;
+        remembered.sized = sized;
+        // The size waits until the braces are hidden: see -markerHider.
+        remembered.applied = [self.markerHider isDrawnAsMeaning:span.range];
+        if (remembered.applied)
         {
-            NSFont *sized = [[NSFontManager sharedFontManager]
-                convertFont:current toSize:size];
-            if (sized)
-            {
-                [storage addAttribute:NSFontAttributeName value:sized
-                                range:range];
-            }
+            [storage addAttribute:NSFontAttributeName value:sized
+                            range:range];
         }
+        [self.sizes addObject:remembered];
     }
     [storage endEditing];
+}
+
+
+- (void)selectionDidChange
+{
+    if (!self.sizes.count)
+        return;
+    NSTextStorage *storage = self.textView.textStorage;
+
+    for (MPSizedSpan *span in self.sizes)
+    {
+        BOOL wanted = [self.markerHider isDrawnAsMeaning:span.range];
+        if (wanted == span.applied)
+            continue;
+        NSRange range = span.content;
+        if (!range.length || NSMaxRange(range) > storage.length)
+            continue;
+
+        // An edit can move a span before the next parse rebuilds this
+        // list. Writing a font into whatever is now at that place would
+        // be worse than doing nothing, so what is there is checked first.
+        NSFont *there = [storage attribute:NSFontAttributeName
+                                   atIndex:range.location
+                            effectiveRange:NULL];
+        NSFont *expected = span.applied ? span.sized : span.before;
+        if (there && expected && ![there isEqual:expected])
+            continue;
+
+        [storage beginEditing];
+        [storage addAttribute:NSFontAttributeName
+                        value:(wanted ? span.sized : span.before)
+                        range:range];
+        [storage endEditing];
+        span.applied = wanted;
+    }
 }
 
 @end

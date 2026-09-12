@@ -398,6 +398,10 @@
         }
     }
 
+    // Outside the parser's own list on purpose: this syntax is not pmh's,
+    // and a document it could make nothing of still has spans in it.
+    [self addAttributedSpans:text];
+
     if (elements != NULL && length)
     {
         NSCharacterSet *breaks = [NSCharacterSet newlineCharacterSet];
@@ -432,8 +436,6 @@
                                              cursor->end - cursor->pos)
                             text:text];
         }
-
-        [self addAttributedSpans:text];
 
         pmh_element_type types[] = {pmh_EMPH, pmh_STRONG, pmh_CODE,
                                     pmh_LINK};
@@ -509,6 +511,14 @@
  * Every selected range, since a second caret is somewhere about to be
  * typed in as well.
  */
+- (BOOL)isDrawnAsMeaning:(NSRange)construct
+{
+    if (!self.enabled || !construct.length)
+        return NO;
+    return ![self.revealed containsIndex:construct.location];
+}
+
+
 - (void)recomputeRevealed
 {
     NSMutableIndexSet *shown = [NSMutableIndexSet indexSet];

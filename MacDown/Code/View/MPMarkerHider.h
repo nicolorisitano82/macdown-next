@@ -49,6 +49,17 @@
 /// Reveals the markers around the caret and hides the rest. Cheap.
 - (void)selectionDidChange;
 
+/** Whether a construct is being drawn as its meaning rather than as it is
+ * written — markers hidden, in other words.
+ *
+ * Asked by whoever styles the text inside one. Most styling is the same
+ * either way: a word stays the colour it asks for while you edit the
+ * braces around it. A *size* is not — it moves everything on the line —
+ * and showing the markup at one size and the words at another is a line
+ * nobody can read. So the size waits until the markup is out of the way.
+ */
+- (BOOL)isDrawnAsMeaning:(NSRange)construct;
+
 /** The construct whose delimiter covers `index`, if one does.
  *
  * Lets the editor treat a marker as one thing when it is deleted: pressing

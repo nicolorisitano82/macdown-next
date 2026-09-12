@@ -1408,6 +1408,7 @@ static NSString * const kMPScrollReporterSource =
     self.editor.markerHider = self.markerHider;
     self.blockStyler = [[MPBlockStyler alloc] initWithTextView:self.editor];
     self.spanStyler = [[MPSpanStyler alloc] initWithTextView:self.editor];
+    self.spanStyler.markerHider = self.markerHider;
     self.semanticStyler.themeStyles = self.highlighter.styles;
     __weak MPDocument *weakSelf = self;
     self.highlighter.elementsDidChange = ^(pmh_element **elements) {
@@ -2153,6 +2154,7 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
 - (void)textViewDidChangeSelection:(NSNotification *)notification
 {
     [self.markerHider selectionDidChange];
+    [self.spanStyler selectionDidChange];
     [self.editor updateWritingAids];
     if (notification.object != self.editor)
         return;

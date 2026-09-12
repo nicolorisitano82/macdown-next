@@ -823,6 +823,8 @@ ok "nell'editor le graffe si nascondono come il resto dei marcatori" \
 ok "e le parole prendono il colore che chiedono" \
     sh -c 'nm "$0" 2>/dev/null | grep -q MPColourFromCSS' \
     "$APP/Contents/MacOS/MacDown Next"
+ok "e la dimensione aspetta che le graffe siano nascoste" \
+    contains MacDown/Code/View/MPSpanStyler.m "isDrawnAsMeaning:"
 
 if clang -fobjc-arc -framework Foundation \
          -I MacDown/Code/Utility -o "$WORK/spans" \

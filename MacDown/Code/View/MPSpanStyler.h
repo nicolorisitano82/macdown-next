@@ -22,9 +22,21 @@
 #import <Cocoa/Cocoa.h>
 
 
+@class MPMarkerHider;
+
+
 @interface MPSpanStyler : NSObject
 
 - (instancetype)initWithTextView:(NSTextView *)textView;
+
+/** Who knows whether a span is drawn as its meaning or as it is written.
+ *
+ * A colour is applied either way; a size only while the braces are out of
+ * the way, because a line showing `[titoletto]{style="font-size:2em"}` with
+ * the middle word twice the size of the brackets is a line nobody can
+ * read, and it rewraps under the caret as you edit it.
+ */
+@property (weak, nonatomic) MPMarkerHider *markerHider;
 
 /** Colours every span the document declares.
  *
@@ -33,6 +45,14 @@
  * It never reaches the file: the document is saved as its string.
  */
 - (void)apply;
+
+/** The caret moved: a span it has just left or entered changes size.
+ *
+ * Cheap on purpose — it looks only at the spans that ask for a size, and
+ * only at those whose state actually flipped. Arrow keys happen more often
+ * than anything else in an editor.
+ */
+- (void)selectionDidChange;
 
 @end
 
