@@ -843,6 +843,12 @@ if clang -fobjc-arc -framework Foundation \
     ok "un collegamento resta un collegamento" \
         sh -c '[ "$("$0" "[testo](http://e.it)")" = "[testo](http://e.it)" ]' \
         "$WORK/spans"
+    ok "quello che scavalca un paragrafo non è una span" \
+        sh -c '[ "$("$0" "[uno
+
+due]{style=\"color:red\"}")" = "[uno
+
+due]{style=\"color:red\"}" ]' "$WORK/spans"
     ok "una parola con lo sfondo e la dimensione arriva intera" \
         sh -c '[ "$("$0" "[x]{style=\"background-color:#ff0;font-size:1.5em\"}")" \
                = "<span style=\"background-color:#ff0;font-size:1.5em\">x</span>" ]' \

@@ -275,6 +275,11 @@ way `**this**` is shown bold. I can paint a colour written as `#c00`,
 and a `font-size` in `pt`, `px`, `em`, `rem` or a percentage. Anything
 fancier the preview still renders and the editor leaves alone.
 
+A span is inline: it lives inside one paragraph. Select across a blank
+line and the menu has nothing to offer, because brackets round two
+paragraphs would be brackets round two paragraphs and nothing on the page
+would change.
+
 A size waits until the braces are hidden. While you are editing them the
 words go back to the size of the line: markup at one size beside words at
 twice it is a line nobody can read, and it would rewrap under the caret as

@@ -113,6 +113,22 @@
     [self assertUntouched:@"[x]{style=\"color:red\"\n}"];
 }
 
+- (void)testASpanDoesNotCrossAParagraph
+{
+    // Inline, in Djot as in Pandoc. Found by selecting more than was
+    // meant and asking the menu to colour it: what came out was brackets
+    // round half a document and nothing different on the page.
+    [self assertUntouched:@"[uno\n\ndue]{style=\"color:red\"}"];
+    [self assertUntouched:@"[uno\n   \ndue]{.a}"];
+    // A single line break inside a paragraph is not a break.
+    [self assert:@"[uno\ndue]{.a}" gives:@"<span class=\"a\">uno\ndue</span>"];
+
+    XCTAssertTrue(MPTextHasABlankLine(@"uno\n\ndue"));
+    XCTAssertTrue(MPTextHasABlankLine(@"uno\n \t \ndue"));
+    XCTAssertFalse(MPTextHasABlankLine(@"uno\ndue"));
+    XCTAssertFalse(MPTextHasABlankLine(@"una riga sola"));
+}
+
 - (void)testTextWithNoBracesComesBackAsItself
 {
     NSString *plain = @"# Titolo\n\nUna riga qualunque.\n";

@@ -45,6 +45,13 @@
  */
 NSArray<MPAttributedSpan *> *MPAttributedSpansIn(NSString *text);
 
+/** Whether `text` runs across a paragraph break — a blank line.
+ *
+ * A span is inline, in Djot as in Pandoc: what crosses a blank line is not
+ * one, and neither the reading nor the writing pretends otherwise.
+ */
+BOOL MPTextHasABlankLine(NSString *text);
+
 
 /** `text` with every bracketed span turned into inline HTML.
  *

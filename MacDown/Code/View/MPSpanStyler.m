@@ -259,6 +259,7 @@ CGFloat MPSizeFromCSS(NSString *value, CGFloat base)
     if (!self.sizes.count)
         return;
     NSTextStorage *storage = self.textView.textStorage;
+    BOOL changed = NO;
 
     for (MPSizedSpan *span in self.sizes)
     {
@@ -285,7 +286,13 @@ CGFloat MPSizeFromCSS(NSString *value, CGFloat base)
                         range:range];
         [storage endEditing];
         span.applied = wanted;
+        changed = YES;
     }
+
+    // A size changes how much room the line needs, which can join two
+    // lines into one and leave the second still drawn where it was.
+    if (changed)
+        [self.textView setNeedsDisplay:YES];
 }
 
 @end

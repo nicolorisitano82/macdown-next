@@ -5499,7 +5499,13 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
                 && NSMaxRange(selection) <= NSMaxRange(span.range))
             return span.range;
     }
-    return selection.length ? selection : NSMakeRange(NSNotFound, 0);
+    if (!selection.length)
+        return NSMakeRange(NSNotFound, 0);
+    // A span is inline: brackets round two paragraphs would be brackets
+    // round two paragraphs, and nothing on the page would change.
+    if (MPTextHasABlankLine([text substringWithRange:selection]))
+        return NSMakeRange(NSNotFound, 0);
+    return selection;
 }
 
 

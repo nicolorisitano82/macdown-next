@@ -330,6 +330,42 @@ NS_INLINE BOOL MPRangeIsInside(NSUInteger location, NSArray<NSValue *> *ranges)
 }
 
 
+/** Whether the text has a blank line in it — a paragraph break.
+ *
+ * The line between two paragraphs, whether it is empty or only spaces.
+ * What tells an inline construct from something that has outgrown the
+ * idea.
+ */
+BOOL MPTextHasABlankLine(NSString *text)
+{
+    NSUInteger at = 0;
+    BOOL previousWasBlank = NO;
+    BOOL first = YES;
+    while (at < text.length)
+    {
+        NSUInteger start = 0, end = 0, contentsEnd = 0;
+        [text getLineStart:&start end:&end contentsEnd:&contentsEnd
+                  forRange:NSMakeRange(at, 0)];
+        BOOL blank = ![[text substringWithRange:
+            NSMakeRange(start, contentsEnd - start)]
+                stringByTrimmingCharactersInSet:
+                    [NSCharacterSet whitespaceCharacterSet]].length;
+        // A blank line at the very start is a break only if something
+        // follows it, which the loop finds on the next turn.
+        if (blank && !first)
+            return YES;
+        if (blank && previousWasBlank)
+            return YES;
+        previousWasBlank = blank;
+        first = NO;
+        if (end <= at)
+            break;
+        at = end;
+    }
+    return NO;
+}
+
+
 @implementation MPAttributedSpan
 @end
 
@@ -389,9 +425,21 @@ NSArray<MPAttributedSpan *> *MPAttributedSpansIn(NSString *text)
             continue;
         }
 
+        // A span is inline, in Djot as in Pandoc: it lives inside one
+        // paragraph. Without this a selection that happens to cover two
+        // of them could be «styled» into something that is not a span at
+        // all — brackets round half a document, and a `<span>` wrapped
+        // round block markup on the page.
+        NSRange content = NSMakeRange(i + 1, close - i - 1);
+        if (MPTextHasABlankLine([text substringWithRange:content]))
+        {
+            i = close;
+            continue;
+        }
+
         MPAttributedSpan *span = [[MPAttributedSpan alloc] init];
         span.range = NSMakeRange(i, end - i + 1);
-        span.content = NSMakeRange(i + 1, close - i - 1);
+        span.content = content;
         span.attributes = attributes;
         [found addObject:span];
         i = end;

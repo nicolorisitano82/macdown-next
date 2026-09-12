@@ -591,6 +591,15 @@
                           actualCharacterRange:NULL];
     [manager invalidateLayoutForCharacterRange:range
                             actualCharacterRange:NULL];
+
+    // And a redraw of what is on screen. Invalidating the layout is not
+    // enough when the number of lines changes: markers coming back can
+    // wrap a line in two, and going away can join it again, and what was
+    // drawn where the second line used to be stays drawn — the old text
+    // still on the page under the new. Measured, not guessed: a span with
+    // a long style in a quotation left «span.» sitting under the line it
+    // had been part of.
+    [self.textView setNeedsDisplay:YES];
 }
 
 
