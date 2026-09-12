@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D2C10000000000000000000A /* MPCloudOpenWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C100000000000000000002 /* MPCloudOpenWindowController.m */; };
 		D2B20000000000000000000A /* MPCloudLedgerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B200000000000000000001 /* MPCloudLedgerTests.m */; };
 		D2B10000000000000000000A /* MPCloudLedger.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B100000000000000000002 /* MPCloudLedger.m */; };
 		D2A00000000000000000000A /* MPSyncPaneTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2A000000000000000000001 /* MPSyncPaneTests.m */; };
@@ -350,6 +351,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D2C100000000000000000001 /* MPCloudOpenWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPCloudOpenWindowController.h; sourceTree = "<group>"; };
+		D2C100000000000000000002 /* MPCloudOpenWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudOpenWindowController.m; sourceTree = "<group>"; };
 		D2B200000000000000000001 /* MPCloudLedgerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudLedgerTests.m; sourceTree = "<group>"; };
 		D2B100000000000000000001 /* MPCloudLedger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPCloudLedger.h; sourceTree = "<group>"; };
 		D2B100000000000000000002 /* MPCloudLedger.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudLedger.m; sourceTree = "<group>"; };
@@ -1242,6 +1245,8 @@
 				D0C1C00200000000000000A1 /* MPSemanticStyler.h */,
 				D0C1C00100000000000000A1 /* MPSemanticStyler.m */,
 				D1D000000000000000000001 /* MPSpanStyler.h */,
+				D2C100000000000000000001 /* MPCloudOpenWindowController.h */,
+				D2C100000000000000000002 /* MPCloudOpenWindowController.m */,
 				D1D000000000000000000002 /* MPSpanStyler.m */,
 				1F396E6519B0EA17000D3EFC /* MPEditorView.m */,
 				7DA2311453239F0973310049 /* MPProseIssuesViewController.h */,
@@ -2061,6 +2066,7 @@
 				D0C1E00300000000000000C1 /* MPMarkerHider.m in Sources */,
 				D0C1C00300000000000000A1 /* MPSemanticStyler.m in Sources */,
 				D1D00000000000000000000A /* MPSpanStyler.m in Sources */,
+				D2C10000000000000000000A /* MPCloudOpenWindowController.m in Sources */,
 				1F396E6619B0EA17000D3EFC /* MPEditorView.m in Sources */,
 				F55A342A5A01CEBCC9F60047 /* MPProseIssuesViewController.m in Sources */,
 				F55A342A5A01CEBCC9F60050 /* MPBacklinksViewController.m in Sources */,

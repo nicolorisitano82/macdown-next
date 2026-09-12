@@ -667,3 +667,17 @@
 "%lu changed" = "%lu cambiati";
 "%lu gone" = "%lu spariti";
 ", " = ", ";
+
+/* Aprire e salvare su un servizio */
+"Open from the Connected Service…" = "Apri dal servizio collegato…";
+"Put a Copy on the Connected Service" = "Metti una copia sul servizio collegato";
+"Open from %@" = "Apri da %@";
+"Open the document" = "Apri il documento";
+"%lu documents." = "%lu documenti.";
+"Nothing here yet. What this application writes into the folder shows up here; documents that were already there have to be handed over in the picker." = "Qui non c'è ancora niente. Quello che questa applicazione scrive nella cartella compare qui; i documenti che c'erano già vanno passati dal selettore.";
+"That document could not be read" = "Quel documento non si è potuto leggere";
+"That document could not be written" = "Quel documento non si è potuto scrivere";
+"Somebody else had written there first" = "Qualcun altro ci aveva scritto prima";
+"What you had was written beside it, as «%@». Nothing was overwritten." = "Quello che avevi è stato scritto accanto, come «%@». Non è stato sovrascritto niente.";
+"untitled" = "senza nome";
+"untitled.md" = "senza nome.md";

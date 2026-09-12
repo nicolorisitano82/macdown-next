@@ -985,7 +985,8 @@ NSData *MPGoogleUploadBody(NSString *boundary, NSDictionary *metadata,
         {
             NSString *folder = self.placeIdentifier;
             NSMutableDictionary *metadata =
-                [@{@"name": name ?: @"senza nome.md"} mutableCopy];
+                [@{@"name": name ?: NSLocalizedString(@"untitled.md",
+                    @"File name when a document has none")} mutableCopy];
             if (folder.length)
                 metadata[@"parents"] = @[folder];
 

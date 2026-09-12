@@ -13,6 +13,7 @@
 #import "hoedown_html_patch.h"
 #import "HGMarkdownHighlighter.h"
 #import "MPAttributedSpans.h"
+#import "MPCloudService.h"
 #import "MPUtilities.h"
 #import "MPAutosaving.h"
 #import "NSColor+HTML.h"
@@ -5640,6 +5641,90 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
     // span for every shade it passes through.
     self.colouringOriginal = replacement;
     self.colouringRange = NSMakeRange(range.location, replacement.length);
+}
+
+
+#pragma mark - Quando il documento sta in una cartella remota
+
+/// Il servizio da cui viene, se viene da uno e se è ancora collegato.
+- (MPCloudService *)cloud
+{
+    if (!self.cloudIdentifier.length)
+        return nil;
+    for (MPCloudService *service in [MPCloudService services])
+    {
+        if ([service.identifier isEqualToString:self.cloudService]
+                && service.isLinked)
+            return service;
+    }
+    return nil;
+}
+
+
+- (void)saveToCloudWithCompletion:(void (^)(BOOL, NSString *, NSString *))finished
+{
+    MPCloudService *service = [self cloud];
+    if (!service)
+    {
+        if (finished)
+            finished(NO, nil, NSLocalizedString(@"Not connected.",
+                                                @"State: no permission yet"));
+        return;
+    }
+    [service writeDocument:self.cloudIdentifier text:self.markdown ?: @""
+              fromRevision:self.cloudRevision
+                completion:^(NSString *revision, NSString *conflict,
+                             NSString *problem) {
+        if (revision.length)
+        {
+            self.cloudRevision = revision;
+            // Salvato davvero: il pallino se ne va, come per un file.
+            [self updateChangeCount:NSChangeCleared];
+        }
+        if (finished)
+            finished(revision.length > 0, conflict, problem);
+    }];
+}
+
+
+/** ⌘S su un documento che viene da una cartella remota va **lì**.
+ *
+ * Senza questo, un documento aperto da un servizio è un documento senza
+ * file: ⌘S aprirebbe il pannello di salvataggio e chiederebbe dove
+ * metterlo, che è la domanda sbagliata — da dove viene si sa già.
+ */
+- (IBAction)saveDocument:(id)sender
+{
+    if (![self cloud])
+    {
+        [super saveDocument:sender];
+        return;
+    }
+    [self saveToCloudWithCompletion:^(BOOL done, NSString *conflict,
+                                      NSString *problem) {
+        if (conflict)
+        {
+            NSAlert *alert = [[NSAlert alloc] init];
+            alert.messageText = NSLocalizedString(
+                @"Somebody else had written there first",
+                @"A save landed as a conflict copy");
+            alert.informativeText = [NSString stringWithFormat:
+                NSLocalizedString(@"What you had was written beside it, as "
+                    @"«%@». Nothing was overwritten.",
+                    @"Where the conflict copy went"), conflict];
+            [alert runModal];
+            return;
+        }
+        if (problem)
+        {
+            NSAlert *alert = [[NSAlert alloc] init];
+            alert.messageText = NSLocalizedString(
+                @"That document could not be written",
+                @"Failure saving a document to a service");
+            alert.informativeText = problem;
+            [alert runModal];
+        }
+    }];
 }
 
 
