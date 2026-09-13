@@ -426,8 +426,13 @@ one Finder draws — [the selection the two panes share](docs/selezione.md),
 [where the work goes](docs/salvataggi.md)
 and [the MCP server over a folder](docs/progetto-mcp.md), which reads it
 for an assistant and can do nothing else,
-[the plan for syncing a folder](docs/progetto-sync.md)
-and [the updater](docs/aggiornamenti.md). There is also a
+[the plan for syncing a folder](docs/progetto-sync.md),
+[talking to the services themselves](docs/progetto-sync-servizi.md)
+and [the updater](docs/aggiornamenti.md). There is a design for
+[this application on iOS](docs/progetto-ios.md), which starts by counting
+what would actually cross — 91 of the 173 source files compile there as
+they are, nine more need a colour and a font renamed, and one file holds
+318 references to AppKit. There is also a
 study, not a plan: [what a Claude and GPT integration could
 be](docs/studio-claude-gpt.md), and which parts of it are worth having, and
 [what the comparison panel still needs](docs/studio-confronto.md), which
