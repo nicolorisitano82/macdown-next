@@ -21,6 +21,10 @@
 #import "MPMarkdownPreferencesViewController.h"
 #import "MPEditorPreferencesViewController.h"
 #import "MPAgentsPreferencesViewController.h"
+#import "MPSyncPreferencesViewController.h"
+#import "MPCloudService.h"
+#import "MPCloudOpenWindowController.h"
+#import "MPDocument.h"
 #import "MPQuickLookPreferencesViewController.h"
 #import "MPUpdateController.h"
 #import "MPUpdatePreferencesViewController.h"
@@ -110,8 +114,161 @@ NS_INLINE void treat()
 
 @synthesize preferencesWindowController = _preferencesWindowController;
 
+/** Due voci in Archivio, accanto a quelle che aprono e salvano.
+ *
+ * Costruite qui e non nel nib per la stessa ragione per cui il plug-in
+ * dell'importazione fa così: il menu si trova per **quello che fa** — è
+ * quello che contiene chi risponde a `saveDocument:` — e non per come si
+ * chiama, che dipende dalla lingua di chi legge.
+ */
+- (void)addCloudMenu
+{
+    NSMenu *file = nil;
+    for (NSMenuItem *item in [NSApp mainMenu].itemArray)
+    {
+        if ([item.submenu indexOfItemWithTarget:nil
+                                      andAction:@selector(saveDocument:)] >= 0)
+        {
+            file = item.submenu;
+            break;
+        }
+    }
+    if (!file || [file indexOfItemWithTarget:nil
+                                   andAction:@selector(openFromCloud:)] >= 0)
+        return;
+
+    NSInteger where = [file indexOfItemWithTarget:nil
+                                        andAction:@selector(saveDocumentAs:)];
+    if (where < 0)
+        where = file.numberOfItems - 1;
+
+    // Questa mette **una copia** di un documento locale nella cartella
+    // collegata, la prima volta. Dopo, il documento sa dove sta e ⌘S ci
+    // va da solo: una cartella collegata si comporta come una cartella.
+    NSMenuItem *save = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(
+        @"Put a Copy on the Connected Service",
+        @"File menu: write a local document to Drive the first time")
+        action:@selector(saveToCloud:) keyEquivalent:@""];
+    save.target = nil;
+    [file insertItem:save atIndex:where + 1];
+
+    NSMenuItem *open = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(
+        @"Open from the Connected Service…", @"File menu: read from Drive")
+        action:@selector(openFromCloud:) keyEquivalent:@""];
+    open.target = nil;
+    [file insertItem:open atIndex:where + 1];
+}
+
+
+#pragma mark - I documenti che stanno in un servizio
+
+/// Il servizio collegato, se ce n'è uno. Con due, sarebbe una scelta in
+/// più nel menu; finché è uno, la domanda non si fa.
+- (MPCloudService *)linkedService
+{
+    for (MPCloudService *service in [MPCloudService services])
+    {
+        if (service.isLinked)
+            return service;
+    }
+    return nil;
+}
+
+
+- (IBAction)openFromCloud:(id)sender
+{
+    MPCloudService *service = [self linkedService];
+    if (!service)
+        return;
+
+    [MPCloudOpenWindowController chooseFrom:service
+                                      chosen:^(MPCloudDocument *chosen) {
+        if (!chosen)
+            return;
+        [service readDocument:chosen.identifier
+                   completion:^(NSString *text, NSString *problem) {
+            if (problem)
+            {
+                [self sayAboutTheCloud:NSLocalizedString(
+                    @"That document could not be read",
+                    @"Failure opening a document from a service")
+                                  text:problem];
+                return;
+            }
+            NSError *making = nil;
+            MPDocument *fresh = (MPDocument *)[[NSDocumentController
+                sharedDocumentController] openUntitledDocumentAndDisplay:YES
+                                                                   error:&making];
+            if (!fresh)
+                return;
+            fresh.markdown = text ?: @"";
+            // Da dove viene: è quello che fa sì che risalvarlo finisca
+            // **lì** invece di creare un secondo documento.
+            fresh.cloudService = service.identifier;
+            fresh.cloudIdentifier = chosen.identifier;
+            fresh.cloudRevision = chosen.revision;
+            // Il nome che ha là fuori, così la finestra non dice «Senza
+            // nome» di un documento che un nome ce l'ha.
+            fresh.displayName = chosen.name;
+            [fresh updateChangeCount:NSChangeCleared];
+        }];
+    }];
+}
+
+
+- (IBAction)saveToCloud:(id)sender
+{
+    MPCloudService *service = [self linkedService];
+    MPDocument *document = (MPDocument *)[[NSDocumentController
+        sharedDocumentController] currentDocument];
+    if (!service || !document)
+        return;
+
+    NSString *text = document.markdown ?: @"";
+    if (document.cloudIdentifier.length)
+    {
+        // Viene già di là: ⌘S ci va da solo, e la voce non si offre.
+        [document saveToCloudWithCompletion:nil];
+        return;
+    }
+
+    NSString *name = document.displayName.length
+        ? document.displayName : NSLocalizedString(@"untitled",
+            @"Name for a document that has never been saved");
+    if (![name.pathExtension.lowercaseString isEqualToString:@"md"])
+        name = [name stringByAppendingPathExtension:@"md"];
+
+    [service createDocumentNamed:name text:text
+                      completion:^(MPCloudDocument *made, NSString *problem) {
+        if (problem || !made)
+        {
+            [self sayAboutTheCloud:NSLocalizedString(
+                @"That document could not be written",
+                @"Failure saving a document to a service") text:problem];
+            return;
+        }
+        document.cloudService = service.identifier;
+        document.cloudIdentifier = made.identifier;
+        document.cloudRevision = made.revision;
+    }];
+}
+
+
+- (void)sayAboutTheCloud:(NSString *)what text:(NSString *)text
+{
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = what;
+    alert.informativeText = text ?: @"";
+    [alert runModal];
+}
+
+
 - (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
+    // Dopo il lancio: il menu principale non è detto sia già montato
+    // mentre il controller si costruisce.
+    dispatch_async(dispatch_get_main_queue(), ^{ [self addCloudMenu]; });
+
     // Using private API [WebCache setDisabled:YES] to disable WebView's cache
     id webCacheClass = (id)NSClassFromString(@"WebCache");
     if (webCacheClass) {
@@ -409,6 +566,7 @@ static const NSInteger kMPPlugInExportItemTag = 9003;
             [[MPTerminalPreferencesViewController alloc] init],
             [[MPQuickLookPreferencesViewController alloc] init],
             [[MPAgentsPreferencesViewController alloc] init],
+            [[MPSyncPreferencesViewController alloc] init],
             [[MPUpdatePreferencesViewController alloc] init],
         ];
         NSString *title = NSLocalizedString(@"Preferences",
@@ -535,6 +693,20 @@ static const NSInteger kMPPlugInExportItemTag = 9003;
     {
         item.state = [MPPreferences sharedInstance].diagnosticsRecording
             ? NSControlStateValueOn : NSControlStateValueOff;
+    }
+    // Le due voci dei servizi si offrono solo quando c'è un servizio
+    // collegato: una voce che apre un pannello per dire «non sei
+    // collegato» è una voce che fa perdere tempo.
+    if (item.action == @selector(openFromCloud:))
+        return [self linkedService] != nil;
+    if (item.action == @selector(saveToCloud:))
+    {
+        MPDocument *document = (MPDocument *)[[NSDocumentController
+            sharedDocumentController] currentDocument];
+        // Un documento che viene di là non ha bisogno di essere «messo»
+        // di là: ci va con ⌘S.
+        return [self linkedService] != nil && document != nil
+            && !document.cloudIdentifier.length;
     }
     return YES;
 }

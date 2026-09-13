@@ -13,6 +13,7 @@
 #import "hoedown_html_patch.h"
 #import "HGMarkdownHighlighter.h"
 #import "MPAttributedSpans.h"
+#import "MPCloudService.h"
 #import "MPUtilities.h"
 #import "MPAutosaving.h"
 #import "NSColor+HTML.h"
@@ -5640,6 +5641,293 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
     // span for every shade it passes through.
     self.colouringOriginal = replacement;
     self.colouringRange = NSMakeRange(range.location, replacement.length);
+}
+
+
+#pragma mark - Quando il documento sta in una cartella remota
+
+/// Il servizio da cui viene, se viene da uno e se è ancora collegato.
+- (MPCloudService *)cloud
+{
+    if (!self.cloudIdentifier.length)
+        return nil;
+    for (MPCloudService *service in [MPCloudService services])
+    {
+        if ([service.identifier isEqualToString:self.cloudService]
+                && service.isLinked)
+            return service;
+    }
+    return nil;
+}
+
+
+- (void)saveToCloudWithCompletion:(void (^)(BOOL, NSString *, NSString *))finished
+{
+    MPCloudService *service = [self cloud];
+    if (!service)
+    {
+        if (finished)
+            finished(NO, nil, NSLocalizedString(@"Not connected.",
+                                                @"State: no permission yet"));
+        return;
+    }
+    [service writeDocument:self.cloudIdentifier text:self.markdown ?: @""
+              fromRevision:self.cloudRevision
+                   ifMoved:MPCloudOnMovedAsk
+                completion:^(NSString *revision, BOOL moved,
+                             NSString *conflict, NSString *problem) {
+        if (revision.length)
+        {
+            self.cloudRevision = revision;
+            // Salvato davvero: il pallino se ne va, come per un file.
+            [self updateChangeCount:NSChangeCleared];
+        }
+        if (moved)
+        {
+            [self askAboutTheConflict];
+            return;
+        }
+        if (finished)
+            finished(revision.length > 0, conflict, problem);
+    }];
+}
+
+
+/** Qualcun altro ha scritto lì mentre lavoravi: cosa si fa.
+ *
+ * Quattro strade, e nessuna scelta da noi. La prima è **guardare**: il
+ * pannello del confronto c'è dalla 0.34 e sa mettere due testi uno accanto
+ * all'altro segnando cosa cambia — è esattamente la domanda che uno si fa
+ * in questo momento, e rispondere senza averla vista è come scegliere a
+ * occhi chiusi.
+ */
+- (void)askAboutTheConflict
+{
+    MPCloudService *service = [self cloud];
+    if (!service)
+        return;
+
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = NSLocalizedString(
+        @"Somebody wrote there while you were working",
+        @"Title of the alert when a remote document has moved on");
+    alert.informativeText = NSLocalizedString(
+        @"Nothing has been written yet. Look at the two before deciding, or "
+        @"decide now.",
+        @"What the conflict alert offers");
+    [alert addButtonWithTitle:NSLocalizedString(@"Compare…",
+        @"Opens the comparison between what you have and what is up there")];
+    [alert addButtonWithTitle:NSLocalizedString(@"Keep Both",
+        @"Writes the conflict copy beside the document")];
+    [alert addButtonWithTitle:NSLocalizedString(@"Keep Mine",
+        @"Overwrites what is up there")];
+    [alert addButtonWithTitle:NSLocalizedString(@"Keep Theirs",
+        @"Throws away the local changes and takes the remote text")];
+
+    switch ([alert runModal])
+    {
+        case NSAlertFirstButtonReturn:
+            [self compareWithTheirs];
+            break;
+        case NSAlertSecondButtonReturn:
+            [self resolveBy:MPCloudOnMovedCopy];
+            break;
+        case NSAlertThirdButtonReturn:
+            [self resolveBy:MPCloudOnMovedOverwrite];
+            break;
+        default:
+            [self takeTheirs];
+            break;
+    }
+}
+
+
+- (void)resolveBy:(MPCloudOnMoved)how
+{
+    MPCloudService *service = [self cloud];
+    [service writeDocument:self.cloudIdentifier text:self.markdown ?: @""
+              fromRevision:self.cloudRevision
+                   ifMoved:how
+                completion:^(NSString *revision, BOOL moved,
+                             NSString *conflict, NSString *problem) {
+        if (revision.length)
+        {
+            self.cloudRevision = revision;
+            [self updateChangeCount:NSChangeCleared];
+        }
+        if (conflict)
+        {
+            NSAlert *said = [[NSAlert alloc] init];
+            said.messageText = NSLocalizedString(@"Both are up there now",
+                @"Both versions were kept");
+            said.informativeText = [NSString stringWithFormat:
+                NSLocalizedString(@"Yours went beside it, as «%@».",
+                    @"Where the conflict copy went"), conflict];
+            [said runModal];
+        }
+        else if (problem)
+        {
+            NSAlert *said = [[NSAlert alloc] init];
+            said.messageText = NSLocalizedString(
+                @"That document could not be written",
+                @"Failure saving a document to a service");
+            said.informativeText = problem;
+            [said runModal];
+        }
+    }];
+}
+
+
+/// Prende quello che c'è là fuori e lo mette qui, con la sua versione.
+- (void)takeTheirs
+{
+    MPCloudService *service = [self cloud];
+    [service readDocument:self.cloudIdentifier
+               completion:^(NSString *text, NSString *problem) {
+        if (problem || !text)
+            return;
+        self.markdown = text;
+        [self rememberTheirRevision];
+        [self updateChangeCount:NSChangeCleared];
+    }];
+}
+
+
+/// Dopo aver preso la loro versione, la nostra idea di «da dove parto»
+/// dev'essere la loro: altrimenti il prossimo salvataggio litiga di nuovo.
+- (void)rememberTheirRevision
+{
+    MPCloudService *service = [self cloud];
+    [service documentsWithCompletion:^(NSArray<MPCloudDocument *> *found,
+                                       NSString *problem) {
+        for (MPCloudDocument *document in found)
+        {
+            if ([document.identifier isEqualToString:self.cloudIdentifier])
+                self.cloudRevision = document.revision;
+        }
+    }];
+}
+
+
+/** I due, uno accanto all'altro, nel pannello che già c'è.
+ *
+ * A sinistra quello che hai in mano — non quello che è sul disco, che qui
+ * non esiste nemmeno — e a destra quello che c'è là fuori adesso. Da lì si
+ * può prendere una differenza alla volta invece di scegliere in blocco, e
+ * poi si risalva.
+ */
+- (void)compareWithTheirs
+{
+    MPCloudService *service = [self cloud];
+    [service readDocument:self.cloudIdentifier
+               completion:^(NSString *theirs, NSString *problem) {
+        if (problem || !theirs)
+            return;
+        NSString *name = self.displayName.length ? self.displayName
+                                                 : @"documento";
+        MPCompareWindowController *panel = [MPCompareWindowController
+            compare:self.markdown ?: @""
+              named:[NSString stringWithFormat:NSLocalizedString(
+                        @"%@ (yours)", @"The left side of a conflict"), name]
+                url:nil
+               with:theirs
+              named:[NSString stringWithFormat:NSLocalizedString(
+                        @"%@ (up there)", @"The right side of a conflict"),
+                     name]
+                url:nil];
+
+        __weak MPDocument *weakSelf = self;
+        panel.replaceInEditor = ^BOOL (NSRange range, NSString *expected,
+                                       NSString *replacement) {
+            MPDocument *document = weakSelf;
+            NSTextView *editor = document.editor;
+            if (!editor || NSMaxRange(range) > editor.string.length)
+                return NO;
+            if (![[editor.string substringWithRange:range]
+                    isEqualToString:expected])
+                return NO;      // il documento si è mosso sotto il pannello
+            if (![editor shouldChangeTextInRange:range
+                               replacementString:replacement])
+                return NO;
+            [editor.textStorage replaceCharactersInRange:range
+                                              withString:replacement];
+            [editor didChangeText];
+            return YES;
+        };
+
+        // E in fondo la domanda vera. Prendere riga per riga dal pannello
+        // serve a costruire la versione che si vuole; questi tre bottoni
+        // sono il momento in cui quella versione parte — o non parte, e
+        // vince la loro.
+        [panel offerChoices:@[
+            NSLocalizedString(@"Keep Mine",
+                @"Button in the comparison: write my version up there"),
+            NSLocalizedString(@"Keep Theirs",
+                @"Button in the comparison: take the remote version"),
+            NSLocalizedString(@"Keep Both",
+                @"Button in the comparison: write mine beside theirs")]
+                       note:NSLocalizedString(
+            @"On the left what you have, on the right what is up there now.",
+            @"What the two sides of a conflict are")
+                    handler:^(NSUInteger picked) {
+            MPDocument *document = weakSelf;
+            if (!document)
+                return;
+            switch (picked)
+            {
+                case 0:
+                    [document resolveBy:MPCloudOnMovedOverwrite];
+                    break;
+                case 1:
+                    [document takeTheirs];
+                    break;
+                default:
+                    [document resolveBy:MPCloudOnMovedCopy];
+                    break;
+            }
+        }];
+    }];
+}
+
+
+/** ⌘S su un documento che viene da una cartella remota va **lì**.
+ *
+ * Senza questo, un documento aperto da un servizio è un documento senza
+ * file: ⌘S aprirebbe il pannello di salvataggio e chiederebbe dove
+ * metterlo, che è la domanda sbagliata — da dove viene si sa già.
+ */
+- (IBAction)saveDocument:(id)sender
+{
+    if (![self cloud])
+    {
+        [super saveDocument:sender];
+        return;
+    }
+    [self saveToCloudWithCompletion:^(BOOL done, NSString *conflict,
+                                      NSString *problem) {
+        if (conflict)
+        {
+            NSAlert *alert = [[NSAlert alloc] init];
+            alert.messageText = NSLocalizedString(
+                @"Somebody else had written there first",
+                @"A save landed as a conflict copy");
+            alert.informativeText = [NSString stringWithFormat:
+                NSLocalizedString(@"What you had was written beside it, as "
+                    @"«%@». Nothing was overwritten.",
+                    @"Where the conflict copy went"), conflict];
+            [alert runModal];
+            return;
+        }
+        if (problem)
+        {
+            NSAlert *alert = [[NSAlert alloc] init];
+            alert.messageText = NSLocalizedString(
+                @"That document could not be written",
+                @"Failure saving a document to a service");
+            alert.informativeText = problem;
+            [alert runModal];
+        }
+    }];
 }
 
 

@@ -237,6 +237,12 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
 /// One side is scrolling the other, and should not be scrolled back.
 @property (nonatomic) BOOL following;
 
+/// The vertical stack everything sits in, so that a bar of decisions can
+/// be put under it later, once the window already exists.
+@property (strong, nonatomic) NSStackView *column;
+@property (strong, nonatomic) NSStackView *decisions;
+@property (copy, nonatomic) void (^decisionHandler)(NSUInteger picked);
+
 @end
 
 
@@ -453,6 +459,7 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
     column.alignment = NSLayoutAttributeLeading;
     column.spacing = 12.0;
     column.translatesAutoresizingMaskIntoConstraints = NO;
+    self.column = column;
 
     [content addSubview:column];
     [NSLayoutConstraint activateConstraints:@[
@@ -476,6 +483,83 @@ static NSMutableSet<MPCompareWindowController *> *MPOpenComparisons(void)
         [self.rightScroll.widthAnchor
             constraintEqualToAnchor:rightColumn.widthAnchor],
     ]];
+}
+
+
+/** La barra delle decisioni, in fondo alla finestra.
+ *
+ * Chi apre il confronto per un conflitto passa di qui: i due testi restano
+ * quello che sono, e sotto compare una riga con la domanda a sinistra e le
+ * risposte a destra. È l'unica parte del pannello che chiude la finestra,
+ * e lo fa prima di rispondere, perché la scelta riguarda il documento e non
+ * più il confronto.
+ */
+- (void)offerChoices:(NSArray<NSString *> *)titles
+                note:(NSString *)note
+             handler:(void (^)(NSUInteger picked))picked
+{
+    if (!titles.count || !picked || self.decisions)
+        return;
+    self.decisionHandler = picked;
+
+    NSBox *line = [[NSBox alloc] initWithFrame:NSZeroRect];
+    line.boxType = NSBoxSeparator;
+    line.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSTextField *label = [NSTextField labelWithString:note ?: @""];
+    label.textColor = [NSColor secondaryLabelColor];
+    label.lineBreakMode = NSLineBreakByTruncatingTail;
+    // Una nota lunga non deve mai spingere fuori i bottoni: se lo spazio
+    // non basta è lei che si accorcia.
+    [label setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow
+                        forOrientation:NSLayoutConstraintOrientationHorizontal];
+
+    NSStackView *bar = [[NSStackView alloc] initWithFrame:NSZeroRect];
+    bar.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    bar.alignment = NSLayoutAttributeCenterY;
+    bar.spacing = 10.0;
+    bar.translatesAutoresizingMaskIntoConstraints = NO;
+    [bar addView:label inGravity:NSStackViewGravityLeading];
+
+    NSInteger index = 0;
+    for (NSString *title in titles)
+    {
+        NSButton *button = [NSButton buttonWithTitle:title target:self
+                                              action:@selector(decided:)];
+        button.tag = index;
+        // L'ultimo è il predefinito, perché su macOS il bottone che ⏎
+        // preme è quello a destra e non quello a sinistra.
+        if (index == (NSInteger)titles.count - 1)
+            button.keyEquivalent = @"\r";
+        [bar addView:button inGravity:NSStackViewGravityTrailing];
+        index++;
+    }
+
+    [self.column addArrangedSubview:line];
+    [self.column addArrangedSubview:bar];
+    self.decisions = bar;
+    [bar setContentHuggingPriority:NSLayoutPriorityRequired
+                    forOrientation:NSLayoutConstraintOrientationVertical];
+    [NSLayoutConstraint activateConstraints:@[
+        [line.leadingAnchor constraintEqualToAnchor:self.column.leadingAnchor],
+        [line.trailingAnchor constraintEqualToAnchor:self.column.trailingAnchor],
+        [bar.leadingAnchor constraintEqualToAnchor:self.column.leadingAnchor],
+        [bar.trailingAnchor constraintEqualToAnchor:self.column.trailingAnchor],
+    ]];
+}
+
+
+- (void)decided:(NSButton *)sender
+{
+    void (^picked)(NSUInteger) = self.decisionHandler;
+    self.decisionHandler = nil;
+    NSUInteger which = (NSUInteger)sender.tag;
+    // Chiudere la finestra toglie l'ultimo riferimento al controller: il
+    // locale forte lo tiene in vita fino alla fine del metodo.
+    MPCompareWindowController *alive = self;
+    [alive close];
+    if (picked)
+        picked(which);
 }
 
 

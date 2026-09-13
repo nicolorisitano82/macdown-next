@@ -618,3 +618,79 @@
 "The document has changed since this comparison was made. Read the files again." = "Il documento è cambiato da quando è stato fatto questo confronto. Rileggi i file.";
 "There is nothing to export: the two are the same." = "Non c'è niente da esportare: i due sono uguali.";
 "differences" = "differenze";
+
+/* Il pannello della sincronizzazione */
+"<!doctype html><meta charset=utf-8><title>Done</title><body style=\"font:16px -apple-system;padding:3em\"><p>Done — you can close this tab and go back to MacDown Next." = "<!doctype html><meta charset=utf-8><title>Fatto</title><body style=\"font:16px -apple-system;padding:3em\"><p>Fatto: puoi chiudere questa scheda e tornare a MacDown Next.";
+"A desktop client's secret is not really a secret — it would live inside the application anyway — so the permission is protected by PKCE instead, and Google itself calls the secret optional here. Paste it only if your client refuses without it. It is kept in the keychain, like the tokens; neither ever reaches a preferences file or the log." = "Il segreto di un client desktop non è davvero un segreto — starebbe dentro l'applicazione comunque — e infatti il permesso è protetto da PKCE, e Google stesso qui lo dichiara facoltativo. Incollalo solo se il tuo client si rifiuta senza. Sta nel portachiavi, come i gettoni: né l'uno né gli altri arrivano mai in un file di preferenze o nel diario.";
+"Client ID:" = "ID client:";
+"Client secret:" = "Segreto client:";
+"Connected, on the folder «%@»." = "Collegato, sulla cartella «%@».";
+"Connected." = "Collegato.";
+"Connect…" = "Collega…";
+"Disconnect" = "Scollega";
+"Google did not give the permission" = "Google non ha dato il permesso";
+"How to get one" = "Come si ottiene";
+"In the Google Cloud console: make a project, enable the Google Drive API, then Credentials ▸ Create credentials ▸ OAuth client ID, of type Desktop app. Copy the ID it gives you. There is no redirect address to register: a desktop client is allowed to come back to this Mac on any port." = "Nella console di Google Cloud: crea un progetto, abilita la Google Drive API, poi Credenziali ▸ Crea credenziali ▸ ID client OAuth, di tipo Applicazione desktop. Copia l'ID che ti dà. Non c'è nessun indirizzo di richiamo da registrare: un client desktop può tornare su questo Mac da qualunque porta.";
+"No client ID yet." = "Non c'è ancora un ID client.";
+"No port on this Mac would answer." = "Nessuna porta di questo Mac ha risposto.";
+"Not connected." = "Non collegato.";
+"Open the console…" = "Apri la console…";
+"Sync" = "Sincronizza";
+"There is no client ID yet." = "Non c'è ancora un ID client.";
+"This application does not carry a Google client of its own, and that is on purpose: one client for everybody would mean one verification, one quota and a consent screen with somebody else's name on it. You make your own — it takes five minutes and costs nothing — and from then on the permission is between you and Google." = "Questa applicazione non porta dentro un client Google suo, ed è di proposito: uno solo per tutti vorrebbe dire una verifica sola, una quota sola e una schermata di consenso col nome di qualcun altro. Te ne fai uno tuo — cinque minuti, e non costa niente — e da lì in poi il permesso è fra te e Google.";
+"Waiting for the browser…" = "Aspetto il browser…";
+"What is asked for is the narrowest thing Drive has: the files this application creates, and whatever you hand it in the picker — nothing that resembles «see everything in my Drive». Nothing is read or written until you connect, and Disconnect forgets the tokens for good." = "Quello che si chiede è la cosa più stretta che Drive abbia: i file che questa applicazione crea, e quelli che le dai tu nel selettore — niente che assomigli a «vedi tutto il mio Drive». Finché non colleghi non si legge e non si scrive niente, e Scollega dimentica i gettoni per sempre.";
+"optional" = "facoltativo";
+
+/* I servizi, uno per scheda */
+"A desktop client's secret is not really a secret — it would live inside the application anyway — so the permission is protected by PKCE instead. Paste it only if your client refuses without it. It is kept in the keychain, like the tokens; neither ever reaches a preferences file or the log." = "Il segreto di un client desktop non è davvero un segreto — starebbe dentro l'applicazione comunque — e infatti il permesso è protetto da PKCE. Incollalo solo se il tuo client si rifiuta senza. Sta nel portachiavi, come i gettoni: né l'uno né gli altri arrivano mai in un file di preferenze o nel diario.";
+"Connected, on «%@»." = "Collegato, su «%@».";
+"Google asks for an application of its own, and this one does not carry one: a client inside a program is a client anybody can take out, and one for everybody would mean a single verification, a single quota and a consent screen with somebody else's name on it. Standard use of the Drive API costs nothing." = "Google vuole un'applicazione registrata, e questa non ne porta dentro una: un client dentro un programma lo estrae chiunque, e uno solo per tutti vorrebbe dire una verifica sola, una quota sola e una schermata di consenso col nome di qualcun altro. L'uso normale della Drive API non costa niente.";
+"Make a project, enable the Google Drive API, then Credentials ▸ Create credentials ▸ OAuth client ID, of type Desktop app. Copy the ID. There is no redirect address to register: a desktop client may come back to this Mac on any port.\n\nThen press Publish app on the consent screen. It is the step everybody misses, and without it Google answers «this app has not completed verification and is only open to approved testers». Publishing asks for no verification here, because drive.file is not one of the scopes Google calls sensitive — and it matters for a second reason: while the project stays in testing, Google hands out permissions that expire after seven days, so a connection made today would quietly stop working next week. Adding yourself under Test users works too, with that same seven-day clock." = "Crea un progetto, abilita la Google Drive API, poi Credenziali ▸ Crea credenziali ▸ ID client OAuth, di tipo Applicazione desktop. Copia l'ID. Non c'è nessun indirizzo di richiamo da registrare: un client desktop può tornare su questo Mac da qualunque porta.\n\nPoi, nella schermata di consenso, premi «Pubblica app». È il passo che sfugge a tutti, e senza di quello Google risponde «l'app non ha completato la procedura di verifica ed è accessibile solo ai tester approvati». Pubblicare qui non chiede nessuna verifica, perché drive.file non è fra gli ambiti che Google chiama sensibili — e conta per un secondo motivo: finché il progetto resta in test, Google dà permessi che scadono dopo sette giorni, quindi un collegamento fatto oggi smetterebbe di funzionare la settimana prossima, in silenzio. Aggiungersi fra i «Utenti di test» funziona lo stesso, con lo stesso orologio di sette giorni.";
+"Dropbox comes after Drive, and for one reason: Drive is the harder of the two — files named by identifier rather than by path, and no way to make it refuse a write that started from an old version — so what is learned there makes this one half the work." = "Dropbox viene dopo Drive, per un motivo solo: Drive è il più difficile dei due — i file si chiamano per identificatore invece che per percorso, e non c'è modo di fargli rifiutare una scrittura partita da una versione vecchia — quindi quello che si impara là rende questo metà lavoro.";
+"The permission was not given" = "Il permesso non è stato dato";
+"What is asked for is the narrowest thing Drive has — the files this application creates and whatever you hand it in the picker — and not anything resembling «see everything in my Drive», which Google classes as restricted and which would need a yearly verification." = "Quello che si chiede è la cosa più stretta che Drive abbia — i file che questa applicazione crea e quelli che le dai tu nel selettore — e niente che assomigli a «vedi tutto il mio Drive», che Google classifica come restricted e che vorrebbe una verifica ogni anno.";
+"Open the Dropbox App Console…" = "Apri la App Console di Dropbox…";
+"Open the Google Cloud console…" = "Apri la console di Google Cloud…";
+"Connected, on «%@» — %ld documents in there." = "Collegato, su «%@» — %ld documenti là dentro.";
+"Connected, on «%@», and nothing is visible inside it — which means either that it is empty, or that documents already in there are not covered by the permission. To find out: put a file in it from Drive and press Check." = "Collegato, su «%@», e là dentro non si vede niente — che vuol dire una di due cose: o è vuota, o i documenti che c'erano già non sono compresi nel permesso. Per saperlo: mettici un file dalla pagina di Drive e premi Verifica.";
+"Check" = "Verifica";
+"Asking…" = "Sto chiedendo…";
+"The service did not answer." = "Il servizio non ha risposto.";
+"Drive did not answer." = "Drive non ha risposto.";
+"Choose a folder…" = "Scegli una cartella…";
+"Choose documents…" = "Scegli documenti…";
+
+/* Il delta */
+"nothing has moved" = "non si è mosso niente";
+"%lu new" = "%lu nuovi";
+"%lu changed" = "%lu cambiati";
+"%lu gone" = "%lu spariti";
+", " = ", ";
+
+/* Aprire e salvare su un servizio */
+"Open from the Connected Service…" = "Apri dal servizio collegato…";
+"Put a Copy on the Connected Service" = "Metti una copia sul servizio collegato";
+"Open from %@" = "Apri da %@";
+"Open the document" = "Apri il documento";
+"%lu documents." = "%lu documenti.";
+"Nothing here yet. What this application writes into the folder shows up here; documents that were already there have to be handed over in the picker." = "Qui non c'è ancora niente. Quello che questa applicazione scrive nella cartella compare qui; i documenti che c'erano già vanno passati dal selettore.";
+"That document could not be read" = "Quel documento non si è potuto leggere";
+"That document could not be written" = "Quel documento non si è potuto scrivere";
+"Somebody else had written there first" = "Qualcun altro ci aveva scritto prima";
+"What you had was written beside it, as «%@». Nothing was overwritten." = "Quello che avevi è stato scritto accanto, come «%@». Non è stato sovrascritto niente.";
+"untitled" = "senza nome";
+"untitled.md" = "senza nome.md";
+
+/* Quando due hanno scritto lo stesso documento */
+"Somebody wrote there while you were working" = "Qualcuno ci ha scritto mentre lavoravi";
+"Nothing has been written yet. Look at the two before deciding, or decide now." = "Non è stato scritto ancora niente. Guarda i due prima di decidere, oppure decidi adesso.";
+"Compare…" = "Confronta…";
+"Keep Both" = "Tieni entrambi";
+"Keep Mine" = "Tieni la mia";
+"Keep Theirs" = "Tieni la loro";
+"On the left what you have, on the right what is up there now." = "A sinistra quello che hai tu, a destra quello che c’è là fuori adesso.";
+"Both are up there now" = "Adesso ci sono tutte e due";
+"Yours went beside it, as «%@»." = "La tua è finita accanto, come «%@».";
+"%@ (yours)" = "%@ (la tua)";
+"%@ (up there)" = "%@ (là fuori)";

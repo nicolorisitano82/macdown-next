@@ -46,6 +46,24 @@
                                                     NSString *replacement);
 @property (copy, nonatomic) BOOL (^revealInEditor)(NSRange range);
 
+/** A row of buttons at the bottom, for a comparison that is a question.
+ *
+ * A conflict is not read for its own sake: it is read to decide which
+ * version stays, and that decision has to be one button away from the two
+ * texts — not hidden in a menu on a single row. Whoever opens the panel for
+ * such a reason hands it the choices, in the order they should be offered
+ * from left to right; the last one is what ⏎ means, because that is where
+ * macOS puts the button ⏎ presses. `note` says, in a line, what the two
+ * sides are.
+ *
+ * Without this call there is no bar at all, and an ordinary comparison
+ * looks exactly as it did. Pressing one closes the window and then calls
+ * `picked` with the index of the title that was pressed.
+ */
+- (void)offerChoices:(NSArray<NSString *> *)titles
+                note:(NSString *)note
+             handler:(void (^)(NSUInteger picked))picked;
+
 /// What the window is called: the two names and how many differences.
 + (NSString *)titleForLeft:(NSString *)left right:(NSString *)right
                differences:(NSUInteger)differences;

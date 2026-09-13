@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D2C10000000000000000000A /* MPCloudOpenWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C100000000000000000002 /* MPCloudOpenWindowController.m */; };
+		D2B20000000000000000000A /* MPCloudLedgerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B200000000000000000001 /* MPCloudLedgerTests.m */; };
+		D2B10000000000000000000A /* MPCloudLedger.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B100000000000000000002 /* MPCloudLedger.m */; };
+		D2A00000000000000000000A /* MPSyncPaneTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2A000000000000000000001 /* MPSyncPaneTests.m */; };
+		D1F000000000000000000014 /* MPCloudService.m in Sources */ = {isa = PBXBuildFile; fileRef = D1F000000000000000000002 /* MPCloudService.m */; };
+		D1F000000000000000000015 /* MPSyncPreferencesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = D1F000000000000000000004 /* MPSyncPreferencesViewController.m */; };
 		D1E00000000000000000000A /* MPSpanStylerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D1E000000000000000000001 /* MPSpanStylerTests.m */; };
 		D1D00000000000000000000A /* MPSpanStyler.m in Sources */ = {isa = PBXBuildFile; fileRef = D1D000000000000000000002 /* MPSpanStyler.m */; };
 		D1C00000000000000000000A /* MPAttributedSpans.m in Sources */ = {isa = PBXBuildFile; fileRef = D1C000000000000000000002 /* MPAttributedSpans.m */; };
@@ -345,6 +351,16 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D2C100000000000000000001 /* MPCloudOpenWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPCloudOpenWindowController.h; sourceTree = "<group>"; };
+		D2C100000000000000000002 /* MPCloudOpenWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudOpenWindowController.m; sourceTree = "<group>"; };
+		D2B200000000000000000001 /* MPCloudLedgerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudLedgerTests.m; sourceTree = "<group>"; };
+		D2B100000000000000000001 /* MPCloudLedger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPCloudLedger.h; sourceTree = "<group>"; };
+		D2B100000000000000000002 /* MPCloudLedger.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudLedger.m; sourceTree = "<group>"; };
+		D2A000000000000000000001 /* MPSyncPaneTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPSyncPaneTests.m; sourceTree = "<group>"; };
+		D1F000000000000000000001 /* MPCloudService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPCloudService.h; sourceTree = "<group>"; };
+		D1F000000000000000000002 /* MPCloudService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudService.m; sourceTree = "<group>"; };
+		D1F000000000000000000003 /* MPSyncPreferencesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPSyncPreferencesViewController.h; sourceTree = "<group>"; };
+		D1F000000000000000000004 /* MPSyncPreferencesViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPSyncPreferencesViewController.m; sourceTree = "<group>"; };
 		D1E000000000000000000001 /* MPSpanStylerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPSpanStylerTests.m; sourceTree = "<group>"; };
 		D1D000000000000000000001 /* MPSpanStyler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPSpanStyler.h; sourceTree = "<group>"; };
 		D1D000000000000000000002 /* MPSpanStyler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPSpanStyler.m; sourceTree = "<group>"; };
@@ -1153,6 +1169,10 @@
 				7DA2311453239F0973310004 /* MPRemoteImageFetch.m */,
 				D1C000000000000000000001 /* MPAttributedSpans.h */,
 				D1C000000000000000000002 /* MPAttributedSpans.m */,
+				D2B100000000000000000001 /* MPCloudLedger.h */,
+				D2B100000000000000000002 /* MPCloudLedger.m */,
+				D1F000000000000000000001 /* MPCloudService.h */,
+				D1F000000000000000000002 /* MPCloudService.m */,
 				1F0D9E01000000000000F1 /* MPMarkdownText.h */,
 				1F0D9E01000000000000F2 /* MPMarkdownText.m */,
 				1F0D9D63194AC7CF008E1856 /* MPUtilities.h */,
@@ -1183,6 +1203,8 @@
 				D2B0000000000000000000FB /* MPUpdatePreferencesViewController.m */,
 				1F0D9E01000000000000F5 /* MPAgentsPreferencesViewController.h */,
 				1F0D9E01000000000000F6 /* MPAgentsPreferencesViewController.m */,
+				D1F000000000000000000003 /* MPSyncPreferencesViewController.h */,
+				D1F000000000000000000004 /* MPSyncPreferencesViewController.m */,
 				D2B0000000000000000000EA /* MPQuickLookPreferencesViewController.h */,
 				D2B0000000000000000000EB /* MPQuickLookPreferencesViewController.m */,
 				852D52391E260A6400BA7162 /* MPTerminalPreferencesViewController.h */,
@@ -1223,6 +1245,8 @@
 				D0C1C00200000000000000A1 /* MPSemanticStyler.h */,
 				D0C1C00100000000000000A1 /* MPSemanticStyler.m */,
 				D1D000000000000000000001 /* MPSpanStyler.h */,
+				D2C100000000000000000001 /* MPCloudOpenWindowController.h */,
+				D2C100000000000000000002 /* MPCloudOpenWindowController.m */,
 				D1D000000000000000000002 /* MPSpanStyler.m */,
 				1F396E6519B0EA17000D3EFC /* MPEditorView.m */,
 				7DA2311453239F0973310049 /* MPProseIssuesViewController.h */,
@@ -1475,6 +1499,8 @@
 				1F0D9E01000000000000FE /* MPDiffTests.m */,
 				D1C000000000000000000003 /* MPAttributedSpansTests.m */,
 				D1E000000000000000000001 /* MPSpanStylerTests.m */,
+				D2A000000000000000000001 /* MPSyncPaneTests.m */,
+				D2B200000000000000000001 /* MPCloudLedgerTests.m */,
 				1F0D9E0100000000000110 /* MPDiagramPromptTests.m */,
 				1F0D9E0100000000000120 /* MPCompareActionsTests.m */,
 				7DA2311453239F0973310062 /* MPActionLogTests.m */,
@@ -2040,6 +2066,7 @@
 				D0C1E00300000000000000C1 /* MPMarkerHider.m in Sources */,
 				D0C1C00300000000000000A1 /* MPSemanticStyler.m in Sources */,
 				D1D00000000000000000000A /* MPSpanStyler.m in Sources */,
+				D2C10000000000000000000A /* MPCloudOpenWindowController.m in Sources */,
 				1F396E6619B0EA17000D3EFC /* MPEditorView.m in Sources */,
 				F55A342A5A01CEBCC9F60047 /* MPProseIssuesViewController.m in Sources */,
 				F55A342A5A01CEBCC9F60050 /* MPBacklinksViewController.m in Sources */,
@@ -2087,6 +2114,7 @@
 				D2B0000000000000000000EC /* MPQuickLookExtension.m in Sources */,
 				D2B0000000000000000000ED /* MPQuickLookPreferencesViewController.m in Sources */,
 				1F0D9E0100000000000F6A /* MPAgentsPreferencesViewController.m in Sources */,
+				D1F000000000000000000015 /* MPSyncPreferencesViewController.m in Sources */,
 				F55A342A5A01CEBCC9F60054 /* MPActionLog.m in Sources */,
 				F55A342A5A01CEBCC9F60060 /* MPWebClipper.m in Sources */,
 				F55A342A5A01CEBCC9F60057 /* MPTaskList.m in Sources */,
@@ -2097,6 +2125,8 @@
 				D0C1A1000000000000000033 /* MPSidebarController.m in Sources */,
 				1F0D9D67194AC7CF008E1856 /* MPUtilities.m in Sources */,
 				1F0D9E0100000000000F2A /* MPMarkdownText.m in Sources */,
+				D1F000000000000000000014 /* MPCloudService.m in Sources */,
+				D2B10000000000000000000A /* MPCloudLedger.m in Sources */,
 				D1C00000000000000000000A /* MPAttributedSpans.m in Sources */,
 				852D523C1E260A6400BA7162 /* MPTerminalPreferencesViewController.m in Sources */,
 				1F0D9D78194AC7F7008E1856 /* MPHtmlPreferencesViewController.m in Sources */,
@@ -2171,6 +2201,8 @@
 				1F0D9E0100000000000FEA /* MPDiffTests.m in Sources */,
 				D1C00000000000000000000C /* MPAttributedSpansTests.m in Sources */,
 				D1E00000000000000000000A /* MPSpanStylerTests.m in Sources */,
+				D2A00000000000000000000A /* MPSyncPaneTests.m in Sources */,
+				D2B20000000000000000000A /* MPCloudLedgerTests.m in Sources */,
 				1F0D9E0100000000000111 /* MPDiagramPromptTests.m in Sources */,
 				1F0D9E0100000000000121 /* MPCompareActionsTests.m in Sources */,
 				F55A342A5A01CEBCC9F60055 /* MPActionLogTests.m in Sources */,
