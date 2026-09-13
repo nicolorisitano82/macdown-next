@@ -11,6 +11,7 @@
 #import <XCTest/XCTest.h>
 
 #import "MPCloudService.h"
+#import "MPCloudLedger.h"
 
 extern NSData *MPGoogleUploadBody(NSString *boundary,
                                   NSDictionary *metadata,
@@ -25,6 +26,10 @@ extern NSString *MPConflictNameFor(NSString *name, NSDate *when);
 - (instancetype)initWithService:(MPCloudService *)service chosen:(id)chosen;
 @property (strong, nonatomic) NSViewController *list;
 @property (strong, nonatomic) NSViewController *sidebar;
+@end
+
+@interface MPCloudService (Prove)
+- (void)remember:(NSURL *)folder;
 @end
 
 @interface NSViewController (Prove)
@@ -53,17 +58,27 @@ extern NSString *MPConflictNameFor(NSString *name, NSDate *when);
     XCTAssertTrue(pane.view.subviews.count > 0);
 }
 
-- (void)testBothProvidersAreThere
+- (void)testTheProvidersAreThereInOrder
 {
     NSArray<MPCloudService *> *services = [MPCloudService services];
-    XCTAssertEqual(services.count, 2u);
+    XCTAssertEqual(services.count, 3u);
     XCTAssertEqualObjects(services[0].name, @"Google Drive");
-    XCTAssertEqualObjects(services[1].name, @"Dropbox");
-    // Il secondo è un segnaposto: si vede e non si tocca.
+    XCTAssertEqualObjects(services[1].name, @"iCloud Drive");
+    XCTAssertEqualObjects(services[2].name, @"Dropbox");
+    // L'ultimo è un segnaposto: si vede e non si tocca.
     XCTAssertTrue(services[0].available);
-    XCTAssertFalse(services[1].available);
+    XCTAssertTrue(services[1].available);
+    XCTAssertFalse(services[2].available);
     // E lo dice, invece di lasciare una scheda vuota.
-    XCTAssertTrue(services[1].explanation.length > 40);
+    XCTAssertTrue(services[2].explanation.length > 40);
+
+    // iCloud non chiede niente da incollare, e la sua cartella porta con
+    // sé quello che contiene: sono le due cose che lo rendono diverso.
+    XCTAssertTrue(services[0].needsAClient);
+    XCTAssertFalse(services[1].needsAClient);
+    XCTAssertTrue(services[0].picksDocuments);
+    XCTAssertFalse(services[1].picksDocuments);
+    XCTAssertTrue(services[1].isConfigured);
 }
 
 - (void)testEachProviderRemembersItsOwnThings
@@ -363,6 +378,204 @@ static MPCloudOpenWindowController *MPOpenWindow(void)
     // spiegazioni. Il tetto è largo — serve a fermare il ritorno del muro
     // di testo, non a misurare lo stile.
     XCTAssertLessThan(words, 40u);
+}
+
+#pragma mark - iCloud Drive, che è una cartella
+
+/// Il servizio, puntato su una cartella qualunque: `link:` pretende che
+/// stia dentro iCloud Drive, ma tutto il resto lavora su una cartella e
+/// basta — ed è così che si prova senza toccare la roba di nessuno.
+- (MPCloudService *)iCloudOn:(NSURL *)folder
+{
+    MPCloudService *service = [MPCloudService services][1];
+    [service remember:folder];
+    return service;
+}
+
+- (NSURL *)aFreshFolder
+{
+    NSURL *folder = [[NSURL fileURLWithPath:NSTemporaryDirectory()]
+        URLByAppendingPathComponent:[NSString stringWithFormat:@"icloud-%@",
+            [NSUUID UUID].UUIDString]];
+    [[NSFileManager defaultManager] createDirectoryAtURL:folder
+        withIntermediateDirectories:YES attributes:nil error:NULL];
+    return folder;
+}
+
+- (void)write:(NSString *)text named:(NSString *)name in:(NSURL *)folder
+{
+    [text writeToURL:[folder URLByAppendingPathComponent:name]
+          atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+}
+
+/// Aspetta una risposta che arriva sulla coda principale.
+- (void)waitFor:(void (^)(void (^done)(void)))work
+{
+    XCTestExpectation *waited = [self expectationWithDescription:@"servizio"];
+    work(^{ [waited fulfill]; });
+    [self waitForExpectations:@[waited] timeout:10.0];
+}
+
+
+- (void)testTheFolderIsTheListOfDocuments
+{
+    NSURL *folder = [self aFreshFolder];
+    [self write:@"# Uno\n" named:@"uno.md" in:folder];
+    [self write:@"due" named:@"due.txt" in:folder];
+    [self write:@"non è un documento" named:@"foto.png" in:folder];
+    MPCloudService *icloud = [self iCloudOn:folder];
+
+    XCTAssertTrue(icloud.isLinked);
+    XCTAssertEqualObjects(icloud.placeName, folder.lastPathComponent);
+
+    __block NSArray<MPCloudDocument *> *found = nil;
+    [self waitFor:^(void (^done)(void)) {
+        [icloud documentsWithCompletion:^(NSArray<MPCloudDocument *> *got,
+                                          NSString *problem) {
+            found = got;
+            done();
+        }];
+    }];
+
+    XCTAssertEqual(found.count, 2u);        // il .png non è un documento
+    NSMutableSet *names = [NSMutableSet set];
+    for (MPCloudDocument *document in found)
+    {
+        [names addObject:document.name];
+        XCTAssertTrue(document.revision.length > 0);
+        XCTAssertNotNil(document.modified);
+        XCTAssertTrue(document.size > 0);
+    }
+    XCTAssertEqualObjects(names, ([NSSet setWithArray:@[@"uno.md",
+                                                        @"due.txt"]]));
+    [icloud unlink];
+}
+
+
+- (void)testWritingANewDocumentNeverCoversOneThatIsThere
+{
+    NSURL *folder = [self aFreshFolder];
+    [self write:@"quello di prima" named:@"nota.md" in:folder];
+    MPCloudService *icloud = [self iCloudOn:folder];
+
+    __block MPCloudDocument *made = nil;
+    [self waitFor:^(void (^done)(void)) {
+        [icloud createDocumentNamed:@"nota.md" text:@"quello nuovo"
+                         completion:^(MPCloudDocument *got, NSString *bad) {
+            made = got;
+            done();
+        }];
+    }];
+    XCTAssertEqualObjects(made.name, @"nota 2.md");
+    XCTAssertEqualObjects([NSString stringWithContentsOfURL:
+        [folder URLByAppendingPathComponent:@"nota.md"]
+        encoding:NSUTF8StringEncoding error:NULL], @"quello di prima");
+    [icloud unlink];
+}
+
+
+/// La prova che conta: due Mac sulla stessa cartella. Chi salva per
+/// secondo non deve cancellare quello che ha scritto il primo.
+- (void)testAWriteThatWouldCoverSomebodyElseStopsOrGoesBeside
+{
+    NSURL *folder = [self aFreshFolder];
+    [self write:@"la mia riga\n" named:@"verbale.md" in:folder];
+    MPCloudService *icloud = [self iCloudOn:folder];
+
+    __block NSString *revision = nil;
+    [self waitFor:^(void (^done)(void)) {
+        [icloud documentsWithCompletion:^(NSArray<MPCloudDocument *> *got,
+                                          NSString *bad) {
+            revision = got.firstObject.revision;
+            done();
+        }];
+    }];
+    XCTAssertNotNil(revision);
+
+    // Qualcun altro scrive lì, mentre noi avevamo il documento aperto.
+    [NSThread sleepForTimeInterval:0.05];
+    [self write:@"la riga di un altro\n" named:@"verbale.md" in:folder];
+
+    __block BOOL moved = NO;
+    [self waitFor:^(void (^done)(void)) {
+        [icloud writeDocument:@"verbale.md" text:@"la mia versione\n"
+                 fromRevision:revision ifMoved:MPCloudOnMovedAsk
+                   completion:^(NSString *now, BOOL itMoved,
+                                NSString *conflict, NSString *problem) {
+            moved = itMoved;
+            done();
+        }];
+    }];
+    XCTAssertTrue(moved, @"si è fermato invece di scrivere");
+    XCTAssertEqualObjects([NSString stringWithContentsOfURL:
+        [folder URLByAppendingPathComponent:@"verbale.md"]
+        encoding:NSUTF8StringEncoding error:NULL], @"la riga di un altro\n");
+
+    // «Tieni entrambi»: la nostra va accanto, con un nome che lo dice.
+    __block NSString *conflictName = nil;
+    [self waitFor:^(void (^done)(void)) {
+        [icloud writeDocument:@"verbale.md" text:@"la mia versione\n"
+                 fromRevision:revision ifMoved:MPCloudOnMovedCopy
+                   completion:^(NSString *now, BOOL itMoved,
+                                NSString *conflict, NSString *problem) {
+            conflictName = conflict;
+            done();
+        }];
+    }];
+    XCTAssertTrue([conflictName hasPrefix:@"verbale (copia in conflitto "]);
+    XCTAssertEqualObjects([NSString stringWithContentsOfURL:
+        [folder URLByAppendingPathComponent:conflictName]
+        encoding:NSUTF8StringEncoding error:NULL], @"la mia versione\n");
+    // E quella dell'altro è ancora lì, intera.
+    XCTAssertEqualObjects([NSString stringWithContentsOfURL:
+        [folder URLByAppendingPathComponent:@"verbale.md"]
+        encoding:NSUTF8StringEncoding error:NULL], @"la riga di un altro\n");
+    [icloud unlink];
+}
+
+
+- (void)testTheFirstLookIsQuietAndTheSecondOneCounts
+{
+    NSURL *folder = [self aFreshFolder];
+    [self write:@"uno" named:@"uno.md" in:folder];
+    MPCloudService *icloud = [self iCloudOn:folder];
+    [[MPCloudLedger ledgerFor:@"icloud"] forget];
+
+    __block MPCloudDelta *first = nil;
+    [self waitFor:^(void (^done)(void)) {
+        [icloud changesWithCompletion:^(MPCloudDelta *delta, NSString *bad) {
+            first = delta;
+            done();
+        }];
+    }];
+    XCTAssertTrue(first.isQuiet, @"la prima occhiata è il punto di partenza");
+
+    [self write:@"due" named:@"due.md" in:folder];
+    __block MPCloudDelta *second = nil;
+    [self waitFor:^(void (^done)(void)) {
+        [icloud changesWithCompletion:^(MPCloudDelta *delta, NSString *bad) {
+            second = delta;
+            done();
+        }];
+    }];
+    XCTAssertEqual(second.added, 1u);
+    XCTAssertEqual(second.changed, 0u);
+
+    // E quello che sparisce si conta come sparito.
+    [[NSFileManager defaultManager] removeItemAtURL:
+        [folder URLByAppendingPathComponent:@"uno.md"] error:NULL];
+    __block MPCloudDelta *third = nil;
+    [self waitFor:^(void (^done)(void)) {
+        [icloud changesWithCompletion:^(MPCloudDelta *delta, NSString *bad) {
+            third = delta;
+            done();
+        }];
+    }];
+    XCTAssertEqual(third.removed, 1u);
+    XCTAssertEqual(icloud.visibleInPlace, 1);
+
+    [[MPCloudLedger ledgerFor:@"icloud"] forget];
+    [icloud unlink];
 }
 
 

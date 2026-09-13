@@ -121,12 +121,20 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     state.alignment = NSLayoutAttributeFirstBaseline;
     state.spacing = 8.0;
 
+    self.helpButton = [NSButton buttonWithTitle:@"" target:self
+                                         action:@selector(showHelp:)];
+    self.helpButton.bezelStyle = NSBezelStyleHelpButton;
+    self.helpButton.title = @"";
+
     self.buttons = [[NSStackView alloc] initWithFrame:NSZeroRect];
     self.buttons.orientation = NSUserInterfaceLayoutOrientationHorizontal;
     self.buttons.spacing = 8.0;
     [self.buttons addView:self.mainButton inGravity:NSStackViewGravityLeading];
     [self.buttons addView:self.moreButton inGravity:NSStackViewGravityLeading];
+    [self.buttons addView:self.helpButton inGravity:NSStackViewGravityTrailing];
 
+    [self.buttons.widthAnchor constraintEqualToConstant:
+        kMPPanelWidth - kMPPanelPadding * 2.0 - 28.0].active = YES;
     NSStackView *inside = [NSStackView stackViewWithViews:
         @[state, self.buttons]];
     inside.orientation = NSUserInterfaceLayoutOrientationVertical;
@@ -148,13 +156,8 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     self.clientField = [NSTextField textFieldWithString:@""];
     self.clientField.delegate = self;
     [self.clientField.widthAnchor constraintEqualToConstant:320.0].active = YES;
-    self.helpButton = [NSButton buttonWithTitle:@"" target:self
-                                         action:@selector(showHelp:)];
-    self.helpButton.bezelStyle = NSBezelStyleHelpButton;
-    self.helpButton.title = @"";
-
     self.clientRow = [NSStackView stackViewWithViews:
-        @[self.clientTitle, self.clientField, self.helpButton]];
+        @[self.clientTitle, self.clientField]];
     self.clientRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
     self.clientRow.spacing = 8.0;
 
@@ -236,12 +239,16 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     self.clientField.stringValue = service.clientIdentifier;
     self.secretField.stringValue = service.clientSecret;
 
-    // Un segnaposto mostra il perché e niente su cui mettere le mani.
+    // Un segnaposto mostra il perché e niente su cui mettere le mani; e
+    // un servizio che non chiede credenziali non mostra i campi che
+    // servono a incollarle.
     BOOL ready = service.available;
+    BOOL credentials = ready && service.needsAClient;
     for (NSView *row in @[self.clientRow, self.secretTitleRow,
                           self.secretRow])
-        row.hidden = !ready;
-    self.secretRow.hidden = !ready || self.moreFields.state != NSControlStateValueOn;
+        row.hidden = !credentials;
+    self.secretRow.hidden = !credentials
+        || self.moreFields.state != NSControlStateValueOn;
     self.buttons.hidden = !ready;
 
     if (ready)
@@ -291,8 +298,11 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     }
 
     [self dotColour:[NSColor systemGreenColor]];
-    [self offer:NSLocalizedString(@"Add Documents…",
-        @"Button that hands single documents over") enabled:YES];
+    [self offer:service.picksDocuments
+        ? NSLocalizedString(@"Add Documents…",
+            @"Button that hands single documents over")
+        : NSLocalizedString(@"Change Folder…",
+            @"Button that picks another folder") enabled:YES];
 
     NSString *place = service.placeName.length ? service.placeName : nil;
     if (!place)
@@ -345,7 +355,7 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     // qui sono i tre puntini.
     [self.moreButton addItemWithTitle:@"⋯"];
     NSMutableArray<NSString *> *rest = [NSMutableArray array];
-    if (service.isConfigured)
+    if (service.isConfigured && service.picksDocuments)
         [rest addObject:NSLocalizedString(@"Choose Folder…",
             @"Menu item: pick the folder to write into")];
     if (service.isLinked)
@@ -409,7 +419,7 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     MPCloudService *service = [self chosen];
     if (service.isLinked && service.problem.length)
         [self check:nil];
-    else if (service.isLinked)
+    else if (service.isLinked && service.picksDocuments)
         [self link:MPCloudPickDocuments];
     else
         [self link:MPCloudPickFolder];
@@ -462,6 +472,7 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     NSTextField *what = [self paragraph:service.explanation width:wide];
     NSTextField *how = [self paragraph:service.howToGetAClient width:wide];
     NSTextField *scope = [self paragraph:service.scopeExplanation width:wide];
+    BOOL credentials = service.needsAClient;
     NSTextField *secret = [self paragraph:NSLocalizedString(
         @"The secret of a desktop client is not really a secret — PKCE "
         @"protects the permission instead. Paste it only if your client "
@@ -471,8 +482,9 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     NSButton *console = [NSButton buttonWithTitle:service.consoleButtonTitle
         target:self action:@selector(openConsole:)];
 
-    NSStackView *column = [NSStackView stackViewWithViews:
-        @[what, how, console, scope, secret]];
+    NSArray *pieces = credentials ? @[what, how, console, scope, secret]
+                                  : @[what, scope];
+    NSStackView *column = [NSStackView stackViewWithViews:pieces];
     column.orientation = NSUserInterfaceLayoutOrientationVertical;
     column.alignment = NSLayoutAttributeLeading;
     column.spacing = 10.0;

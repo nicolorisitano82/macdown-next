@@ -220,6 +220,7 @@ NSDate *MPDateFromDrive(NSString *written)
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         services = @[[[NSClassFromString(@"MPGoogleDriveService") alloc] init],
+                     [[NSClassFromString(@"MPICloudService") alloc] init],
                      [[NSClassFromString(@"MPDropboxService") alloc] init]];
     });
     return services;
@@ -235,6 +236,11 @@ NSDate *MPDateFromDrive(NSString *written)
 /// mostra lo stesso: nasconderlo vorrebbe dire far cercare alla gente una
 /// cosa che è in programma.
 - (BOOL)available { return YES; }
+/// Se si porta un client OAuth proprio. iCloud Drive no: è una cartella.
+- (BOOL)needsAClient { return YES; }
+/// Se i documenti che esistono già si passano uno per uno. Dove la
+/// cartella li porta tutti, questa domanda non si fa.
+- (BOOL)picksDocuments { return YES; }
 - (NSString *)consoleButtonTitle { return @""; }
 - (NSURL *)consoleURL { return nil; }
 - (NSString *)explanation { return @""; }
@@ -1224,6 +1230,551 @@ NSString *MPConflictNameFor(NSString *name, NSDate *when)
         }
 
         self.problem = problem;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (done)
+                done(problem ? nil : delta, problem);
+        });
+    });
+}
+
+@end
+
+
+#pragma mark - iCloud Drive
+
+/** iCloud Drive, che è già qui.
+ *
+ * Nessun consenso da dare e nessun gettone da custodire: iCloud Drive su
+ * un Mac **è una cartella**, e il pezzo difficile — portare su e giù,
+ * sapere chi ha scritto per ultimo, tenere le due copie quando due Mac
+ * scrivono insieme — lo fa il sistema, meglio di come lo faremmo noi.
+ * Quello che manca è la parte che riguarda noi: sapere *quale* cartella,
+ * leggere e scrivere coordinandosi col demone invece che alle sue spalle,
+ * e accorgersi che un documento si è mosso prima di scriverci sopra.
+ *
+ * Da qui viene anche la differenza col Drive: là si sceglie una cartella
+ * *e* i documenti, uno per uno, perché il permesso è stretto. Qui la
+ * cartella li porta tutti, perché il permesso è il Finder.
+ */
+@interface MPICloudService : MPCloudService
+/// Che la cartella non c'è più, per non richiederlo al sistema ogni volta.
+@property (assign, nonatomic) BOOL folderIsGone;
+@end
+
+
+/// Dove sta iCloud Drive su un Mac. Il nome della cartella è quello e non
+/// cambia: è l'identificatore del contenitore, scritto come lo scrive il
+/// sistema.
+static NSString *const kMPICloudRoot =
+    @"Library/Mobile Documents/com~apple~CloudDocs";
+
+/// Cosa consideriamo un documento, in una cartella qualunque.
+static BOOL MPLooksLikeADocument(NSURL *url)
+{
+    static NSSet *kinds = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        kinds = [NSSet setWithArray:@[@"md", @"markdown", @"mdown", @"mkd",
+                                      @"txt", @"text", @"textbundle"]];
+    });
+    return [kinds containsObject:url.pathExtension.lowercaseString];
+}
+
+/// La versione di un file: quando è stato scritto e quanto è lungo. Non è
+/// un numero che dà il servizio — iCloud non ne dà — ma cambia esattamente
+/// quando cambia il file, che è tutto quello che ci serve per accorgerci
+/// che qualcun altro ci ha messo mano.
+static NSString *MPRevisionOf(NSURL *url)
+{
+    NSDate *when = nil;
+    NSNumber *size = nil;
+    [url getResourceValue:&when forKey:NSURLContentModificationDateKey
+                    error:NULL];
+    [url getResourceValue:&size forKey:NSURLFileSizeKey error:NULL];
+    if (!when)
+        return nil;
+    return [NSString stringWithFormat:@"%.0f.%@",
+            when.timeIntervalSince1970 * 1000.0, size ?: @0];
+}
+
+
+@implementation MPICloudService
+
+- (NSString *)name { return @"iCloud Drive"; }
+- (NSString *)identifier { return @"icloud"; }
+- (NSString *)symbolName { return @"icloud"; }
+
+/// Non c'è niente da registrare da nessuna parte: è la cartella di chi sta
+/// già usando il Mac.
+- (BOOL)needsAClient { return NO; }
+- (BOOL)picksDocuments { return NO; }
+- (BOOL)isConfigured { return YES; }
+
+- (NSString *)explanation
+{
+    return NSLocalizedString(
+        @"A folder of your iCloud Drive, chosen in the usual panel. No "
+        @"account to register and nothing kept anywhere: the folder is "
+        @"already yours, and macOS carries it between your machines.",
+        @"What connecting iCloud Drive means");
+}
+
+- (NSString *)scopeExplanation
+{
+    return NSLocalizedString(
+        @"Only the folder you choose, and everything in it: unlike the "
+        @"other services, documents that were already there come across "
+        @"too, because here the permission is the Finder.",
+        @"What the iCloud Drive connection covers");
+}
+
+
+#pragma mark La cartella
+
+- (NSURL *)root
+{
+    return [NSURL fileURLWithPath:[NSHomeDirectory()
+        stringByAppendingPathComponent:kMPICloudRoot] isDirectory:YES];
+}
+
+/** La cartella scelta, se c'è ancora.
+ *
+ * Tenuta in due modi: il percorso di quando la si è scelta, che costa
+ * niente da controllare, e il segnalibro, che sopravvive a uno
+ * spostamento. Si guarda il percorso per primo di proposito — sciogliere
+ * un segnalibro che punta a una cartella cancellata mette il sistema a
+ * cercarla, e l'attesa arriva al minuto: è successo in una prova, e in
+ * una prova si può aspettare, in un pannello no.
+ */
+- (NSURL *)folder
+{
+    NSFileManager *manager = [NSFileManager defaultManager];
+    NSString *known = self.placeIdentifier;
+    BOOL directory = NO;
+    if (known.length && [manager fileExistsAtPath:known
+                                      isDirectory:&directory] && directory)
+        return [NSURL fileURLWithPath:known isDirectory:YES];
+
+    if (self.folderIsGone)
+        return nil;
+
+    NSData *bookmark = [[NSUserDefaults standardUserDefaults]
+        dataForKey:[self defaultsKey:@"bookmark"]];
+    if (!bookmark.length)
+        return nil;
+    BOOL stale = NO;
+    NSURL *url = [NSURL URLByResolvingBookmarkData:bookmark
+        options:NSURLBookmarkResolutionWithoutUI
+              | NSURLBookmarkResolutionWithoutMounting
+        relativeToURL:nil bookmarkDataIsStale:&stale error:NULL];
+    if (url && [manager fileExistsAtPath:url.path isDirectory:&directory]
+            && directory)
+    {
+        // Spostata o rinominata: il segnalibro l'ha ritrovata, e da adesso
+        // il percorso nuovo è quello che si controlla per primo.
+        [self remember:url];
+        return url;
+    }
+    // Non c'è più. Chiederlo di nuovo costerebbe un'altra attesa, e la
+    // risposta sarebbe la stessa finché non se ne sceglie un'altra.
+    self.folderIsGone = YES;
+    return nil;
+}
+
+- (void)remember:(NSURL *)folder
+{
+    self.folderIsGone = NO;
+    NSData *bookmark = [folder bookmarkDataWithOptions:0
+        includingResourceValuesForKeys:nil relativeToURL:nil error:NULL];
+    [[NSUserDefaults standardUserDefaults] setObject:bookmark
+        forKey:[self defaultsKey:@"bookmark"]];
+    [self rememberPlace:folder.path named:folder.lastPathComponent];
+}
+
+- (BOOL)isLinked
+{
+    return [self folder] != nil;
+}
+
+- (void)unlink
+{
+    [[NSUserDefaults standardUserDefaults]
+        removeObjectForKey:[self defaultsKey:@"bookmark"]];
+    [super unlink];
+}
+
+
+/** Si sceglie nel pannello di sempre, e deve stare dentro iCloud Drive.
+ *
+ * Una cartella qualunque del disco funzionerebbe — e un giorno sarà un
+ * altro servizio, «una cartella e basta» — ma questo qui si chiama iCloud
+ * Drive e promette che quello che ci metti lo trovi sull'altro Mac. Fuori
+ * di lì non sarebbe vero.
+ */
+- (void)link:(MPCloudPick)what
+  completion:(void (^)(MPCloudLinkOutcome, NSString *))done
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSOpenPanel *panel = [NSOpenPanel openPanel];
+        panel.canChooseFiles = NO;
+        panel.canChooseDirectories = YES;
+        panel.canCreateDirectories = YES;
+        panel.allowsMultipleSelection = NO;
+        panel.directoryURL = [self root];
+        panel.message = NSLocalizedString(
+            @"Choose a folder of your iCloud Drive. What this application "
+            @"writes goes in there, and what is in there already comes "
+            @"across.", @"Message of the panel that picks an iCloud folder");
+        panel.prompt = NSLocalizedString(@"Use This Folder",
+            @"Button of the panel that picks an iCloud folder");
+
+        if ([panel runModal] != NSModalResponseOK || !panel.URL)
+        {
+            if (done)
+                done(MPCloudLinkCancelled, nil);
+            return;
+        }
+
+        NSString *chosen = panel.URL.URLByResolvingSymlinksInPath.path;
+        NSString *root = [self root].URLByResolvingSymlinksInPath.path;
+        if (![chosen hasPrefix:root])
+        {
+            if (done)
+                done(MPCloudLinkRefused, NSLocalizedString(
+                    @"That folder is not in iCloud Drive. Choose one inside "
+                    @"it, or nothing written there would reach your other "
+                    @"machines.",
+                    @"Refusing a folder outside iCloud Drive"));
+            return;
+        }
+
+        [self remember:panel.URL];
+        self.problem = nil;
+        if (done)
+            done(MPCloudLinkDone, nil);
+    });
+}
+
+
+- (void)checkWithCompletion:(void (^)(NSString *))done
+{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSString *problem = nil;
+        NSURL *folder = [self folder];
+        if (!folder)
+            problem = NSLocalizedString(
+                @"That folder is not there any more. Choose it again.",
+                @"The chosen iCloud folder has gone");
+        else
+            [self rememberVisible:(NSInteger)[self filesIn:folder].count];
+        self.problem = problem;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (done)
+                done(problem);
+        });
+    });
+}
+
+
+/// Quello che c'è nella cartella, senza scendere nelle sottocartelle: una
+/// cartella collegata è un posto dove si lavora, non un archivio da
+/// esplorare.
+- (NSArray<NSURL *> *)filesIn:(NSURL *)folder
+{
+    NSArray *keys = @[NSURLContentModificationDateKey, NSURLFileSizeKey,
+                      NSURLIsDirectoryKey];
+    NSArray<NSURL *> *inside = [[NSFileManager defaultManager]
+        contentsOfDirectoryAtURL:folder includingPropertiesForKeys:keys
+        options:NSDirectoryEnumerationSkipsHiddenFiles error:NULL];
+    NSMutableArray *kept = [NSMutableArray array];
+    for (NSURL *url in inside)
+    {
+        NSNumber *directory = nil;
+        [url getResourceValue:&directory forKey:NSURLIsDirectoryKey
+                        error:NULL];
+        if (directory.boolValue || !MPLooksLikeADocument(url))
+            continue;
+        [kept addObject:url];
+    }
+    return kept;
+}
+
+
+- (MPCloudDocument *)documentAt:(NSURL *)url
+{
+    NSDate *when = nil;
+    NSNumber *size = nil;
+    [url getResourceValue:&when forKey:NSURLContentModificationDateKey
+                    error:NULL];
+    [url getResourceValue:&size forKey:NSURLFileSizeKey error:NULL];
+    MPCloudDocument *document = [[MPCloudDocument alloc] init];
+    document.identifier = url.lastPathComponent;
+    document.name = url.lastPathComponent;
+    document.revision = MPRevisionOf(url);
+    document.modified = when;
+    document.size = size.longLongValue;
+    return document;
+}
+
+
+- (void)documentsWithCompletion:(void (^)(NSArray<MPCloudDocument *> *,
+                                          NSString *))done
+{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSURL *folder = [self folder];
+        NSMutableArray *found = [NSMutableArray array];
+        NSString *problem = folder ? nil : NSLocalizedString(
+            @"That folder is not there any more. Choose it again.",
+            @"The chosen iCloud folder has gone");
+        for (NSURL *url in [self filesIn:folder])
+            [found addObject:[self documentAt:url]];
+        self.problem = problem;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (done)
+                done(problem ? nil : found, problem);
+        });
+    });
+}
+
+
+/** Il file, sceso se non c'era.
+ *
+ * Un documento di iCloud può essere lì senza esserci: il sistema ne tiene
+ * il nome e butta via il contenuto quando lo spazio serve altrove. Si
+ * chiede di riportarlo e si aspetta — poco — invece di leggere zero byte e
+ * chiamarlo documento vuoto.
+ */
+- (NSURL *)readyURLFor:(NSString *)name
+{
+    NSURL *folder = [self folder];
+    if (!folder || !name.length)
+        return nil;
+    NSURL *url = [folder URLByAppendingPathComponent:name];
+    NSFileManager *manager = [NSFileManager defaultManager];
+    if (![manager fileExistsAtPath:url.path])
+        return nil;
+
+    NSNumber *status = nil;
+    [url getResourceValue:&status forKey:NSURLUbiquitousItemDownloadingStatusKey
+                    error:NULL];
+    NSString *where = (NSString *)status;
+    if (where && ![where isEqualToString:
+            NSURLUbiquitousItemDownloadingStatusCurrent])
+    {
+        [manager startDownloadingUbiquitousItemAtURL:url error:NULL];
+        for (int i = 0; i < 100; i++)      // dieci secondi, non di più
+        {
+            [NSThread sleepForTimeInterval:0.1];
+            NSString *now = nil;
+            [url getResourceValue:&now
+                           forKey:NSURLUbiquitousItemDownloadingStatusKey
+                            error:NULL];
+            if ([now isEqualToString:NSURLUbiquitousItemDownloadingStatusCurrent])
+                break;
+        }
+    }
+    return url;
+}
+
+
+- (void)readDocument:(NSString *)identifier
+          completion:(void (^)(NSString *, NSString *))done
+{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        __block NSString *text = nil;
+        __block NSString *problem = nil;
+        NSURL *url = [self readyURLFor:identifier];
+        if (!url)
+            problem = NSLocalizedString(@"That document is not there.",
+                @"Reading a document that has gone from the folder");
+        else
+        {
+            // Coordinata, perché dall'altra parte c'è un demone che scrive:
+            // leggere alle sue spalle è come leggere un file a metà.
+            NSFileCoordinator *coordinator = [[NSFileCoordinator alloc]
+                initWithFilePresenter:nil];
+            NSError *bad = nil;
+            [coordinator coordinateReadingItemAtURL:url options:0 error:&bad
+                                         byAccessor:^(NSURL *ready) {
+                NSError *reading = nil;
+                text = [NSString stringWithContentsOfURL:ready
+                    encoding:NSUTF8StringEncoding error:&reading];
+                if (!text)
+                    problem = reading.localizedDescription;
+            }];
+            if (bad)
+                problem = bad.localizedDescription;
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (done)
+                done(text, problem);
+        });
+    });
+}
+
+
+- (void)createDocumentNamed:(NSString *)name text:(NSString *)text
+                 completion:(void (^)(MPCloudDocument *, NSString *))done
+{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSURL *folder = [self folder];
+        __block MPCloudDocument *made = nil;
+        __block NSString *problem = folder ? nil : NSLocalizedString(
+            @"That folder is not there any more. Choose it again.",
+            @"The chosen iCloud folder has gone");
+        if (folder)
+        {
+            // Un nome già preso non si sovrascrive mai: si numera.
+            NSString *wanted = name.length ? name
+                : [NSLocalizedString(@"untitled",
+                    @"Name for a document that has never been saved")
+                        stringByAppendingPathExtension:@"md"];
+            NSURL *url = [folder URLByAppendingPathComponent:wanted];
+            NSFileManager *manager = [NSFileManager defaultManager];
+            for (int i = 2; [manager fileExistsAtPath:url.path] && i < 100; i++)
+            {
+                NSString *stem = wanted.stringByDeletingPathExtension;
+                NSString *extension = wanted.pathExtension;
+                NSString *another = [NSString stringWithFormat:@"%@ %d",
+                                     stem, i];
+                if (extension.length)
+                    another = [another stringByAppendingPathExtension:extension];
+                url = [folder URLByAppendingPathComponent:another];
+            }
+            problem = [self write:text to:url];
+            if (!problem)
+                made = [self documentAt:url];
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (done)
+                done(made, problem);
+        });
+    });
+}
+
+
+/// Una scrittura coordinata, e il guaio in parole se non è andata.
+- (NSString *)write:(NSString *)text to:(NSURL *)url
+{
+    __block NSString *problem = nil;
+    NSFileCoordinator *coordinator = [[NSFileCoordinator alloc]
+        initWithFilePresenter:nil];
+    NSError *bad = nil;
+    [coordinator coordinateWritingItemAtURL:url
+        options:NSFileCoordinatorWritingForReplacing error:&bad
+        byAccessor:^(NSURL *ready) {
+        NSError *writing = nil;
+        if (![text ?: @"" writeToURL:ready atomically:YES
+                           encoding:NSUTF8StringEncoding error:&writing])
+            problem = writing.localizedDescription;
+    }];
+    return problem ?: bad.localizedDescription;
+}
+
+
+/** Riscrive, ma solo se là dentro è ancora quello di prima.
+ *
+ * Sullo stesso Mac questo non succede quasi mai; con due Mac accesi sulla
+ * stessa cartella succede eccome, ed è il momento in cui una copia di
+ * qualcuno sparisce se non si guarda prima.
+ */
+- (void)writeDocument:(NSString *)identifier text:(NSString *)text
+         fromRevision:(NSString *)fromRevision ifMoved:(MPCloudOnMoved)ifMoved
+           completion:(void (^)(NSString *, BOOL, NSString *, NSString *))done
+{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSURL *folder = [self folder];
+        NSURL *url = folder ? [folder URLByAppendingPathComponent:identifier]
+                            : nil;
+        NSString *revision = nil;
+        NSString *conflict = nil;
+        NSString *problem = nil;
+        BOOL moved = NO;
+
+        if (!url || ![[NSFileManager defaultManager]
+                fileExistsAtPath:url.path])
+        {
+            problem = NSLocalizedString(@"That document is not there.",
+                @"Writing a document that has gone from the folder");
+        }
+        else
+        {
+            NSString *now = MPRevisionOf(url);
+            BOOL hasMoved = fromRevision.length && now.length
+                && ![now isEqualToString:fromRevision];
+            if (hasMoved && ifMoved == MPCloudOnMovedAsk)
+            {
+                moved = YES;    // non si scrive niente: decide chi scrive
+            }
+            else if (hasMoved && ifMoved == MPCloudOnMovedCopy)
+            {
+                NSString *name = MPConflictNameFor(url.lastPathComponent, nil);
+                NSURL *beside = [folder URLByAppendingPathComponent:name];
+                problem = [self write:text to:beside];
+                if (!problem)
+                {
+                    conflict = name;
+                    revision = MPRevisionOf(beside);
+                }
+            }
+            else
+            {
+                problem = [self write:text to:url];
+                if (!problem)
+                    revision = MPRevisionOf(url);
+            }
+        }
+
+        self.problem = problem;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (done)
+                done(revision, moved, conflict, problem);
+        });
+    });
+}
+
+
+/** Cosa si è mosso: qui non c'è un servizio che lo racconti, quindi si
+ * guarda la cartella e si confronta col registro — che è esattamente il
+ * quaderno che il registro tiene per Drive, riempito da un'altra parte.
+ */
+- (void)changesWithCompletion:(void (^)(MPCloudDelta *, NSString *))done
+{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        MPCloudLedger *ledger = [MPCloudLedger ledgerFor:self.identifier];
+        NSURL *folder = [self folder];
+        NSString *problem = folder ? nil : NSLocalizedString(
+            @"That folder is not there any more. Choose it again.",
+            @"The chosen iCloud folder has gone");
+
+        NSMutableArray *changes = [NSMutableArray array];
+        NSMutableSet *seen = [NSMutableSet set];
+        for (NSURL *url in [self filesIn:folder])
+        {
+            NSString *name = url.lastPathComponent;
+            [seen addObject:name];
+            [changes addObject:@{@"fileId": name,
+                                 @"file": @{@"name": name,
+                                            @"headRevisionId":
+                                                MPRevisionOf(url) ?: @""}}];
+        }
+        // Quello che il registro conosce e nella cartella non c'è più.
+        for (NSString *known in [ledger knownIdentifiers])
+        {
+            if (![seen containsObject:known])
+                [changes addObject:@{@"fileId": known, @"removed": @YES}];
+        }
+
+        MPCloudDelta *delta = [ledger applyChanges:changes];
+        // La prima occhiata non è un cambiamento: è il punto di partenza.
+        if (!ledger.startToken.length)
+        {
+            ledger.startToken = @"cartella";
+            delta = [[MPCloudDelta alloc] init];
+        }
+        [ledger save];
+        [self rememberVisible:(NSInteger)seen.count];
+
         dispatch_async(dispatch_get_main_queue(), ^{
             if (done)
                 done(problem ? nil : delta, problem);

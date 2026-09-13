@@ -302,6 +302,15 @@ invisible there.
 
 ## A folder that lives in a service
 
+**Settings ▸ Sync** connects a space of yours — **iCloud Drive** or **Google
+Drive**, one card each.
+
+iCloud Drive asks for nothing: you pick a folder of it in the usual panel,
+and that is the whole setup. Everything already in that folder comes across,
+because there the permission is the Finder, and macOS carries the folder
+between your machines. What follows is about Google Drive, which is the one
+that needs a client of yours.
+
 **Settings ▸ Sync** connects a Google Drive of yours. There is no client of
 mine inside the application, on purpose: one client for everybody would mean
 one verification, one quota and a consent screen carrying somebody else's
@@ -328,8 +337,10 @@ Then, in **File**:
   window: the connected services down the left, and on the right the
   documents with the date they were written and their size, sortable by
   clicking a column, with a search field in the toolbar.
-* **Put a Copy on the Connected Service** sends a local document up, the
-  first time.
+* **Put a Copy on ▸** lists the connected services and sends a local
+  document to the one you pick — the first time. The service the document
+  already lives on carries a tick and cannot be picked: it is where ⌘S
+  already goes.
 
 A document opened from a service saves back to it with **⌘S** — no save
 panel, because where it came from is already known — and the edited dot

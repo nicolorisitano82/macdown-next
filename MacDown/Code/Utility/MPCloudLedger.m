@@ -113,6 +113,12 @@
 }
 
 
+- (NSArray<NSString *> *)knownIdentifiers
+{
+    return self.documents.allKeys;
+}
+
+
 - (MPCloudDelta *)applyChanges:(NSArray<NSDictionary *> *)changes
 {
     MPCloudDelta *delta = [[MPCloudDelta alloc] init];

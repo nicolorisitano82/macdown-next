@@ -105,6 +105,11 @@ NS_INLINE void treat()
 }
 
 
+/// Il sottomenu dei servizi si riconosce da qui, e non dal titolo, che
+/// dipende dalla lingua di chi legge.
+static NSString *const kMPCloudMenu = @"servizi.salva";
+
+
 @interface MPMainController () <NSMenuDelegate>
 @property (readonly) NSWindowController *preferencesWindowController;
 @end
@@ -142,14 +147,20 @@ NS_INLINE void treat()
     if (where < 0)
         where = file.numberOfItems - 1;
 
-    // Questa mette **una copia** di un documento locale nella cartella
-    // collegata, la prima volta. Dopo, il documento sa dove sta e ⌘S ci
-    // va da solo: una cartella collegata si comporta come una cartella.
+    // Questa mette **una copia** di un documento locale in un servizio,
+    // la prima volta. Dopo, il documento sa dove sta e ⌘S ci va da solo:
+    // una cartella collegata si comporta come una cartella.
+    //
+    // I servizi collegati stanno in un sottomenu, anche quando è uno solo:
+    // «il servizio collegato» era una voce che decideva per conto suo, e
+    // con due spazi collegati avrebbe scelto il primo senza dirlo.
     NSMenuItem *save = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(
-        @"Put a Copy on the Connected Service",
-        @"File menu: write a local document to Drive the first time")
-        action:@selector(saveToCloud:) keyEquivalent:@""];
-    save.target = nil;
+        @"Put a Copy on", @"File menu: submenu of the connected services")
+        action:NULL keyEquivalent:@""];
+    NSMenu *services = [[NSMenu alloc] initWithTitle:save.title];
+    services.delegate = self;
+    services.identifier = kMPCloudMenu;
+    save.submenu = services;
     [file insertItem:save atIndex:where + 1];
 
     NSMenuItem *open = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(
@@ -162,16 +173,59 @@ NS_INLINE void treat()
 
 #pragma mark - I documenti che stanno in un servizio
 
-/// Il servizio collegato, se ce n'è uno. Con due, sarebbe una scelta in
-/// più nel menu; finché è uno, la domanda non si fa.
-- (MPCloudService *)linkedService
+/// I servizi in cui si può scrivere adesso.
+- (NSArray<MPCloudService *> *)linkedServices
 {
+    NSMutableArray *linked = [NSMutableArray array];
     for (MPCloudService *service in [MPCloudService services])
     {
         if (service.isLinked)
-            return service;
+            [linked addObject:service];
     }
-    return nil;
+    return linked;
+}
+
+
+/// Il primo, per chi non ha una scelta da fare: aprire parte da lì, e la
+/// barra laterale della finestra fa il resto.
+- (MPCloudService *)linkedService
+{
+    return [self linkedServices].firstObject;
+}
+
+
+/** Il sottomenu dei servizi, rifatto ogni volta che si apre.
+ *
+ * Collegare o scollegare uno spazio succede in un pannello, mentre il
+ * menu esiste già: l'unico elenco che non mente è quello costruito nel
+ * momento in cui lo si guarda.
+ */
+- (void)rebuildCloudMenu:(NSMenu *)menu
+{
+    [menu removeAllItems];
+    MPDocument *document = (MPDocument *)[[NSDocumentController
+        sharedDocumentController] currentDocument];
+    NSArray<MPCloudService *> *linked = [self linkedServices];
+    if (!linked.count)
+    {
+        NSMenuItem *none = [menu addItemWithTitle:NSLocalizedString(
+            @"No connected service", @"Submenu entry when nothing is linked")
+            action:NULL keyEquivalent:@""];
+        none.enabled = NO;
+        return;
+    }
+    for (MPCloudService *service in linked)
+    {
+        NSMenuItem *item = [menu addItemWithTitle:service.name
+            action:@selector(saveToCloud:) keyEquivalent:@""];
+        item.target = nil;
+        item.representedObject = service;
+        // Quello dove il documento già sta si vede, con la spunta, e non
+        // si preme: metterci una copia di sé stesso non vuol dire niente.
+        if (document.cloudIdentifier.length
+                && [document.cloudService isEqualToString:service.identifier])
+            item.state = NSControlStateValueOn;
+    }
 }
 
 
@@ -219,19 +273,31 @@ NS_INLINE void treat()
 
 - (IBAction)saveToCloud:(id)sender
 {
-    MPCloudService *service = [self linkedService];
+    // Quale servizio: quello scelto nel sottomenu. Senza scelta — una
+    // scorciatoia, uno script — il primo collegato.
+    MPCloudService *service = nil;
+    if ([sender respondsToSelector:@selector(representedObject)]
+            && [[sender representedObject] isKindOfClass:[MPCloudService class]])
+        service = [sender representedObject];
+    if (!service)
+        service = [self linkedService];
+
     MPDocument *document = (MPDocument *)[[NSDocumentController
         sharedDocumentController] currentDocument];
     if (!service || !document)
         return;
 
     NSString *text = document.markdown ?: @"";
-    if (document.cloudIdentifier.length)
+    if (document.cloudIdentifier.length
+            && [document.cloudService isEqualToString:service.identifier])
     {
         // Viene già di là: ⌘S ci va da solo, e la voce non si offre.
         [document saveToCloudWithCompletion:nil];
         return;
     }
+    // Un documento che sta su un servizio e viene messo su un altro resta
+    // di casa dov'era: ⌘S continua ad andare lì, e di là c'è una copia.
+    BOOL hadAHome = document.cloudIdentifier.length > 0;
 
     NSString *name = document.displayName.length
         ? document.displayName : NSLocalizedString(@"untitled",
@@ -248,6 +314,8 @@ NS_INLINE void treat()
                 @"Failure saving a document to a service") text:problem];
             return;
         }
+        if (hadAHome)
+            return;
         document.cloudService = service.identifier;
         document.cloudIdentifier = made.identifier;
         document.cloudRevision = made.revision;
@@ -432,6 +500,12 @@ static const NSInteger kMPPlugInExportItemTag = 9003;
 
 - (void)menuNeedsUpdate:(NSMenu *)menu
 {
+    if ([menu.identifier isEqualToString:kMPCloudMenu])
+    {
+        [self rebuildCloudMenu:menu];
+        return;
+    }
+
     if (menu == [self submenuWithTag:kMPExportMenuTag])
     {
         [self rebuildExportMenu:menu];
@@ -704,10 +778,17 @@ static const NSInteger kMPPlugInExportItemTag = 9003;
     {
         MPDocument *document = (MPDocument *)[[NSDocumentController
             sharedDocumentController] currentDocument];
+        if (!document || ![self linkedService])
+            return NO;
         // Un documento che viene di là non ha bisogno di essere «messo»
-        // di là: ci va con ⌘S.
-        return [self linkedService] != nil && document != nil
-            && !document.cloudIdentifier.length;
+        // di là: ci va con ⌘S. Su un *altro* servizio, invece, sì.
+        MPCloudService *service = [item.representedObject
+            isKindOfClass:[MPCloudService class]] ? item.representedObject
+                                                  : nil;
+        if (!document.cloudIdentifier.length)
+            return YES;
+        return service != nil
+            && ![document.cloudService isEqualToString:service.identifier];
     }
     return YES;
 }

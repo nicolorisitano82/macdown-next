@@ -61,6 +61,15 @@ typedef NS_ENUM(NSUInteger, MPCloudPick) {
 /// vengono ricordate: `google`, `dropbox`.
 @property (readonly, copy, nonatomic) NSString *identifier;
 
+/// Se questo servizio ha bisogno di un client registrato da chi lo usa.
+/// iCloud Drive no: lì il permesso è il Finder, e il pannello non chiede
+/// niente da incollare.
+@property (readonly, nonatomic) BOOL needsAClient;
+
+/// Se i documenti che esistono già vanno passati uno per uno, come vuole
+/// l'ambito stretto di Drive, o se la cartella li porta con sé.
+@property (readonly, nonatomic) BOOL picksDocuments;
+
 /// Il simbolo con cui si mostra in un elenco, alla maniera del Finder.
 @property (readonly, copy, nonatomic) NSString *symbolName;
 

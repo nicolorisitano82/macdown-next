@@ -716,3 +716,13 @@
 "«%@» — %ld documents" = "«%@» — %ld documenti";
 "«%@» — nothing visible in there yet." = "«%@» — lì dentro non si vede ancora niente.";
 "Open" = "Apri";
+"A folder of your iCloud Drive, chosen in the usual panel. No account to register and nothing kept anywhere: the folder is already yours, and macOS carries it between your machines." = "Una cartella del tuo iCloud Drive, scelta nel pannello di sempre. Nessun account da registrare e niente da custodire: la cartella è già tua, e a portarla da un Mac all’altro ci pensa macOS.";
+"Change Folder…" = "Cambia cartella…";
+"Choose a folder of your iCloud Drive. What this application writes goes in there, and what is in there already comes across." = "Scegli una cartella del tuo iCloud Drive. Quello che questa applicazione scrive finisce lì, e quello che c’è già arriva qui.";
+"No connected service" = "Nessun servizio collegato";
+"Only the folder you choose, and everything in it: unlike the other services, documents that were already there come across too, because here the permission is the Finder." = "Solo la cartella che scegli, e tutto quello che contiene: a differenza degli altri servizi, i documenti che c’erano già arrivano anche loro, perché qui il permesso è il Finder.";
+"Put a Copy on" = "Metti una copia su";
+"That document is not there." = "Quel documento non c’è.";
+"That folder is not in iCloud Drive. Choose one inside it, or nothing written there would reach your other machines." = "Quella cartella non è dentro iCloud Drive. Scegline una lì dentro, altrimenti quello che ci scrivi non arriva sugli altri tuoi dispositivi.";
+"That folder is not there any more. Choose it again." = "Quella cartella non c’è più. Scegline una di nuovo.";
+"Use This Folder" = "Usa questa cartella";

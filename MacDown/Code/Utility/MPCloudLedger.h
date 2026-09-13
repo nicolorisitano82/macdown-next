@@ -57,6 +57,11 @@
 /// Quello che sa di un documento: `name`, `revision`, `path`, o nil.
 - (NSDictionary *)documentWithIdentifier:(NSString *)identifier;
 
+/// I documenti che conosce. Serve a chi il racconto deve farselo da sé —
+/// una cartella non ha un servizio che dica «questo è sparito», e la
+/// sparizione si vede solo confrontando con quello che si sapeva.
+- (NSArray<NSString *> *)knownIdentifiers;
+
 /** Prende quello che il servizio ha raccontato e lo mette a registro.
  *
  * Ogni voce è come la dà Drive: un `fileId`, un `file` con dentro nome e
