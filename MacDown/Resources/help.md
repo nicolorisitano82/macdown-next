@@ -330,9 +330,16 @@ Then, in **File**:
 
 A document opened from a service saves back to it with **⌘S** — no save
 panel, because where it came from is already known — and the edited dot
-clears the way it does for a file. If somebody wrote there while you were
-working, nothing of theirs is overwritten: what you had is written beside
-it, as a copy whose name says so.
+clears the way it does for a file.
+
+If somebody wrote there while you were working, **nothing is written at
+all** until you say what should happen. The save stops and asks, with four
+answers: **Compare…**, **Keep Both** — yours goes up beside theirs, as a
+copy whose name says so — **Keep Mine**, and **Keep Theirs**. Comparing
+opens the usual two columns, yours on the left and what is up there on the
+right, and at the bottom of that window the same three decisions are one
+button away: take single lines across first if you want to build the
+version you actually mean, then press **Keep Mine** to send it up.
 
 ## <a name="rendering-pane"></a>The Rendering Preference Pane
 This is where I keep preferences relating to how I render and style the parsed markdown in the preview window.  

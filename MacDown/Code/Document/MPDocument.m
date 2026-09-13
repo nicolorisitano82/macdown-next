@@ -5854,6 +5854,38 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
             [editor didChangeText];
             return YES;
         };
+
+        // E in fondo la domanda vera. Prendere riga per riga dal pannello
+        // serve a costruire la versione che si vuole; questi tre bottoni
+        // sono il momento in cui quella versione parte — o non parte, e
+        // vince la loro.
+        [panel offerChoices:@[
+            NSLocalizedString(@"Keep Mine",
+                @"Button in the comparison: write my version up there"),
+            NSLocalizedString(@"Keep Theirs",
+                @"Button in the comparison: take the remote version"),
+            NSLocalizedString(@"Keep Both",
+                @"Button in the comparison: write mine beside theirs")]
+                       note:NSLocalizedString(
+            @"On the left what you have, on the right what is up there now.",
+            @"What the two sides of a conflict are")
+                    handler:^(NSUInteger picked) {
+            MPDocument *document = weakSelf;
+            if (!document)
+                return;
+            switch (picked)
+            {
+                case 0:
+                    [document resolveBy:MPCloudOnMovedOverwrite];
+                    break;
+                case 1:
+                    [document takeTheirs];
+                    break;
+                default:
+                    [document resolveBy:MPCloudOnMovedCopy];
+                    break;
+            }
+        }];
     }];
 }
 

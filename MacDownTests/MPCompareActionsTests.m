@@ -29,6 +29,8 @@
 - (void)takeRightVersion:(id)sender;
 - (NSRange)sourceRangeOf:(NSUInteger)row onTheLeft:(BOOL)left;
 - (NSString *)sourceTextOf:(NSUInteger)row onTheLeft:(BOOL)left;
+- (NSStackView *)decisions;
+- (void)decided:(NSButton *)sender;
 @end
 
 
@@ -92,6 +94,19 @@
             return i;
     }
     return NSNotFound;
+}
+
+
+/// I bottoni della barra in fondo, nell'ordine in cui si vedono.
+- (NSArray<NSButton *> *)buttonsOfTheBar
+{
+    NSMutableArray<NSButton *> *found = [NSMutableArray array];
+    for (NSView *view in [self.panel decisions].views)
+    {
+        if ([view isKindOfClass:[NSButton class]])
+            [found addObject:(NSButton *)view];
+    }
+    return found;
 }
 
 
@@ -215,6 +230,84 @@
     NSMenu *menu = [alone menuForRow:0 onTheLeft:YES];
     XCTAssertEqual(menu.numberOfItems, 1);   // only «copy this difference»
     [alone close];
+}
+
+#pragma mark - La barra delle decisioni
+
+/// I bottoni della decisione compaiono soltanto se qualcuno li chiede: un
+/// confronto qualsiasi resta quello che era.
+- (void)testWithoutChoicesThereIsNoBar
+{
+    XCTAssertNil([self.panel decisions]);
+}
+
+
+- (void)testTheChoicesBecomeButtonsInOrder
+{
+    [self.panel offerChoices:@[@"Uno", @"Due", @"Tre"] note:@"nota"
+                     handler:^(NSUInteger picked) { }];
+    NSArray<NSButton *> *buttons = [self buttonsOfTheBar];
+    XCTAssertEqual(buttons.count, 3u);
+    XCTAssertEqualObjects(buttons[0].title, @"Uno");
+    XCTAssertEqualObjects(buttons[1].title, @"Due");
+    XCTAssertEqualObjects(buttons[2].title, @"Tre");
+    // L'ultimo è quello che ⏎ preme, come ovunque su macOS.
+    XCTAssertEqualObjects(buttons[2].keyEquivalent, @"\r");
+    XCTAssertEqualObjects(buttons[0].keyEquivalent, @"");
+}
+
+
+/// La nota c'è, e non è un bottone: dice cosa sono i due lati.
+- (void)testTheNoteIsShownBesideTheButtons
+{
+    [self.panel offerChoices:@[@"Uno"] note:@"a sinistra la tua"
+                     handler:^(NSUInteger picked) { }];
+    BOOL found = NO;
+    for (NSView *view in [self.panel decisions].views)
+    {
+        if ([view isKindOfClass:[NSTextField class]]
+                && [[(NSTextField *)view stringValue]
+                        isEqualToString:@"a sinistra la tua"])
+            found = YES;
+    }
+    XCTAssertTrue(found);
+}
+
+
+- (void)testPressingAChoiceAnswersWithItsPlaceAndClosesTheWindow
+{
+    __block NSInteger answered = -1;
+    [self.panel offerChoices:@[@"Uno", @"Due", @"Tre"] note:@"nota"
+                     handler:^(NSUInteger picked) {
+        answered = (NSInteger)picked;
+    }];
+    NSButton *second = [self buttonsOfTheBar][1];
+    [self.panel decided:second];
+    XCTAssertEqual(answered, 1);
+    XCTAssertFalse(self.panel.window.isVisible);
+}
+
+
+/// Due pressioni non fanno due decisioni: la seconda non trova più nulla.
+- (void)testTheAnswerIsGivenOnce
+{
+    __block NSUInteger times = 0;
+    [self.panel offerChoices:@[@"Uno", @"Due"] note:@"nota"
+                     handler:^(NSUInteger picked) { times++; }];
+    NSButton *first = [self buttonsOfTheBar][0];
+    [self.panel decided:first];
+    [self.panel decided:first];
+    XCTAssertEqual(times, 1u);
+}
+
+
+- (void)testAskingTwiceDoesNotPileUpTwoBars
+{
+    [self.panel offerChoices:@[@"Uno"] note:@"nota"
+                     handler:^(NSUInteger picked) { }];
+    [self.panel offerChoices:@[@"Due", @"Tre"] note:@"altra"
+                     handler:^(NSUInteger picked) { }];
+    XCTAssertEqual([self buttonsOfTheBar].count, 1u);
 }
 
 @end
