@@ -182,11 +182,12 @@ NS_INLINE void treat()
         return;
 
     [MPCloudOpenWindowController chooseFrom:service
-                                      chosen:^(MPCloudDocument *chosen) {
+                                      chosen:^(MPCloudService *from,
+                                               MPCloudDocument *chosen) {
         if (!chosen)
             return;
-        [service readDocument:chosen.identifier
-                   completion:^(NSString *text, NSString *problem) {
+        [from readDocument:chosen.identifier
+                completion:^(NSString *text, NSString *problem) {
             if (problem)
             {
                 [self sayAboutTheCloud:NSLocalizedString(
@@ -204,7 +205,7 @@ NS_INLINE void treat()
             fresh.markdown = text ?: @"";
             // Da dove viene: è quello che fa sì che risalvarlo finisca
             // **lì** invece di creare un secondo documento.
-            fresh.cloudService = service.identifier;
+            fresh.cloudService = from.identifier;
             fresh.cloudIdentifier = chosen.identifier;
             fresh.cloudRevision = chosen.revision;
             // Il nome che ha là fuori, così la finestra non dice «Senza

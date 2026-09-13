@@ -324,7 +324,10 @@ time, in the picker.
 
 Then, in **File**:
 
-* **Open from the Connected Service…** lists what is up there and opens one.
+* **Open from the Connected Service…** opens a window shaped like a Finder
+  window: the connected services down the left, and on the right the
+  documents with the date they were written and their size, sortable by
+  clicking a column, with a search field in the toolbar.
 * **Put a Copy on the Connected Service** sends a local document up, the
   first time.
 

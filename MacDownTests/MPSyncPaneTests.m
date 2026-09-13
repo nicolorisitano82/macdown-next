@@ -17,6 +17,20 @@ extern NSData *MPGoogleUploadBody(NSString *boundary,
                                   NSString *text);
 extern NSString *MPConflictNameFor(NSString *name, NSDate *when);
 #import "MPSyncPreferencesViewController.h"
+#import "MPCloudOpenWindowController.h"
+
+
+/// Quel tanto di privato che serve per guardare dentro le due finestre.
+@interface MPCloudOpenWindowController (Prove)
+- (instancetype)initWithService:(MPCloudService *)service chosen:(id)chosen;
+@property (strong, nonatomic) NSViewController *list;
+@property (strong, nonatomic) NSViewController *sidebar;
+@end
+
+@interface NSViewController (Prove)
+- (void)show:(NSArray *)documents note:(NSString *)note;
+- (void)setFilter:(NSString *)filter;
+@end
 
 
 @interface MPSyncPaneTests : XCTestCase
@@ -200,5 +214,156 @@ extern NSString *MPConflictNameFor(NSString *name, NSDate *when);
     XCTAssertTrue([name hasSuffix:@".md"]);
     XCTAssertFalse([name isEqualToString:@"verbale.md"]);
 }
+
+#pragma mark - La finestra dei documenti
+
+/// La prima tabella che si trova, scendendo: l'elenco o la barra laterale.
+static NSTableView *MPTableIn(NSView *view)
+{
+    if ([view isKindOfClass:[NSTableView class]])
+        return (NSTableView *)view;
+    for (NSView *child in view.subviews)
+    {
+        NSTableView *found = MPTableIn(child);
+        if (found)
+            return found;
+    }
+    return nil;
+}
+
+static NSArray<MPCloudDocument *> *MPSomeDocuments(void)
+{
+    NSArray *names = @[@"verbale.md", @"appunti.md", @"spesa.txt"];
+    NSMutableArray *documents = [NSMutableArray array];
+    for (NSUInteger i = 0; i < names.count; i++)
+    {
+        MPCloudDocument *one = [[MPCloudDocument alloc] init];
+        one.identifier = [NSString stringWithFormat:@"id%lu",
+                          (unsigned long)i];
+        one.name = names[i];
+        one.modified = [NSDate dateWithTimeIntervalSinceNow:-60.0 * (i + 1)];
+        one.size = (long long)(1000 * (i + 1));
+        [documents addObject:one];
+    }
+    return documents;
+}
+
+static MPCloudOpenWindowController *MPOpenWindow(void)
+{
+    MPCloudService *google = [MPCloudService services].firstObject;
+    MPCloudOpenWindowController *open = [[MPCloudOpenWindowController alloc]
+        initWithService:google chosen:nil];
+    [open.list show:MPSomeDocuments() note:nil];
+    return open;
+}
+
+
+/// I servizi collegati stanno a sinistra, sotto un'intestazione, anche
+/// quando è uno solo: è lì che si guarda per sapere dove si è.
+- (void)testTheSidebarNamesTheServicesUnderAHeader
+{
+    MPCloudOpenWindowController *open = MPOpenWindow();
+    NSTableView *side = MPTableIn(open.sidebar.view);
+    XCTAssertNotNil(side);
+    XCTAssertEqual(side.style, NSTableViewStyleSourceList);
+    // Una riga di intestazione più i servizi.
+    XCTAssertTrue(side.numberOfRows >= 2);
+    XCTAssertTrue([side.delegate tableView:side isGroupRow:0]);
+    XCTAssertFalse([side.delegate tableView:side shouldSelectRow:0]);
+    NSTableCellView *first = (NSTableCellView *)[side viewAtColumn:0 row:1
+                                                   makeIfNecessary:YES];
+    XCTAssertEqualObjects(first.textField.stringValue,
+                          [MPCloudService services].firstObject.name);
+    XCTAssertNotNil(first.imageView.image);
+    [open close];
+}
+
+
+/// Tre colonne come in una cartella: nome, quando, quanto — e si possono
+/// ordinare, che è la ragione per cui ci sono.
+- (void)testTheListHasTheThreeColumnsOfAFolder
+{
+    MPCloudOpenWindowController *open = MPOpenWindow();
+    NSTableView *list = MPTableIn(open.list.view);
+    XCTAssertEqual(list.tableColumns.count, 3u);
+    for (NSTableColumn *column in list.tableColumns)
+    {
+        XCTAssertNotNil(column.sortDescriptorPrototype);
+        XCTAssertTrue(column.title.length > 0);
+    }
+    XCTAssertEqual(list.numberOfRows, 3);
+    [open close];
+}
+
+
+- (void)testSortingChangesTheOrderAndSearchNarrowsTheList
+{
+    MPCloudOpenWindowController *open = MPOpenWindow();
+    NSTableView *list = MPTableIn(open.list.view);
+
+    NSString *(^nameOfRow)(NSInteger) = ^NSString *(NSInteger row) {
+        NSTableCellView *cell = (NSTableCellView *)[list viewAtColumn:0
+                                                                  row:row
+                                                      makeIfNecessary:YES];
+        return cell.textField.stringValue;
+    };
+    XCTAssertEqualObjects(nameOfRow(0), @"appunti.md");     // per nome
+
+    list.sortDescriptors = @[[NSSortDescriptor sortDescriptorWithKey:@"size"
+                                                           ascending:NO]];
+    XCTAssertEqualObjects(nameOfRow(0), @"spesa.txt");      // il più grosso
+
+    [open.list setFilter:@"verb"];
+    XCTAssertEqual(list.numberOfRows, 1);
+    XCTAssertEqualObjects(nameOfRow(0), @"verbale.md");
+
+    [open.list setFilter:@""];
+    XCTAssertEqual(list.numberOfRows, 3);
+    [open close];
+}
+
+
+#pragma mark - Il pannello, dopo la sfoltita
+
+/// Quello che si legge aprendo il pannello è poco: il resto sta dietro il
+/// «?», e questa prova è lì perché non ci torni da solo.
+- (void)testThePaneSaysLittleAndKeepsTheRestBehindTheHelpButton
+{
+    MPSyncPreferencesViewController *pane =
+        [[MPSyncPreferencesViewController alloc] init];
+    (void)pane.view;
+
+    __block NSUInteger words = 0;
+    __block BOOL help = NO;
+    void (^__block walk)(NSView *) = nil;
+    walk = ^(NSView *view) {
+        for (NSView *child in view.subviews)
+        {
+            if (child.hidden)
+                continue;
+            if ([child isKindOfClass:[NSButton class]]
+                    && [(NSButton *)child bezelStyle] == NSBezelStyleHelpButton)
+                help = YES;
+            if ([child isKindOfClass:[NSTextField class]]
+                    && ![child isKindOfClass:[NSSecureTextField class]])
+            {
+                NSString *said = [(NSTextField *)child stringValue];
+                words += [[said componentsSeparatedByCharactersInSet:
+                    [NSCharacterSet whitespaceAndNewlineCharacterSet]]
+                        filteredArrayUsingPredicate:[NSPredicate
+                            predicateWithFormat:@"length > 0"]].count;
+            }
+            walk(child);
+        }
+    };
+    walk(pane.view);
+
+    XCTAssertTrue(help, @"il «?» c'è");
+    // Prima erano cinque paragrafi: una novantina di parole solo di
+    // spiegazioni. Il tetto è largo — serve a fermare il ritorno del muro
+    // di testo, non a misurare lo stile.
+    XCTAssertLessThan(words, 40u);
+}
+
 
 @end

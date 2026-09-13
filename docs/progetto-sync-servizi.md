@@ -394,6 +394,12 @@ C'è quindi **Impostazioni ▸ Sincronizza**, e dice dove sta cosa:
 Il pannello non chiede mai una password: il consenso si dà **nel browser**,
 che è l'unico posto dove ha senso darlo, e torna su `127.0.0.1`.
 
+In vista ci sono tre cose — dove sei, un campo, un pulsante — e il resto
+(cos'è questo servizio, come ci si registra un client, cosa gli si sta
+chiedendo, perché il segreto è facoltativo) sta dietro il **«?»**: sono
+pagine che si leggono una volta e poi fanno da muro fra chi apre le
+impostazioni e il pulsante che gli serve.
+
 ## 5-bis. Le fasi
 
 | Fase | Cosa | Perché qui |

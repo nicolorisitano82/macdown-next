@@ -21,25 +21,25 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 @property (strong, nonatomic) NSSegmentedControl *picker;
 /// Cosa si è mosso all'ultima occhiata, detto a parole.
 @property (copy, nonatomic) NSString *movement;
-@property (strong, nonatomic) NSTextField *soon;
-@property (strong, nonatomic) NSTextField *explanation;
-@property (strong, nonatomic) NSTextField *howTitle;
-@property (strong, nonatomic) NSTextField *how;
-@property (strong, nonatomic) NSButton *console;
+/// La scheda con dentro tutto quello che riguarda il collegamento.
+@property (strong, nonatomic) NSBox *card;
+@property (strong, nonatomic) NSImageView *dot;
+@property (strong, nonatomic) NSTextField *stateLabel;
+@property (strong, nonatomic) NSButton *mainButton;
+@property (strong, nonatomic) NSPopUpButton *moreButton;
 @property (strong, nonatomic) NSTextField *clientTitle;
 @property (strong, nonatomic) NSTextField *clientField;
-@property (strong, nonatomic) NSTextField *secretTitle;
-@property (strong, nonatomic) NSSecureTextField *secretField;
-@property (strong, nonatomic) NSTextField *secretNote;
-@property (strong, nonatomic) NSTextField *stateLabel;
-@property (strong, nonatomic) NSButton *linkButton;
-@property (strong, nonatomic) NSButton *documentsButton;
-@property (strong, nonatomic) NSButton *unlinkButton;
-@property (strong, nonatomic) NSButton *checkButton;
-@property (strong, nonatomic) NSTextField *scopeNote;
+@property (strong, nonatomic) NSButton *helpButton;
 @property (strong, nonatomic) NSStackView *clientRow;
-@property (strong, nonatomic) NSStackView *secretRow;
 @property (strong, nonatomic) NSStackView *buttons;
+/// Quello che si legge solo se lo si chiede: il come e il perché, che
+/// sono la parte lunga e che nessuno rilegge dopo la prima volta.
+@property (strong, nonatomic) NSPopover *help;
+/// Il segreto, dietro il triangolino: facoltativo per un client desktop.
+@property (strong, nonatomic) NSButton *moreFields;
+@property (strong, nonatomic) NSStackView *secretTitleRow;
+@property (strong, nonatomic) NSStackView *secretRow;
+@property (strong, nonatomic) NSSecureTextField *secretField;
 
 @end
 
@@ -65,10 +65,19 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 }
 
 
+/** Poche cose, e quelle che servono sempre.
+ *
+ * Il pannello di prima diceva tutto quello che c'è da sapere, tutto in
+ * una volta: com'è fatto un client OAuth, perché il segreto è facoltativo,
+ * cosa si sta chiedendo al servizio. Roba vera, che però si legge una
+ * volta sola e poi resta lì a fare da muro fra chi apre le impostazioni e
+ * il pulsante che gli serve. Adesso sta dietro il «?», e in vista restano
+ * tre cose: dove sei, un campo, un pulsante.
+ */
 - (void)loadView
 {
     NSView *view = [[NSView alloc] initWithFrame:
-        NSMakeRect(0.0, 0.0, kMPPanelWidth, 460.0)];
+        NSMakeRect(0.0, 0.0, kMPPanelWidth, 280.0)];
 
     NSArray<MPCloudService *> *services = [MPCloudService services];
     self.picker = [NSSegmentedControl segmentedControlWithLabels:
@@ -81,91 +90,114 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
         [self.picker setEnabled:services[i].available forSegment:(NSInteger)i];
     self.picker.selectedSegment = 0;
 
-    self.soon = [self paragraph:@""];
-    self.soon.font = [NSFont systemFontOfSize:11.0];
-    self.explanation = [self paragraph:@""];
-    self.howTitle = [self label:NSLocalizedString(
-        @"How to get one", @"Title above the steps to register an app")];
-    self.how = [self paragraph:@""];
-    self.console = [NSButton buttonWithTitle:@""
-        target:self action:@selector(openConsole:)];
+    // Il pallino dice lo stato prima delle parole: verde collegato,
+    // arancione qualcosa da sistemare, grigio non ancora.
+    self.dot = [[NSImageView alloc] init];
+    self.dot.image = [NSImage imageWithSystemSymbolName:@"circle.fill"
+                             accessibilityDescription:nil];
+    self.dot.symbolConfiguration = [NSImageSymbolConfiguration
+        configurationWithPointSize:9.0 weight:NSFontWeightRegular];
+    [self.dot.widthAnchor constraintEqualToConstant:12.0].active = YES;
 
-    self.clientTitle = [self label:NSLocalizedString(
-        @"Client ID:", @"Field for the client identifier")];
-    self.clientField = [NSTextField textFieldWithString:@""];
-    self.clientField.delegate = self;
-    [self.clientField.widthAnchor constraintEqualToConstant:330.0].active = YES;
-
-    self.secretTitle = [self label:NSLocalizedString(
-        @"Client secret:", @"Field for the client secret")];
-    self.secretField = [[NSSecureTextField alloc] init];
-    self.secretField.placeholderString = NSLocalizedString(
-        @"optional", @"Placeholder: the client secret is not required");
-    self.secretField.delegate = self;
-    [self.secretField.widthAnchor constraintEqualToConstant:330.0].active = YES;
-
-    self.secretNote = [self paragraph:NSLocalizedString(
-        @"A desktop client's secret is not really a secret — it would live "
-        @"inside the application anyway — so the permission is protected by "
-        @"PKCE instead. Paste it only if your client refuses without it. It "
-        @"is kept in the keychain, like the tokens; neither ever reaches a "
-        @"preferences file or the log.",
-        @"Why the client secret is optional")];
-
-    self.stateLabel = [self paragraph:@""];
+    // La larghezza della scheda meno i suoi margini, meno il pallino.
+    self.stateLabel = [self paragraph:@""
+        width:kMPPanelWidth - kMPPanelPadding * 2.0 - 28.0 - 20.0];
     self.stateLabel.textColor = [NSColor labelColor];
     // Perché un indirizzo dentro un messaggio del servizio si possa
     // premere invece che ricopiare a mano.
     self.stateLabel.allowsEditingTextAttributes = YES;
     self.stateLabel.selectable = YES;
-    // Due gesti, due pulsanti: B0 ha misurato che una cartella non porta
-    // con sé quello che contiene, quindi prometterli insieme sarebbe una
-    // bugia con un bottone sopra.
-    self.linkButton = [NSButton buttonWithTitle:NSLocalizedString(
-        @"Choose a folder…", @"Picks the folder the application writes into")
-        target:self action:@selector(linkFolder:)];
-    self.documentsButton = [NSButton buttonWithTitle:NSLocalizedString(
-        @"Choose documents…", @"Picks the documents to bring in")
-        target:self action:@selector(linkDocuments:)];
-    self.unlinkButton = [NSButton buttonWithTitle:NSLocalizedString(
-        @"Disconnect", @"Forgets the tokens of a service")
-        target:self action:@selector(unlink:)];
-    self.checkButton = [NSButton buttonWithTitle:NSLocalizedString(
-        @"Check", @"Asks the service what it can see, again")
-        target:self action:@selector(check:)];
-    self.scopeNote = [self paragraph:@""];
+
+    self.mainButton = [NSButton buttonWithTitle:@"" target:self
+                                         action:@selector(mainAction:)];
+    self.mainButton.controlSize = NSControlSizeRegular;
+    self.moreButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect
+                                                 pullsDown:YES];
+    [self.moreButton.widthAnchor constraintEqualToConstant:44.0].active = YES;
+
+    NSStackView *state = [NSStackView stackViewWithViews:
+        @[self.dot, self.stateLabel]];
+    state.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    state.alignment = NSLayoutAttributeFirstBaseline;
+    state.spacing = 8.0;
+
+    self.buttons = [[NSStackView alloc] initWithFrame:NSZeroRect];
+    self.buttons.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    self.buttons.spacing = 8.0;
+    [self.buttons addView:self.mainButton inGravity:NSStackViewGravityLeading];
+    [self.buttons addView:self.moreButton inGravity:NSStackViewGravityLeading];
+
+    NSStackView *inside = [NSStackView stackViewWithViews:
+        @[state, self.buttons]];
+    inside.orientation = NSUserInterfaceLayoutOrientationVertical;
+    inside.alignment = NSLayoutAttributeLeading;
+    inside.spacing = 12.0;
+    inside.edgeInsets = NSEdgeInsetsMake(14.0, 14.0, 14.0, 14.0);
+
+    self.card = [[NSBox alloc] initWithFrame:NSZeroRect];
+    self.card.boxType = NSBoxCustom;
+    self.card.borderWidth = 0.0;
+    self.card.cornerRadius = 8.0;
+    self.card.fillColor = [NSColor controlBackgroundColor];
+    self.card.contentView = inside;
+    self.card.contentViewMargins = NSZeroSize;
+    self.card.titlePosition = NSNoTitle;
+
+    self.clientTitle = [self label:NSLocalizedString(
+        @"Client ID", @"Field for the client identifier")];
+    self.clientField = [NSTextField textFieldWithString:@""];
+    self.clientField.delegate = self;
+    [self.clientField.widthAnchor constraintEqualToConstant:320.0].active = YES;
+    self.helpButton = [NSButton buttonWithTitle:@"" target:self
+                                         action:@selector(showHelp:)];
+    self.helpButton.bezelStyle = NSBezelStyleHelpButton;
+    self.helpButton.title = @"";
 
     self.clientRow = [NSStackView stackViewWithViews:
-        @[self.clientTitle, self.clientField]];
+        @[self.clientTitle, self.clientField, self.helpButton]];
     self.clientRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
     self.clientRow.spacing = 8.0;
 
-    self.secretRow = [NSStackView stackViewWithViews:
-        @[self.secretTitle, self.secretField]];
-    self.secretRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
-    self.secretRow.spacing = 8.0;
+    // Il triangolino di AppKit mostra solo sé stesso: la scritta gli va
+    // messa accanto, e si preme anche quella — che è come si comporta
+    // ovunque nel sistema.
+    self.moreFields = [NSButton buttonWithTitle:@"" target:self
+                                         action:@selector(toggleSecret:)];
+    self.moreFields.bezelStyle = NSBezelStyleDisclosure;
+    self.moreFields.buttonType = NSButtonTypePushOnPushOff;
+    self.moreFields.title = @"";
+    NSTextField *secretTitle = [self label:NSLocalizedString(
+        @"Client secret (optional)",
+        @"Disclosure that shows the client secret field")];
+    secretTitle.textColor = [NSColor secondaryLabelColor];
+    [secretTitle addGestureRecognizer:[[NSClickGestureRecognizer alloc]
+        initWithTarget:self action:@selector(clickTheDisclosure:)]];
+    self.secretTitleRow = [NSStackView stackViewWithViews:
+        @[self.moreFields, secretTitle]];
+    self.secretTitleRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    self.secretTitleRow.spacing = 4.0;
 
-    self.buttons = [NSStackView stackViewWithViews:
-        @[self.linkButton, self.documentsButton, self.checkButton,
-          self.unlinkButton]];
-    self.buttons.orientation = NSUserInterfaceLayoutOrientationHorizontal;
-    self.buttons.spacing = 10.0;
+    self.secretField = [[NSSecureTextField alloc] init];
+    self.secretField.placeholderString = NSLocalizedString(
+        @"kept in the keychain",
+        @"Placeholder of the client secret field");
+    self.secretField.delegate = self;
+    [self.secretField.widthAnchor constraintEqualToConstant:320.0].active = YES;
+    self.secretRow = [NSStackView stackViewWithViews:@[self.secretField]];
+    self.secretRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    self.secretRow.edgeInsets = NSEdgeInsetsMake(0.0, 18.0, 0.0, 0.0);
+    self.secretRow.hidden = YES;
 
     NSStackView *column = [NSStackView stackViewWithViews:
-        @[self.picker, self.soon, self.explanation, self.howTitle, self.how, self.console,
-          self.clientRow, self.secretRow, self.secretNote, self.stateLabel,
-          self.buttons, self.scopeNote]];
+        @[self.picker, self.card, self.clientRow, self.secretTitleRow,
+          self.secretRow]];
     column.orientation = NSUserInterfaceLayoutOrientationVertical;
     column.alignment = NSLayoutAttributeLeading;
-    column.spacing = 12.0;
+    column.spacing = 14.0;
     column.translatesAutoresizingMaskIntoConstraints = NO;
-    [column setCustomSpacing:6.0 afterView:self.picker];
-    [column setCustomSpacing:18.0 afterView:self.soon];
-    [column setCustomSpacing:4.0 afterView:self.howTitle];
-    [column setCustomSpacing:18.0 afterView:self.console];
-    [column setCustomSpacing:4.0 afterView:self.secretRow];
-    [column setCustomSpacing:18.0 afterView:self.secretNote];
-    [column setCustomSpacing:6.0 afterView:self.stateLabel];
+    [column setCustomSpacing:18.0 afterView:self.card];
+    [column setCustomSpacing:8.0 afterView:self.clientRow];
+    [column setCustomSpacing:6.0 afterView:self.secretTitleRow];
 
     [view addSubview:column];
     [NSLayoutConstraint activateConstraints:@[
@@ -177,6 +209,8 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
                                          constant:kMPPanelPadding],
         [column.bottomAnchor constraintLessThanOrEqualToAnchor:view.bottomAnchor
                                                      constant:-kMPPanelPadding],
+        [self.card.leadingAnchor constraintEqualToAnchor:column.leadingAnchor],
+        [self.card.trailingAnchor constraintEqualToAnchor:column.trailingAnchor],
     ]];
     self.view = view;
     [self showService];
@@ -198,35 +232,25 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 {
     MPCloudService *service = [self chosen];
 
-    // Quello che c'è ma non si può ancora premere lo dice qui, una riga:
-    // una scheda grigia senza spiegazione è una domanda lasciata aperta.
-    NSMutableArray<NSString *> *waiting = [NSMutableArray array];
-    for (MPCloudService *other in [MPCloudService services])
-    {
-        if (!other.available)
-            [waiting addObject:[NSString stringWithFormat:@"%@ — %@",
-                                other.name, other.explanation]];
-    }
-    self.soon.stringValue = [waiting componentsJoinedByString:@"\n"];
-    self.soon.hidden = !waiting.count;
-
-    self.explanation.stringValue = service.explanation;
-    self.how.stringValue = service.howToGetAClient;
-    self.scopeNote.stringValue = service.scopeExplanation;
     self.clientField.placeholderString = service.clientPlaceholder;
     self.clientField.stringValue = service.clientIdentifier;
     self.secretField.stringValue = service.clientSecret;
-    self.console.title = service.consoleButtonTitle;
 
     // Un segnaposto mostra il perché e niente su cui mettere le mani.
     BOOL ready = service.available;
-    for (NSView *row in @[self.howTitle, self.how, self.console, self.clientRow,
-                          self.secretRow, self.secretNote, self.stateLabel,
-                          self.buttons, self.scopeNote])
+    for (NSView *row in @[self.clientRow, self.secretTitleRow,
+                          self.secretRow])
         row.hidden = !ready;
+    self.secretRow.hidden = !ready || self.moreFields.state != NSControlStateValueOn;
+    self.buttons.hidden = !ready;
 
     if (ready)
         [self showState];
+    else
+    {
+        [self dotColour:[NSColor tertiaryLabelColor]];
+        [self say:service.explanation];
+    }
 }
 
 
@@ -234,76 +258,116 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 - (void)showState
 {
     MPCloudService *service = [self chosen];
-    self.linkButton.enabled = service.isConfigured;
-    self.documentsButton.enabled = service.isConfigured;
 
     if (!service.isConfigured)
     {
-        [self say:NSLocalizedString(@"No client ID yet.",
+        [self dotColour:[NSColor tertiaryLabelColor]];
+        [self offer:NSLocalizedString(@"Connect…",
+            @"Button that starts the permission") enabled:NO];
+        [self say:NSLocalizedString(@"Paste your client ID to begin.",
             @"State: the pane has no client identifier")];
-        self.unlinkButton.enabled = NO;
         return;
     }
-    self.unlinkButton.enabled = service.isLinked;
-    self.checkButton.enabled = service.isLinked;
 
     // Il guaio, con le parole del servizio: «la Drive API non è attiva in
     // questo progetto» è una frase che si risolve in un clic, e nasconderla
     // lascerebbe un'applicazione collegata che non vede niente.
     if (service.isLinked && service.problem.length)
     {
+        [self dotColour:[NSColor systemOrangeColor]];
+        [self offer:NSLocalizedString(@"Try Again",
+            @"Button that asks the service once more") enabled:YES];
         [self say:service.problem];
         return;
     }
     if (!service.isLinked)
     {
-        [self say:NSLocalizedString(@"Not connected.",
-                                   @"State: no permission yet")];
+        [self dotColour:[NSColor tertiaryLabelColor]];
+        [self offer:NSLocalizedString(@"Connect…",
+            @"Button that starts the permission") enabled:YES];
+        [self say:NSLocalizedString(@"Not connected yet.",
+                                    @"State: no permission yet")];
         return;
     }
+
+    [self dotColour:[NSColor systemGreenColor]];
+    [self offer:NSLocalizedString(@"Add Documents…",
+        @"Button that hands single documents over") enabled:YES];
+
     NSString *place = service.placeName.length ? service.placeName : nil;
     if (!place)
     {
         [self say:NSLocalizedString(@"Connected.",
-                                   @"State: connected to a service")];
+                                    @"State: connected to a service")];
         return;
     }
 
-    // Quello che si vede là dentro è la domanda che decide tutto il resto,
-    // e la risposta si è avuta collegandosi: vale la pena dirla, e dire
-    // cosa fare quando è «niente».
     NSInteger visible = service.visibleInPlace;
     if (visible > 0)
     {
         NSString *line = [NSString stringWithFormat:
-            NSLocalizedString(@"Connected, on «%@» — %ld documents in there.",
+            NSLocalizedString(@"«%@» — %ld documents",
                 @"State: connected, the chosen folder and what is visible"),
             place, (long)visible];
         if (self.movement.length)
-            line = [line stringByAppendingFormat:@" %@", self.movement];
+            line = [line stringByAppendingFormat:@" · %@", self.movement];
         [self say:line];
     }
     else if (visible == 0)
     {
         // Zero vuol dire due cose diverse e non sappiamo quale: una
         // cartella vuota e una cartella i cui documenti non sono compresi
-        // nel permesso rispondono uguale. Dirne una sola sarebbe
-        // inventare, quindi si dicono tutte e due e si dice come saperlo.
-        [self say:[NSString stringWithFormat:
-            NSLocalizedString(
-                @"Connected, on «%@», and nothing is visible inside it — "
-                @"which means either that it is empty, or that documents "
-                @"already in there are not covered by the permission. To "
-                @"find out: put a file in it from Drive and press Check.",
-                @"State: the folder came across, and it looks empty"),
-            place]];
+        // nel permesso rispondono uguale. Il pannello lo dice corto, e il
+        // «?» tiene il resto.
+        [self dotColour:[NSColor systemOrangeColor]];
+        [self say:[NSString stringWithFormat:NSLocalizedString(
+            @"«%@» — nothing visible in there yet.",
+            @"State: the folder came across, and it looks empty"), place]];
     }
     else
     {
         [self say:[NSString stringWithFormat:
-            NSLocalizedString(@"Connected, on «%@».",
+            NSLocalizedString(@"«%@»",
                 @"State: connected, and what the connection covers"), place]];
     }
+}
+
+
+/// Il pulsante grande, e quello che c'è dietro i puntini.
+- (void)offer:(NSString *)title enabled:(BOOL)enabled
+{
+    MPCloudService *service = [self chosen];
+    self.mainButton.title = title;
+    self.mainButton.enabled = enabled;
+
+    [self.moreButton removeAllItems];
+    // La prima voce di un menu a tendina è il suo titolo e non si sceglie:
+    // qui sono i tre puntini.
+    [self.moreButton addItemWithTitle:@"⋯"];
+    NSMutableArray<NSString *> *rest = [NSMutableArray array];
+    if (service.isConfigured)
+        [rest addObject:NSLocalizedString(@"Choose Folder…",
+            @"Menu item: pick the folder to write into")];
+    if (service.isLinked)
+    {
+        [rest addObject:NSLocalizedString(@"Refresh",
+            @"Menu item: ask the service what it sees, again")];
+        [rest addObject:NSLocalizedString(@"Disconnect",
+            @"Menu item: forget the tokens of a service")];
+    }
+    for (NSString *entry in rest)
+    {
+        NSMenuItem *item = [self.moreButton.menu addItemWithTitle:entry
+            action:@selector(moreAction:) keyEquivalent:@""];
+        item.target = self;
+    }
+    self.moreButton.enabled = rest.count > 0;
+}
+
+
+- (void)dotColour:(NSColor *)colour
+{
+    self.dot.contentTintColor = colour;
 }
 
 
@@ -334,6 +398,98 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 }
 
 
+/** Il pulsante grande fa la cosa che serve adesso.
+ *
+ * Non collegato: si collega, scegliendo la cartella — che è il primo
+ * gesto, sempre. Collegato: si aggiungono documenti, che è l'unico gesto
+ * che si ripete. Con un guaio in corso: si richiede.
+ */
+- (void)mainAction:(id)sender
+{
+    MPCloudService *service = [self chosen];
+    if (service.isLinked && service.problem.length)
+        [self check:nil];
+    else if (service.isLinked)
+        [self link:MPCloudPickDocuments];
+    else
+        [self link:MPCloudPickFolder];
+}
+
+
+/// Quello che si usa di rado sta dietro i puntini, per titolo.
+- (void)moreAction:(NSMenuItem *)item
+{
+    NSString *title = item.title;
+    if ([title isEqualToString:NSLocalizedString(@"Choose Folder…",
+            @"Menu item: pick the folder to write into")])
+        [self link:MPCloudPickFolder];
+    else if ([title isEqualToString:NSLocalizedString(@"Refresh",
+            @"Menu item: ask the service what it sees, again")])
+        [self check:nil];
+    else if ([title isEqualToString:NSLocalizedString(@"Disconnect",
+            @"Menu item: forget the tokens of a service")])
+        [self unlink:nil];
+}
+
+
+- (void)toggleSecret:(id)sender
+{
+    self.secretRow.hidden = self.moreFields.state != NSControlStateValueOn;
+}
+
+
+/// Premere la scritta è premere il triangolino.
+- (void)clickTheDisclosure:(id)sender
+{
+    self.moreFields.state = self.moreFields.state == NSControlStateValueOn
+        ? NSControlStateValueOff : NSControlStateValueOn;
+    [self toggleSecret:sender];
+}
+
+
+/** Il perché, dietro un «?».
+ *
+ * Sono le tre cose che prima stavano sempre in vista: cos'è questo
+ * servizio, come ci si registra un client, e cosa gli si sta chiedendo.
+ * Vanno lette una volta e poi mai più, quindi stanno dove si va a
+ * cercarle invece che dove si inciampa.
+ */
+- (void)showHelp:(id)sender
+{
+    MPCloudService *service = [self chosen];
+
+    CGFloat wide = 320.0;
+    NSTextField *what = [self paragraph:service.explanation width:wide];
+    NSTextField *how = [self paragraph:service.howToGetAClient width:wide];
+    NSTextField *scope = [self paragraph:service.scopeExplanation width:wide];
+    NSTextField *secret = [self paragraph:NSLocalizedString(
+        @"The secret of a desktop client is not really a secret — PKCE "
+        @"protects the permission instead. Paste it only if your client "
+        @"refuses without it. It lives in the keychain, like the tokens.",
+        @"Why the client secret is optional") width:wide];
+
+    NSButton *console = [NSButton buttonWithTitle:service.consoleButtonTitle
+        target:self action:@selector(openConsole:)];
+
+    NSStackView *column = [NSStackView stackViewWithViews:
+        @[what, how, console, scope, secret]];
+    column.orientation = NSUserInterfaceLayoutOrientationVertical;
+    column.alignment = NSLayoutAttributeLeading;
+    column.spacing = 10.0;
+    column.edgeInsets = NSEdgeInsetsMake(16.0, 16.0, 16.0, 16.0);
+
+    NSViewController *inside = [[NSViewController alloc] init];
+    inside.view = column;
+
+    self.help = [[NSPopover alloc] init];
+    self.help.behavior = NSPopoverBehaviorTransient;
+    self.help.contentViewController = inside;
+    [self.help showRelativeToRect:self.helpButton.bounds
+                           ofView:self.helpButton
+                    preferredEdge:NSMaxXEdge];
+}
+
+
 - (void)linkFolder:(id)sender
 {
     [self link:MPCloudPickFolder];
@@ -348,8 +504,8 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 
 - (void)link:(MPCloudPick)what
 {
-    self.linkButton.enabled = NO;
-    self.documentsButton.enabled = NO;
+    self.mainButton.enabled = NO;
+    self.moreButton.enabled = NO;
     [self say:NSLocalizedString(@"Waiting for the browser…",
         @"State while the consent screen is open")];
 
@@ -380,7 +536,7 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 
 - (void)check:(id)sender
 {
-    self.checkButton.enabled = NO;
+    self.moreButton.enabled = NO;
     self.movement = nil;
     [self say:NSLocalizedString(@"Asking…",
         @"State while the service is being asked what it sees")];
@@ -483,12 +639,19 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 
 - (NSTextField *)paragraph:(NSString *)string
 {
+    return [self paragraph:string
+                     width:kMPPanelWidth - kMPPanelPadding * 2.0];
+}
+
+/// Un paragrafo che va a capo dentro una larghezza data: dentro una
+/// scheda non c'è tutta la finestra, e un testo che non lo sa esce fuori.
+- (NSTextField *)paragraph:(NSString *)string width:(CGFloat)width
+{
     NSTextField *label = [self label:string];
     label.lineBreakMode = NSLineBreakByWordWrapping;
     label.maximumNumberOfLines = 0;
     label.textColor = [NSColor secondaryLabelColor];
-    [label.widthAnchor constraintEqualToConstant:
-        kMPPanelWidth - kMPPanelPadding * 2.0].active = YES;
+    [label.widthAnchor constraintEqualToConstant:width].active = YES;
     return label;
 }
 

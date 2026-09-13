@@ -189,6 +189,25 @@ static NSDictionary *MPAcceptCallback(int listener)
 @end
 
 
+/// La data come la scrive Drive — RFC 3339, con i millesimi — letta una
+/// volta sola: un formattatore costruito per ogni riga di un elenco è il
+/// modo classico di rendere lento qualcosa che non lo è.
+NSDate *MPDateFromDrive(NSString *written)
+{
+    if (!written.length)
+        return nil;
+    static NSISO8601DateFormatter *reader = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        reader = [[NSISO8601DateFormatter alloc] init];
+        reader.formatOptions = NSISO8601DateFormatWithInternetDateTime
+                             | NSISO8601DateFormatWithFractionalSeconds;
+    });
+    return [reader dateFromString:written]
+        ?: [[[NSISO8601DateFormatter alloc] init] dateFromString:written];
+}
+
+
 @implementation MPCloudDocument
 @end
 
@@ -211,6 +230,7 @@ static NSDictionary *MPAcceptCallback(int listener)
 
 - (NSString *)name { return @""; }
 - (NSString *)identifier { return @""; }
+- (NSString *)symbolName { return @"externaldrive.connected.to.line.below"; }
 /// Se il pannello lo lascia toccare. Un servizio che non c'è ancora si
 /// mostra lo stesso: nasconderlo vorrebbe dire far cercare alla gente una
 /// cosa che è in programma.
@@ -837,6 +857,7 @@ static NSDictionary *MPGet(NSString *address, NSString *token)
 
 - (NSString *)name { return @"Dropbox"; }
 - (NSString *)identifier { return @"dropbox"; }
+- (NSString *)symbolName { return @"shippingbox"; }
 - (BOOL)available { return NO; }
 
 - (NSString *)consoleButtonTitle
@@ -894,7 +915,8 @@ static NSDictionary *MPGet(NSString *address, NSString *token)
                 [NSURL URLWithString:
                     @"https://www.googleapis.com/drive/v3/files"
                     @"?q=trashed%20%3D%20false"
-                    @"&fields=files(id,name,mimeType,headRevisionId)"
+                    @"&fields=files(id,name,mimeType,headRevisionId,"
+                    @"modifiedTime,size)"
                     @"&pageSize=200"]];
             NSDictionary *answer = MPSend(request, token, NULL);
             if (answer[@"error"])
@@ -908,6 +930,8 @@ static NSDictionary *MPGet(NSString *address, NSString *token)
                 document.identifier = file[@"id"];
                 document.name = file[@"name"];
                 document.revision = file[@"headRevisionId"];
+                document.modified = MPDateFromDrive(file[@"modifiedTime"]);
+                document.size = [file[@"size"] longLongValue];
                 [found addObject:document];
             }
         }

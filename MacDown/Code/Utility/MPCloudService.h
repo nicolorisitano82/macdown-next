@@ -61,6 +61,9 @@ typedef NS_ENUM(NSUInteger, MPCloudPick) {
 /// vengono ricordate: `google`, `dropbox`.
 @property (readonly, copy, nonatomic) NSString *identifier;
 
+/// Il simbolo con cui si mostra in un elenco, alla maniera del Finder.
+@property (readonly, copy, nonatomic) NSString *symbolName;
+
 /// Se si può usare davvero, o è solo annunciato. Un servizio che non c'è
 /// ancora si mostra lo stesso, spento: nasconderlo vorrebbe dire far
 /// cercare alla gente una cosa che è in programma.
@@ -164,6 +167,11 @@ typedef NS_ENUM(NSUInteger, MPCloudPick) {
 @interface MPCloudDocument : NSObject
 @property (copy, nonatomic) NSString *identifier;
 @property (copy, nonatomic) NSString *name;
+/// Quando è stato scritto l'ultima volta, e quanto pesa: non servono per
+/// aprirlo, servono per riconoscerlo in un elenco — che è la differenza
+/// fra una lista di nomi e una finestra in cui si sceglie.
+@property (strong, nonatomic) NSDate *modified;
+@property (nonatomic) long long size;
 /// La versione che il servizio dice essere l'ultima. Quello che rende
 /// possibile accorgersi che qualcun altro ha scritto nel frattempo.
 @property (copy, nonatomic) NSString *revision;
