@@ -49,6 +49,16 @@ mkdir -p "$DEST"
 rm -rf "$DEST/$NAME"
 cp -R "$APP" "$DEST/"
 
+# A run of `xcodebuild test` leaves the XCTest bundle inside the
+# application, because that is where a test host wants it. It is not part
+# of what anybody downloads, and a release once carried it: the copy in
+# dist/ goes without it.
+for TESTS in "$DEST/$NAME"/Contents/PlugIns/*.xctest; do
+    [ -e "$TESTS" ] || continue
+    echo "note: tolto $(basename "$TESTS") dalla copia"
+    rm -rf "$TESTS"
+done
+
 # The plug-ins built alongside go too: one is installed through the plug-in
 # manager, which asks for a .plugin to point at.
 for PLUGIN in "$PRODUCTS"/*.plugin; do
