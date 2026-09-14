@@ -357,6 +357,27 @@ right, and at the bottom of that window the same three decisions are one
 button away: take single lines across first if you want to build the
 version you actually mean, then press **Keep Mine** to send it up.
 
+## The document as an email
+
+**File ▸ Open as Email ▸** lists the mail programs this Mac knows about —
+whatever handles `mailto:`, with the one the system would pick itself at the
+top — plus Gmail and Outlook on the web. The message carries what the
+preview shows: the styles, the diagrams and formulas as pictures, and every
+local picture *inside* the message rather than as a link to a file on your
+disk, which would be an empty box for everyone you send it to.
+
+There are two roads, and the difference is not ours to hide:
+
+* **Mail** gets the finished message. A script hands it the HTML and a new
+  message opens with it already in place. The first time, macOS asks
+  whether this application may control Mail; without that permission
+  nothing happens, and the alert says what Mail answered.
+* **Everything else** — every other program, and webmail — only accepts a
+  subject from outside: `mailto:` is plain text by construction. So the
+  formatted message goes on the **clipboard**, the new-message window
+  opens, and ⌘V puts it in. You are told once, with a checkbox to not be
+  told again.
+
 ## <a name="rendering-pane"></a>The Rendering Preference Pane
 This is where I keep preferences relating to how I render and style the parsed markdown in the preview window.  
 ### CSS

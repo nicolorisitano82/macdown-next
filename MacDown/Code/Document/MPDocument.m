@@ -40,6 +40,7 @@
 #import "MPMathEditorController.h"
 #import "MPSidebarController.h"
 #import "MPEpubExport.h"
+#import "MPMailer.h"
 #import "MPDocxPostProcessing.h"
 #import "MPRemoteImageFetch.h"
 #import "MPModelStore.h"
@@ -3470,6 +3471,92 @@ NS_INLINE NSString *MPImageTagForSVG(NSString *svg, CGFloat scale)
                    error:NULL];
     }];
 }
+
+/** Il documento come email, nel programma di posta che si sceglie.
+ *
+ * L'HTML è quello dell'esportazione, con gli stili dentro e le immagini
+ * portate dentro: un'email che rimanda a un file sul disco di chi l'ha
+ * scritta è un'email piena di riquadri vuoti per chi la riceve. I
+ * diagrammi e le formule diventano immagini per la stessa ragione per cui
+ * lo diventano in Word — nessun programma di posta esegue script.
+ */
+- (IBAction)openAsEmail:(id)sender
+{
+    MPMailClient *client = nil;
+    if ([sender respondsToSelector:@selector(representedObject)]
+            && [[sender representedObject] isKindOfClass:[MPMailClient class]])
+        client = [sender representedObject];
+    if (!client)
+        client = [MPMailer clients].firstObject;
+
+    NSString *html = [self.renderer HTMLForExportWithStyles:YES
+                                               highlighting:YES];
+    if (self.preferences.htmlWikiLinks)
+        html = [self htmlByResolvingWikiLinksIn:html];
+    html = [self htmlByInliningDiagramsIn:html asImages:YES];
+    html = [self htmlByInliningFormulasIn:html asImages:YES];
+
+    __weak MPDocument *weakSelf = self;
+    [self html:html withRemoteImagesFetched:^(NSString *ready,
+                                              NSArray<NSString *> *unreachable) {
+        [weakSelf sendAsEmail:ready to:client];
+    }];
+}
+
+
+- (void)sendAsEmail:(NSString *)html to:(MPMailClient *)client
+{
+    NSString *sealed = MPHTMLWithLocalImagesInlined(html, self.fileURL);
+    NSString *subject = self.presumedFileName.length
+        ? self.presumedFileName : NSLocalizedString(@"untitled",
+            @"Name for a document that has never been saved");
+
+    BOOL pasting = NO;
+    NSString *problem = nil;
+    BOOL went = [MPMailer open:client subject:subject html:sealed
+                         plain:[MPMailer plainTextFrom:sealed]
+                  wantsPasting:&pasting problem:&problem];
+    if (!went)
+    {
+        NSAlert *alert = [[NSAlert alloc] init];
+        alert.messageText = NSLocalizedString(
+            @"That mail program could not be opened",
+            @"Failure opening a document as an email");
+        alert.informativeText = problem ?: @"";
+        [alert runModal];
+        return;
+    }
+    if (pasting)
+        [self sayTheEmailIsOnThePasteboard:client];
+}
+
+
+/** Solo Mail riceve un messaggio già formattato.
+ *
+ * Per tutti gli altri `mailto:` porta l'oggetto e nient'altro — è testo
+ * semplice per costruzione — quindi l'email formattata sta negli appunti e
+ * va incollata. Dirlo è l'unica cosa onesta; ripeterlo ogni volta a chi lo
+ * ha capito, no: c'è la spunta per non risentirlo.
+ */
+- (void)sayTheEmailIsOnThePasteboard:(MPMailClient *)client
+{
+    NSString *key = @"emailPasteNoticeSeen";
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:key])
+        return;
+
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = NSLocalizedString(@"The email is on the clipboard",
+        @"Title of the notice about pasting the message");
+    alert.informativeText = [NSString stringWithFormat:NSLocalizedString(
+        @"%@ only accepts a subject from outside, so the formatted message "
+        @"is on the clipboard: press ⌘V in the new message.",
+        @"Why the message has to be pasted"), client.name];
+    alert.showsSuppressionButton = YES;
+    [alert runModal];
+    if (alert.suppressionButton.state == NSControlStateValueOn)
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:key];
+}
+
 
 - (IBAction)exportEpub:(id)sender
 {

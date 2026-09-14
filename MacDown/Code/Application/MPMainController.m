@@ -23,6 +23,7 @@
 #import "MPAgentsPreferencesViewController.h"
 #import "MPSyncPreferencesViewController.h"
 #import "MPCloudService.h"
+#import "MPMailer.h"
 #import "MPCloudOpenWindowController.h"
 #import "MPDocument.h"
 #import "MPQuickLookPreferencesViewController.h"
@@ -109,6 +110,9 @@ NS_INLINE void treat()
 /// dipende dalla lingua di chi legge.
 static NSString *const kMPCloudMenu = @"servizi.salva";
 
+/// E quello dei programmi di posta, allo stesso modo.
+static NSString *const kMPMailMenu = @"posta.apri";
+
 
 @interface MPMainController () <NSMenuDelegate>
 @property (readonly) NSWindowController *preferencesWindowController;
@@ -168,6 +172,18 @@ static NSString *const kMPCloudMenu = @"servizi.salva";
         action:@selector(openFromCloud:) keyEquivalent:@""];
     open.target = nil;
     [file insertItem:open atIndex:where + 1];
+
+    // Il documento come email, nel programma che si sceglie. Anche questo
+    // è un elenco fatto quando lo si apre: i programmi di posta si
+    // installano e si tolgono mentre l'applicazione è aperta.
+    NSMenuItem *mail = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(
+        @"Open as Email", @"File menu: submenu of the mail programs")
+        action:NULL keyEquivalent:@""];
+    NSMenu *programs = [[NSMenu alloc] initWithTitle:mail.title];
+    programs.delegate = self;
+    programs.identifier = kMPMailMenu;
+    mail.submenu = programs;
+    [file insertItem:mail atIndex:where + 1];
 }
 
 
@@ -200,6 +216,24 @@ static NSString *const kMPCloudMenu = @"servizi.salva";
  * menu esiste già: l'unico elenco che non mente è quello costruito nel
  * momento in cui lo si guarda.
  */
+/// I programmi di posta, con la loro icona, nell'ordine in cui il sistema
+/// li dà: per primo quello che userebbe da sé.
+- (void)rebuildMailMenu:(NSMenu *)menu
+{
+    [menu removeAllItems];
+    for (MPMailClient *client in [MPMailer clients])
+    {
+        NSMenuItem *item = [menu addItemWithTitle:client.name
+            action:@selector(openAsEmail:) keyEquivalent:@""];
+        item.target = nil;      // va al documento davanti
+        item.representedObject = client;
+        NSImage *icon = [client.icon copy];
+        icon.size = NSMakeSize(16.0, 16.0);
+        item.image = icon;
+    }
+}
+
+
 - (void)rebuildCloudMenu:(NSMenu *)menu
 {
     [menu removeAllItems];
@@ -503,6 +537,12 @@ static const NSInteger kMPPlugInExportItemTag = 9003;
     if ([menu.identifier isEqualToString:kMPCloudMenu])
     {
         [self rebuildCloudMenu:menu];
+        return;
+    }
+
+    if ([menu.identifier isEqualToString:kMPMailMenu])
+    {
+        [self rebuildMailMenu:menu];
         return;
     }
 

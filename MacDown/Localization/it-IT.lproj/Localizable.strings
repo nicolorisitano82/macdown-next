@@ -728,3 +728,10 @@
 "Use This Folder" = "Usa questa cartella";
 "Nothing here yet.\nWhat this application writes into the folder shows up here; documents that were already there are handed over in Settings ▸ Sync." = "Qui non c’è ancora niente.\nQuello che questa applicazione scrive nella cartella compare qui; i documenti che c’erano già si passano da Impostazioni ▸ Sincronizza.";
 "Nothing here yet.\nPut a document in the folder, or write one and save it there." = "Qui non c’è ancora niente.\nMetti un documento nella cartella, o scrivine uno e salvalo lì.";
+"%@ only accepts a subject from outside, so the formatted message is on the clipboard: press ⌘V in the new message." = "%@ da fuori accetta solo l’oggetto, quindi il messaggio formattato sta negli appunti: premi ⌘V nella finestra nuova.";
+"Mail did not answer." = "Mail non ha risposto.";
+"No mail program was chosen." = "Non è stato scelto nessun programma di posta.";
+"Open as Email" = "Apri come email";
+"That address could not be built." = "Non si è potuto costruire quell’indirizzo.";
+"That mail program could not be opened" = "Quel programma di posta non si è aperto";
+"The email is on the clipboard" = "L’email è negli appunti";
