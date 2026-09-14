@@ -30,6 +30,15 @@
 - (void)sidebarDidSelectRemoteDocument:(NSString *)identifier
                                  named:(NSString *)name;
 
+/// La scheda degli allegati è stata aperta e vuole l'elenco di adesso.
+- (void)sidebarNeedsTheAttachments;
+
+/// Un allegato è stato scelto.
+- (void)sidebarDidSelectAttachment:(NSURL *)file;
+
+/// Di un allegato si vuole una copia altrove.
+- (void)sidebarDidAskToSaveAttachment:(NSURL *)file;
+
 @end
 
 
@@ -61,6 +70,10 @@
 
 /// Il nome del posto che l'elenco sta mostrando, o nil se è il disco.
 @property (readonly, copy, nonatomic) NSString *remotePlaceName;
+
+/// Gli allegati del documento, nella loro scheda: i file che il testo si
+/// porta dietro, con l'icona che il sistema dà a ciascuno.
+- (void)showAttachments:(NSArray<NSURL *> *)attachments;
 
 /// Highlights the heading containing `location`, following the caret.
 - (void)selectHeadingContainingLocation:(NSUInteger)location;

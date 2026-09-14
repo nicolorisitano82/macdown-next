@@ -282,3 +282,102 @@ NSString *MPHTMLWithAttachmentsInlined(NSString *html, NSURL *base)
     }
     return made;
 }
+
+
+#pragma mark - Nell'anteprima
+
+BOOL MPLooksLikeAnAttachment(NSURL *url)
+{
+    if (!url.isFileURL)
+        return NO;
+    NSString *name = url.lastPathComponent;
+    if (MPIsAPicture(name) || MPIsANeighbouringDocument(name))
+        return NO;
+    NSNumber *directory = nil;
+    if (![url getResourceValue:&directory forKey:NSURLIsDirectoryKey
+                         error:NULL])
+        return NO;              // non c'è
+    return !directory.boolValue;
+}
+
+
+NSString *MPIconDataURIForFile(NSURL *file)
+{
+    static NSMutableDictionary<NSString *, NSString *> *known = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ known = [NSMutableDictionary dictionary]; });
+
+    NSString *extension = file.pathExtension.lowercaseString ?: @"";
+    @synchronized (known)
+    {
+        NSString *ready = known[extension];
+        if (ready)
+            return ready;
+    }
+
+    UTType *type = [UTType typeWithFilenameExtension:extension]
+        ?: UTTypeData;
+    NSImage *icon = [[NSWorkspace sharedWorkspace] iconForContentType:type];
+    icon.size = NSMakeSize(32.0, 32.0);
+    NSBitmapImageRep *rep = [[NSBitmapImageRep alloc]
+        initWithCGImage:[icon CGImageForProposedRect:NULL context:nil
+                                               hints:nil]];
+    NSData *png = [rep representationUsingType:NSBitmapImageFileTypePNG
+                                    properties:@{}];
+    if (!png.length)
+        return nil;
+    NSString *uri = [NSString stringWithFormat:@"data:image/png;base64,%@",
+                     [png base64EncodedStringWithOptions:0]];
+    @synchronized (known)
+    {
+        known[extension] = uri;
+    }
+    return uri;
+}
+
+
+NSString *MPHTMLWithAttachmentIcons(NSString *html, NSURL *base)
+{
+    if (!html.length)
+        return html ?: @"";
+
+    static NSRegularExpression *links = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        links = [NSRegularExpression regularExpressionWithPattern:
+            @"<a\\b[^>]*?\\bhref\\s*=\\s*[\"']([^\"']+)[\"'][^>]*>"
+            options:NSRegularExpressionCaseInsensitive error:NULL];
+    });
+
+    NSMutableString *made = [html mutableCopy];
+    NSArray<NSTextCheckingResult *> *found = [links matchesInString:html
+        options:0 range:NSMakeRange(0, html.length)];
+    for (NSTextCheckingResult *one in found.reverseObjectEnumerator)
+    {
+        NSString *source = [html substringWithRange:[one rangeAtIndex:1]];
+        NSString *low = source.lowercaseString;
+        if ([low hasPrefix:@"#"] || [low hasPrefix:@"data:"]
+                || [low hasPrefix:@"mailto:"])
+            continue;
+
+        // L'anteprima serve la pagina da uno schema suo, quindi un link
+        // relativo arriva qui già assoluto e con quello schema addosso.
+        NSURL *url = [NSURL URLWithString:
+            [source stringByRemovingPercentEncoding] ?: source
+            relativeToURL:base];
+        if (!url.isFileURL && url.path.length && !url.host.length)
+            url = [NSURL fileURLWithPath:url.path];
+        if (!MPLooksLikeAnAttachment(url))
+            continue;
+        NSString *icon = MPIconDataURIForFile(url);
+        if (!icon)
+            continue;
+
+        NSString *tag = [NSString stringWithFormat:
+            @"<img class=\"mp-attachment-icon\" alt=\"\" src=\"%@\" "
+            @"style=\"width:1.15em;height:1.15em;vertical-align:-0.25em;"
+            @"margin-right:0.25em\">", icon];
+        [made insertString:tag atIndex:NSMaxRange(one.range)];
+    }
+    return made;
+}

@@ -2943,6 +2943,9 @@ NS_INLINE BOOL MPWikiTargetExists(NSURL *directory, NSString *target)
     // Before the split, so that both roads out of here — a full load and a
     // body replaced in place — carry the same links.
     html = [self htmlByServingLocalFilesIn:html];
+    // Nell'anteprima un allegato porta l'icona del suo tipo: un link a un
+    // PDF e un link a una pagina si scrivono uguale, e non lo sono.
+    html = MPHTMLWithAttachmentIcons(html, self.fileURL);
 
     NSString *head = MPHeadOfHTML(html);
     NSString *body = MPBodyOfHTML(html);
@@ -6400,6 +6403,63 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
 
 
 /// Il link dell'allegato dove sta il cursore, come per un'immagine.
+/** Un allegato su cui si è cliccato: salvarne una copia, o aprirlo.
+ *
+ * Le due cose che si vogliono fare con un file che arriva dentro un
+ * documento, e nessuna delle due scelta da noi.
+ */
+- (void)askAboutAttachment:(NSURL *)file
+{
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = [NSString stringWithFormat:NSLocalizedString(
+        @"Download «%@»?", @"Title of the alert when an attachment is clicked"),
+        file.lastPathComponent];
+    alert.informativeText = NSLocalizedString(
+        @"It is attached to this document. You can keep a copy of it, or "
+        @"open it where it is.",
+        @"What can be done with a clicked attachment");
+    [alert addButtonWithTitle:NSLocalizedString(@"Save a Copy…",
+        @"Button: write the attachment somewhere else")];
+    [alert addButtonWithTitle:NSLocalizedString(@"Open",
+        @"Button: open the attachment where it is")];
+    [alert addButtonWithTitle:NSLocalizedString(@"Cancel",
+        @"Closes the list of remote documents")];
+
+    switch ([alert runModal])
+    {
+        case NSAlertFirstButtonReturn:
+            [self saveACopyOfAttachment:file];
+            break;
+        case NSAlertSecondButtonReturn:
+            [[NSWorkspace sharedWorkspace] openURL:file];
+            break;
+        default:
+            break;
+    }
+}
+
+
+- (void)saveACopyOfAttachment:(NSURL *)file
+{
+    NSSavePanel *panel = [NSSavePanel savePanel];
+    panel.nameFieldStringValue = file.lastPathComponent;
+    NSWindow *window = self.windowForSheet;
+    void (^handler)(NSModalResponse) = ^(NSModalResponse result) {
+        if (result != NSModalResponseOK || !panel.URL)
+            return;
+        NSFileManager *manager = [NSFileManager defaultManager];
+        [manager removeItemAtURL:panel.URL error:NULL];
+        NSError *copying = nil;
+        if (![manager copyItemAtURL:file toURL:panel.URL error:&copying])
+            [self sayAboutTheAttachment:copying.localizedDescription];
+    };
+    if (window)
+        [panel beginSheetModalForWindow:window completionHandler:handler];
+    else
+        handler([panel runModal]);
+}
+
+
 - (void)insertAttachmentMarkup:(NSString *)markup
 {
     NSRange selected = self.editor.selectedRange;
@@ -6541,6 +6601,7 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
     [outer setPosition:0.0 ofDividerAtIndex:0];
 
     [self refreshSidebarFiles];
+    [self sidebarNeedsTheAttachments];
     [self.sidebar updateOutlineWithMarkdown:self.editor.string ?: @""];
 }
 
@@ -6608,6 +6669,7 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
     if (!visible)
     {
         [self refreshSidebarFiles];
+        [self sidebarNeedsTheAttachments];
         [self.sidebar updateOutlineWithMarkdown:self.editor.string ?: @""];
     }
 }
@@ -6625,6 +6687,27 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
     [self.editor scrollRangeToVisible:range];
     [self.windowForSheet makeFirstResponder:self.editor];
 }
+
+#pragma mark - Gli allegati nella barra
+
+- (void)sidebarNeedsTheAttachments
+{
+    [self.sidebar showAttachments:
+        MPAttachmentsIn(self.markdown ?: @"", self.fileURL)];
+}
+
+
+- (void)sidebarDidSelectAttachment:(NSURL *)file
+{
+    [self askAboutAttachment:file];
+}
+
+
+- (void)sidebarDidAskToSaveAttachment:(NSURL *)file
+{
+    [self saveACopyOfAttachment:file];
+}
+
 
 - (void)sidebarDidSelectRemoteDocument:(NSString *)identifier
                                  named:(NSString *)name
@@ -8243,6 +8326,16 @@ NS_INLINE BOOL MPIsMarkdownFileURL(NSURL *url)
 
 - (void)openOrCreateFileForUrl:(NSURL *)url
 {
+    // Un allegato non si apre e basta: quasi sempre chi ci clicca lo
+    // vuole **avere**, e aprirlo da una cartella nascosta accanto al
+    // documento è il modo di non trovarlo più.
+    NSURL *attachment = MPFileURLFromPreviewURL(url);
+    if (MPLooksLikeAnAttachment(attachment))
+    {
+        [self askAboutAttachment:attachment];
+        return;
+    }
+
     // Out of the preview's scheme and back into a file. The page is served
     // over a scheme of its own so it has an ordinary origin, and a relative
     // link in the document resolves against it — so a link to the file next

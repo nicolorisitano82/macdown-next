@@ -76,3 +76,18 @@ extern NSArray<NSURL *> *MPAttachmentsIn(NSString *markdown,
  * un allegato che era un file diventa il file stesso, dentro la pagina.
  */
 extern NSString *MPHTMLWithAttachmentsInlined(NSString *html, NSURL *base);
+
+/// Se quell'indirizzo è un allegato di qualcuno: un file che c'è, che non
+/// è un'immagine e non è un documento di testo.
+extern BOOL MPLooksLikeAnAttachment(NSURL *url);
+
+/** L'HTML con l'icona del file davanti a ogni allegato.
+ *
+ * Nell'anteprima un allegato è un link come un altro, e non si distingue
+ * da un rimando a una pagina: l'icona che il sistema dà a quel tipo di
+ * file lo dice prima di leggerne il nome.
+ */
+extern NSString *MPHTMLWithAttachmentIcons(NSString *html, NSURL *base);
+
+/// L'icona di un file, come `data:` da mettere in una pagina.
+extern NSString *MPIconDataURIForFile(NSURL *file);

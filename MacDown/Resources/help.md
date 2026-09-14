@@ -386,6 +386,17 @@ lives:
 A picture is written as a picture, a file as a link. A `.md` beside the
 document is not an attachment: it is a neighbour, and it stays where it is.
 
+The sidebar has a third tab, **Attached**, listing the files this document
+carries, each with the icon the system gives its kind. A right-click offers
+the three things one does with a file — **Save a Copy…**, **Open**, **Show
+in Finder** — and a click asks the same question the preview asks.
+
+In the preview an attachment carries that icon in front of its name, so a
+link to a PDF does not read like a link to a page, and clicking it asks
+whether to keep a copy or open it where it is. Opening it in place is
+sometimes what you want; finding it again in a folder beside the document
+usually is not, which is why the question is asked at all.
+
 **What travels, when the document leaves here**
 
 | Export | The attachments |

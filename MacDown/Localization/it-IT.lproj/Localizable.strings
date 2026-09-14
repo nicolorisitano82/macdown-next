@@ -744,3 +744,7 @@
 "That file could not be read." = "Quel file non si è potuto leggere.";
 "The attachments stay inside the message, as links that carry the file: only Mail and Outlook take real attachments from outside." = "Gli allegati restano dentro il messaggio, come link che si portano dietro il file: solo Mail e Outlook prendono allegati veri da fuori.";
 "Writes the file inside the document instead of beside it, so the document depends on nothing — and grows by about a third of the file's size, on a single line." = "Scrive il file dentro il documento invece che accanto, così il documento non dipende da niente — e cresce di circa un terzo della dimensione del file, su una riga sola.";
+"Attached" = "Allegati";
+"Download «%@»?" = "Vuoi scaricare «%@»?";
+"It is attached to this document. You can keep a copy of it, or open it where it is." = "È allegato a questo documento. Puoi tenerne una copia, oppure aprirlo dov’è.";
+"Save a Copy…" = "Salva una copia…";

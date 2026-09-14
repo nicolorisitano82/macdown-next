@@ -16,6 +16,8 @@
 @interface MPSidebarController (Prove)
 - (NSArray *)childrenOfItem:(id)item;
 - (void)setMode:(NSUInteger)mode;
+- (NSMenu *)menuForAttachmentAt:(NSInteger)row;
+- (NSOutlineView *)outlineView;
 - (BOOL)outlineView:(NSOutlineView *)outlineView isItemExpandable:(id)item;
 @end
 
@@ -121,5 +123,59 @@
     XCTAssertEqualObjects([[self.sidebar childrenOfItem:nil].firstObject name],
                           @"vicino.md");
 }
+
+#pragma mark - La scheda degli allegati
+
+- (void)testTheAttachmentsHaveATabOfTheirOwn
+{
+    NSURL *one = [self.folder URLByAppendingPathComponent:@"verbale.pdf"];
+    NSURL *two = [self.folder URLByAppendingPathComponent:@"conti.csv"];
+    [self.sidebar setMode:2];
+    [self.sidebar showAttachments:@[one, two]];
+
+    NSArray *rows = [self.sidebar childrenOfItem:nil];
+    XCTAssertEqual(rows.count, 2u);
+    XCTAssertEqualObjects([rows.firstObject lastPathComponent],
+                          @"verbale.pdf");
+    // Non è l'elenco dei file, che resta quello che era.
+    [self.sidebar setMode:1];
+    [self.sidebar setRootURL:self.folder];
+    XCTAssertEqualObjects([[self.sidebar childrenOfItem:nil].firstObject name],
+                          @"vicino.md");
+}
+
+
+/// Il tasto destro su un allegato offre le tre cose che si fanno con un
+/// file, e la prima è tenerne una copia.
+- (void)testTheRightClickMenuOffersToKeepACopy
+{
+    NSURL *one = [self.folder URLByAppendingPathComponent:@"verbale.pdf"];
+    [@"%PDF-1.4\n" writeToURL:one atomically:YES
+                      encoding:NSUTF8StringEncoding error:NULL];
+    [self.sidebar setMode:2];
+    [self.sidebar showAttachments:@[one]];
+    (void)self.sidebar.view;
+    [[self.sidebar outlineView] reloadData];
+
+    NSMenu *menu = [self.sidebar menuForAttachmentAt:0];
+    XCTAssertEqual(menu.numberOfItems, 3);
+    XCTAssertEqualObjects([menu itemAtIndex:0].representedObject, one);
+    for (NSMenuItem *item in menu.itemArray)
+    {
+        XCTAssertTrue(item.title.length > 0);
+        XCTAssertNotNil(item.target);
+    }
+}
+
+
+- (void)testThereIsNoMenuOnSomethingThatIsNotAnAttachment
+{
+    [self.sidebar setMode:1];
+    [self.sidebar setRootURL:self.folder];
+    (void)self.sidebar.view;
+    [[self.sidebar outlineView] reloadData];
+    XCTAssertNil([self.sidebar menuForAttachmentAt:0]);
+}
+
 
 @end

@@ -201,5 +201,58 @@
                                                         @"schema.png"]]));
 }
 
+#pragma mark - Nell'anteprima
+
+- (void)testAnAttachmentIsRecognisedAndAPictureIsNot
+{
+    NSURL *pdf = [self fileNamed:@"verbale.pdf" saying:@"%PDF-1.4\n"];
+    NSURL *picture = [self fileNamed:@"schema.png" saying:@"png finto"];
+    NSURL *neighbour = [self fileNamed:@"vicino.md" saying:@"# x\n"];
+    NSURL *missing = [self.folder URLByAppendingPathComponent:@"sparito.pdf"];
+
+    XCTAssertTrue(MPLooksLikeAnAttachment(pdf));
+    XCTAssertFalse(MPLooksLikeAnAttachment(picture));
+    XCTAssertFalse(MPLooksLikeAnAttachment(neighbour));
+    XCTAssertFalse(MPLooksLikeAnAttachment(missing));
+    XCTAssertFalse(MPLooksLikeAnAttachment(self.folder));
+    XCTAssertFalse(MPLooksLikeAnAttachment(
+        [NSURL URLWithString:@"https://esempio.it/x.pdf"]));
+}
+
+
+- (void)testTheIconOfAFileIsAPictureThePageCanShow
+{
+    NSURL *pdf = [self fileNamed:@"verbale.pdf" saying:@"%PDF-1.4\n"];
+    NSString *uri = MPIconDataURIForFile(pdf);
+    XCTAssertTrue([uri hasPrefix:@"data:image/png;base64,"]);
+    XCTAssertGreaterThan(uri.length, 200u);
+    // Chiesta due volte, la stessa: le icone si tengono da parte.
+    XCTAssertEqualObjects(uri, MPIconDataURIForFile(pdf));
+}
+
+
+- (void)testThePreviewShowsTheIconBeforeTheName
+{
+    [self fileNamed:@"verbale.pdf" saying:@"%PDF-1.4\n"];
+    [self fileNamed:@"vicino.md" saying:@"# x\n"];
+    NSURL *document = [self.folder URLByAppendingPathComponent:@"nota.md"];
+
+    NSString *html = @"<p><a href=\"verbale.pdf\">il verbale</a>, "
+                     @"<a href=\"vicino.md\">il vicino</a>, "
+                     @"<a href=\"https://esempio.it\">un sito</a></p>";
+    NSString *made = MPHTMLWithAttachmentIcons(html, document);
+
+    XCTAssertTrue([made containsString:@"mp-attachment-icon"], @"%@", made);
+    // Una sola: il vicino e il sito non sono allegati.
+    XCTAssertEqual([[made componentsSeparatedByString:@"mp-attachment-icon"]
+                        count], 2u);
+    // L'icona sta *dentro* il link, prima del testo.
+    NSRange icon = [made rangeOfString:@"mp-attachment-icon"];
+    NSRange text = [made rangeOfString:@"il verbale"];
+    XCTAssertLessThan(icon.location, text.location);
+    // E il link resta quello che era.
+    XCTAssertTrue([made containsString:@"href=\"verbale.pdf\""]);
+}
+
 
 @end
