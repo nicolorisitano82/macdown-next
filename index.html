@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MacDown Next — a Markdown editor for macOS 26</title>
-<meta name="description" content="A fork of MacDown for macOS 26: an editor that draws what the markup means, diagrams that render, exports that survive the trip, a Finder preview, and an updater that asks before it does anything.">
+<meta name="description" content="A fork of MacDown for macOS 26: an editor that draws what the markup means, diagrams that render, exports that survive the trip, documents that live in iCloud Drive or Google Drive, attachments that travel with the text, a Finder preview, and an updater that asks before it does anything.">
 <style>
   :root {
     --bg: #ffffff;
@@ -647,6 +647,79 @@
           thing off.
         </p>
       </div>
+
+      <div class="card">
+        <p class="tag">Services</p>
+        <h3>A folder that lives in iCloud, or in Drive</h3>
+        <p>
+          <b>iCloud Drive</b> asks for nothing — not even which folder: a
+          <code>MacDownNext</code> folder is made the first time and used
+          from then on, and a button points it somewhere else. Everything
+          already in that folder comes across, because there the permission
+          is the Finder.
+        </p>
+        <p>
+          <b>Google Drive</b> needs a client of your own from the Google
+          console: one client for everybody would mean one verification, one
+          quota and a consent screen carrying somebody else's name. The ID
+          lives in preferences, which is public by construction; the tokens
+          live in the keychain, and no server of ours is anywhere in the
+          path.
+        </p>
+        <p>
+          A document opened from either saves back with <kbd>⌘S</kbd>, like a
+          folder. If somebody wrote there while you were working, nothing is
+          overwritten: the save stops and asks — compare, keep both, keep
+          mine, keep theirs — and the comparison window carries the same
+          three decisions at the bottom, one button each.
+        </p>
+      </div>
+
+      <div class="card">
+        <p class="tag">Email</p>
+        <h3>The document as a message, formatted</h3>
+        <p>
+          <b>File ▸ Open as Email ▸</b> lists the mail programs this Mac has,
+          plus Gmail and Outlook on the web. The message carries what the
+          preview shows — styles, diagrams and formulas as pictures, and
+          every local picture inside the message rather than as a link to a
+          file on your disk.
+        </p>
+        <p>
+          Mail gets the finished message, attachments included. Everything
+          else accepts only a subject from outside — <code>mailto:</code> is
+          plain text by construction — so the formatted message goes on the
+          clipboard and <kbd>⌘V</kbd> puts it in. That is said once, plainly,
+          rather than dressed up as «sent».
+        </p>
+      </div>
+
+      <div class="card">
+        <p class="tag">Attachments</p>
+        <h3>A file that travels with the text</h3>
+        <p>
+          Markdown has no attachments — links and pictures, and that is all —
+          so this does what every plain-text format that gave itself some had
+          to do: the file beside the text and a relative link. Where it lands
+          follows where the document lives: <code>name.assets</code> beside a
+          document on disk, <code>assets/</code> inside a textbundle, the
+          connected folder when the document lives in a service, or inside
+          the document as a <code>data:</code> URL for whoever wants it to
+          depend on nothing.
+        </p>
+        <p>
+          The sidebar has a tab for them, with the system's icon on each and
+          a right-click to keep a copy. In the preview an attachment carries
+          that icon in front of its name, and clicking it asks whether to
+          keep a copy or open it where it is — instead of opening it from a
+          folder nobody browses.
+        </p>
+        <p>
+          And they arrive where the document arrives: in <code>assets/</code>
+          in a textbundle, inside an exported HTML page, as real attachments
+          on a message in Mail and Outlook.
+        </p>
+      </div>
     </div>
   </div>
 </section>
@@ -767,7 +840,7 @@
     <h2>What changed, concretely</h2>
     <p class="section-lede">
       This fork exists because of specific things that did not work. These are
-      five of them.
+      six of them.
     </p>
 
     <div class="ba">
@@ -904,6 +977,18 @@
         <td>While the Models panel downloads the one you chose</td>
         <td>—</td>
       </tr>
+      <tr>
+        <td>Your documents, to a service you connected yourself</td>
+        <td>Google Drive only: listing, opening, saving and attachments, in
+            the folder you handed over. iCloud Drive is a folder on this Mac
+            and macOS carries it</td>
+        <td>Settings › Sync, and Disconnect</td>
+      </tr>
+      <tr>
+        <td>A message you are composing</td>
+        <td>Only what you send yourself, from your own mail program</td>
+        <td>—</td>
+      </tr>
     </table>
 
     <ul class="plain">
@@ -937,6 +1022,8 @@
       <a href="docs/selezione">the selection the two panes share</a><br>
       <a href="docs/salvataggi">where the work goes</a><br>
       <a href="docs/progetto-mcp">the MCP server over a folder</a><br>
+      <a href="docs/progetto-sync-servizi">talking to the services</a><br>
+      <a href="docs/progetto-ios">what an iOS version would cost</a><br>
       <a href="docs/aggiornamenti">the updater</a></p>
     </div>
     <div>
