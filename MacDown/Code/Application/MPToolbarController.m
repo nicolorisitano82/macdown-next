@@ -74,6 +74,7 @@
         [self toolbarItemWithIdentifier:@"blockquote" label:NSLocalizedString(@"Blockquote", @"Blockquote toolbar button") icon:@"ToolbarIconBlockquote" action:@selector(toggleBlockquote:)],
         [self toolbarItemWithIdentifier:@"code" label:NSLocalizedString(@"Code", @"Code toolbar button") icon:@"ToolbarIconInlineCode" action:@selector(insertCode:)],
         [self toolbarItemWithIdentifier:@"link" label:NSLocalizedString(@"Link", @"Link toolbar button") icon:@"ToolbarIconLink" action:@selector(toggleLink:)],
+        [self toolbarItemWithIdentifier:@"attach" label:NSLocalizedString(@"Attach", @"Button of the attachment chooser") icon:@"paperclip" action:@selector(attachFile:)],
         [self toolbarItemWithIdentifier:@"image" label:NSLocalizedString(@"Image", @"Image toolbar button") icon:@"ToolbarIconImage" action:@selector(toggleImage:)],
         [self toolbarItemWithIdentifier:@"table" label:NSLocalizedString(@"Table", @"Insert table toolbar button") icon:@"tablecells" action:@selector(insertTable:)],
         [self toolbarItemWithIdentifier:@"copy-html" label:NSLocalizedString(@"Copy HTML", @"Copy HTML toolbar button") icon:@"ToolbarIconCopyHTML" action:@selector(copyHtml:)],
@@ -118,7 +119,11 @@
     // the space array was declared empty, so every iteration read whatever
     // sat next to it on the stack. It happened not to crash here; it does
     // crash for others.
-    static const int flexibleSpaceAfterIndices[] = {2, 3, 5, 7, 11};
+    // Gli indici sono nell'ordine dell'elenco qui sopra, quindi una voce
+    // aggiunta in mezzo li sposta tutti quelli che vengono dopo: con
+    // «allega» fra il link e l'immagine, lo spazio che stava dopo
+    // l'immagine passa da 7 a 8, e quello in fondo da 11 a 12.
+    static const int flexibleSpaceAfterIndices[] = {2, 3, 5, 8, 12};
     static const int flexibleSpaceCount =
         sizeof(flexibleSpaceAfterIndices) / sizeof(flexibleSpaceAfterIndices[0]);
     int i = 0;

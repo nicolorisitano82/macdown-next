@@ -11,6 +11,7 @@
 
 #import "MPAttachments.h"
 #import "MPTextBundle.h"
+#import "MPToolbarController.h"
 
 
 @interface MPAttachmentsTests : XCTestCase
@@ -252,6 +253,56 @@
     XCTAssertLessThan(icon.location, text.location);
     // E il link resta quello che era.
     XCTAssertTrue([made containsString:@"href=\"verbale.pdf\""]);
+}
+
+#pragma mark - Nella barra degli strumenti
+
+/// Il pulsante c'è, sta accanto al link, ed è nella barra predefinita:
+/// una voce che si può solo aggiungere a mano è una voce che nessuno
+/// trova.
+- (void)testTheAttachButtonSitsNextToTheLinkOne
+{
+    MPToolbarController *controller = [[MPToolbarController alloc] init];
+    NSToolbar *toolbar = [[NSToolbar alloc]
+        initWithIdentifier:@"prova"];
+
+    NSArray<NSString *> *all = [controller toolbarAllowedItemIdentifiers:toolbar];
+    NSUInteger link = [all indexOfObject:@"link"];
+    NSUInteger attach = [all indexOfObject:@"attach"];
+    XCTAssertNotEqual(link, (NSUInteger)NSNotFound);
+    XCTAssertEqual(attach, link + 1);
+
+    NSArray<NSString *> *shown =
+        [controller toolbarDefaultItemIdentifiers:toolbar];
+    XCTAssertTrue([shown containsObject:@"attach"]);
+
+    NSToolbarItem *item = [controller toolbar:toolbar
+                        itemForItemIdentifier:@"attach"
+                    willBeInsertedIntoToolbar:YES];
+    XCTAssertEqualObjects(NSStringFromSelector(item.action),
+                          @"attachFile:");
+    XCTAssertNotNil(item.image);
+    XCTAssertTrue(item.label.length > 0);
+}
+
+
+/// Gli spazi della barra sono indici in un elenco: una voce in mezzo li
+/// sposta, e se non si spostano i gruppi si rompono. Questo dice dove
+/// cadono adesso.
+- (void)testTheGroupsStillBreakWhereTheyShould
+{
+    MPToolbarController *controller = [[MPToolbarController alloc] init];
+    NSArray<NSString *> *shown = [controller toolbarDefaultItemIdentifiers:
+        [[NSToolbar alloc] initWithIdentifier:@"prova"]];
+
+    NSUInteger image = [shown indexOfObject:@"image"];
+    XCTAssertNotEqual(image, (NSUInteger)NSNotFound);
+    XCTAssertEqualObjects(shown[image + 1],
+                          NSToolbarFlexibleSpaceItemIdentifier);
+    // E il link e l'allegato restano nello stesso gruppo, senza spazi in
+    // mezzo.
+    NSUInteger link = [shown indexOfObject:@"link"];
+    XCTAssertEqualObjects(shown[link + 1], @"attach");
 }
 
 
