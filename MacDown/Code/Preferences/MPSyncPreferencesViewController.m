@@ -400,8 +400,9 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     {
         [rest addObject:NSLocalizedString(@"Refresh",
             @"Menu item: ask the service what it sees, again")];
-        [rest addObject:NSLocalizedString(@"Disconnect",
-            @"Menu item: forget the tokens of a service")];
+        if (service.canDisconnect)
+            [rest addObject:NSLocalizedString(@"Disconnect",
+                @"Menu item: forget the tokens of a service")];
     }
     for (NSString *entry in rest)
     {

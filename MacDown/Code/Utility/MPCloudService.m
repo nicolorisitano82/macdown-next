@@ -241,6 +241,8 @@ NSDate *MPDateFromDrive(NSString *written)
 /// Se i documenti che esistono già si passano uno per uno. Dove la
 /// cartella li porta tutti, questa domanda non si fa.
 - (BOOL)picksDocuments { return YES; }
+/// Se «scollega» vuol dire qualcosa: dove il permesso è un gettone, sì.
+- (BOOL)canDisconnect { return YES; }
 - (NSString *)consoleButtonTitle { return @""; }
 - (NSURL *)consoleURL { return nil; }
 - (NSString *)explanation { return @""; }
@@ -1268,6 +1270,9 @@ NSString *MPConflictNameFor(NSString *name, NSDate *when)
 static NSString *const kMPICloudRoot =
     @"Library/Mobile Documents/com~apple~CloudDocs";
 
+/// La cartella che si usa senza chiedere niente a nessuno.
+static NSString *const kMPICloudFolder = @"MacDownNext";
+
 /// Cosa consideriamo un documento, in una cartella qualunque.
 static BOOL MPLooksLikeADocument(NSURL *url)
 {
@@ -1309,6 +1314,9 @@ static NSString *MPRevisionOf(NSURL *url)
 - (BOOL)needsAClient { return NO; }
 - (BOOL)picksDocuments { return NO; }
 - (BOOL)isConfigured { return YES; }
+/// Non c'è niente da scollegare: il collegamento è una cartella, e una
+/// cartella si cambia, non si revoca.
+- (BOOL)canDisconnect { return NO; }
 
 - (NSString *)explanation
 {
@@ -1333,8 +1341,43 @@ static NSString *MPRevisionOf(NSURL *url)
 
 - (NSURL *)root
 {
+    // La radice si può spostare da una preferenza, che non sta nel
+    // pannello: serve alle prove, per non andare a scrivere nell'iCloud
+    // Drive vero di chi sta facendo girare la suite.
+    NSString *elsewhere = [[NSUserDefaults standardUserDefaults]
+        stringForKey:[self defaultsKey:@"root"]];
+    if (elsewhere.length)
+        return [NSURL fileURLWithPath:elsewhere isDirectory:YES];
     return [NSURL fileURLWithPath:[NSHomeDirectory()
         stringByAppendingPathComponent:kMPICloudRoot] isDirectory:YES];
+}
+
+
+/** La cartella che si usa se non se ne è scelta un'altra.
+ *
+ * Un servizio che per essere usato chiede prima di scegliere una cartella
+ * è un servizio che chiede un compito a chi voleva solo scrivere. Qui il
+ * posto ovvio esiste — una cartella col nome dell'applicazione dentro
+ * iCloud Drive — e se non c'è la si fa. Cambiarla resta un pulsante nelle
+ * impostazioni.
+ */
+- (NSURL *)defaultFolder
+{
+    NSURL *root = [self root];
+    NSFileManager *manager = [NSFileManager defaultManager];
+    BOOL directory = NO;
+    if (![manager fileExistsAtPath:root.path isDirectory:&directory]
+            || !directory)
+        return nil;         // iCloud Drive non c'è su questo Mac
+
+    NSURL *mine = [root URLByAppendingPathComponent:kMPICloudFolder
+                                        isDirectory:YES];
+    if ([manager fileExistsAtPath:mine.path isDirectory:&directory])
+        return directory ? mine : nil;
+    if (![manager createDirectoryAtURL:mine withIntermediateDirectories:NO
+                            attributes:nil error:NULL])
+        return nil;
+    return mine;
 }
 
 /** La cartella scelta, se c'è ancora.
@@ -1355,12 +1398,17 @@ static NSString *MPRevisionOf(NSURL *url)
                                       isDirectory:&directory] && directory)
         return [NSURL fileURLWithPath:known isDirectory:YES];
 
-    if (self.folderIsGone)
-        return nil;
-
     NSData *bookmark = [[NSUserDefaults standardUserDefaults]
         dataForKey:[self defaultsKey:@"bookmark"]];
     if (!bookmark.length)
+    {
+        // Mai scelta: quella predefinita, fatta adesso se non c'era.
+        NSURL *mine = [self defaultFolder];
+        if (mine)
+            [self remember:mine];
+        return mine;
+    }
+    if (self.folderIsGone)
         return nil;
     BOOL stale = NO;
     NSURL *url = [NSURL URLByResolvingBookmarkData:bookmark
@@ -1396,10 +1444,21 @@ static NSString *MPRevisionOf(NSURL *url)
     return [self folder] != nil;
 }
 
+/// Il nome della cartella, che quando non se n'è scelta nessuna è quello
+/// della predefinita — e chiederlo è anche il momento in cui la si fa.
+- (NSString *)placeName
+{
+    NSString *known = [super placeName];
+    return known.length ? known : [self folder].lastPathComponent;
+}
+
+/// Dimenticare la cartella scelta vuol dire tornare a quella
+/// predefinita, che è l'unico «scollegato» che ha senso qui.
 - (void)unlink
 {
     [[NSUserDefaults standardUserDefaults]
         removeObjectForKey:[self defaultsKey:@"bookmark"]];
+    self.folderIsGone = NO;
     [super unlink];
 }
 

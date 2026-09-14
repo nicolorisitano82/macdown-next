@@ -726,3 +726,5 @@
 "That folder is not in iCloud Drive. Choose one inside it, or nothing written there would reach your other machines." = "Quella cartella non è dentro iCloud Drive. Scegline una lì dentro, altrimenti quello che ci scrivi non arriva sugli altri tuoi dispositivi.";
 "That folder is not there any more. Choose it again." = "Quella cartella non c’è più. Scegline una di nuovo.";
 "Use This Folder" = "Usa questa cartella";
+"Nothing here yet.\nWhat this application writes into the folder shows up here; documents that were already there are handed over in Settings ▸ Sync." = "Qui non c’è ancora niente.\nQuello che questa applicazione scrive nella cartella compare qui; i documenti che c’erano già si passano da Impostazioni ▸ Sincronizza.";
+"Nothing here yet.\nPut a document in the folder, or write one and save it there." = "Qui non c’è ancora niente.\nMetti un documento nella cartella, o scrivine uno e salvalo lì.";

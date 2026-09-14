@@ -70,6 +70,10 @@ typedef NS_ENUM(NSUInteger, MPCloudPick) {
 /// l'ambito stretto di Drive, o se la cartella li porta con sé.
 @property (readonly, nonatomic) BOOL picksDocuments;
 
+/// Se «scollega» vuol dire qualcosa. Dove il collegamento è una cartella
+/// che esiste comunque, no: si cambia cartella.
+@property (readonly, nonatomic) BOOL canDisconnect;
+
 /// Il simbolo con cui si mostra in un elenco, alla maniera del Finder.
 @property (readonly, copy, nonatomic) NSString *symbolName;
 

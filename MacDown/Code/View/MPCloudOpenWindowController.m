@@ -226,8 +226,17 @@ static NSString *const kMPCloudSize = @"quanto";
     self.empty.alignment = NSTextAlignmentCenter;
     self.empty.lineBreakMode = NSLineBreakByWordWrapping;
     self.empty.maximumNumberOfLines = 0;
+    self.empty.preferredMaxLayoutWidth = 320.0;
     self.empty.translatesAutoresizingMaskIntoConstraints = NO;
     self.empty.hidden = YES;
+    // Una frase lunga non deve decidere quanto è larga la finestra: senza
+    // questo, la riga «qui non c'è ancora niente» la apriva quanto sé
+    // stessa, tutta su un rigo solo.
+    [self.empty setContentCompressionResistancePriority:
+        NSLayoutPriorityDefaultLow
+        forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [self.empty setContentHuggingPriority:NSLayoutPriorityDefaultLow
+        forOrientation:NSLayoutConstraintOrientationHorizontal];
 
     self.count = [NSTextField labelWithString:@""];
     self.count.textColor = [NSColor secondaryLabelColor];
@@ -266,8 +275,7 @@ static NSString *const kMPCloudSize = @"quanto";
         [scroll.bottomAnchor constraintEqualToAnchor:line.topAnchor],
         [self.empty.centerXAnchor constraintEqualToAnchor:scroll.centerXAnchor],
         [self.empty.centerYAnchor constraintEqualToAnchor:scroll.centerYAnchor],
-        [self.empty.widthAnchor constraintEqualToAnchor:scroll.widthAnchor
-                                             multiplier:0.7],
+        [self.empty.widthAnchor constraintEqualToConstant:320.0],
         [line.leadingAnchor constraintEqualToAnchor:view.leadingAnchor],
         [line.trailingAnchor constraintEqualToAnchor:view.trailingAnchor],
         [line.bottomAnchor constraintEqualToAnchor:bar.topAnchor],
@@ -594,11 +602,16 @@ static NSString *const kMPCloudSize = @"quanto";
             return;             // nel frattempo si è cambiato servizio
         NSString *note = problem;
         if (!problem && !found.count)
-            note = NSLocalizedString(
-                @"Nothing here yet. What this application writes into the "
-                @"folder shows up here; documents that were already there "
-                @"have to be handed over in Settings ▸ Sync.",
-                @"When the connected service shows no documents");
+            note = asked.picksDocuments
+                ? NSLocalizedString(
+                    @"Nothing here yet.\nWhat this application writes into "
+                    @"the folder shows up here; documents that were already "
+                    @"there are handed over in Settings ▸ Sync.",
+                    @"When the connected service shows no documents")
+                : NSLocalizedString(
+                    @"Nothing here yet.\nPut a document in the folder, or "
+                    @"write one and save it there.",
+                    @"When the connected folder is empty");
         [self.list show:found note:note];
     }];
 }

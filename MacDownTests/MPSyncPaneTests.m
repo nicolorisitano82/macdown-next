@@ -39,10 +39,42 @@ extern NSString *MPConflictNameFor(NSString *name, NSDate *when);
 
 
 @interface MPSyncPaneTests : XCTestCase
+/// Dove iCloud crede di essere, mentre le prove girano.
+@property (strong) NSURL *fakeRoot;
+@property (copy) NSString *wasRoot;
 @end
 
 
 @implementation MPSyncPaneTests
+
+/// iCloud Drive, per queste prove, è una cartella temporanea: il servizio
+/// si crea la sua cartella predefinita da solo, e non deve crearla nello
+/// spazio vero di chi sta facendo girare la suite.
+- (void)setUp
+{
+    [super setUp];
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    self.wasRoot = [defaults stringForKey:@"cloud.icloud.root"];
+    self.fakeRoot = [[NSURL fileURLWithPath:NSTemporaryDirectory()]
+        URLByAppendingPathComponent:[NSString stringWithFormat:@"radice-%@",
+            [NSUUID UUID].UUIDString]];
+    [[NSFileManager defaultManager] createDirectoryAtURL:self.fakeRoot
+        withIntermediateDirectories:YES attributes:nil error:NULL];
+    [defaults setObject:self.fakeRoot.path forKey:@"cloud.icloud.root"];
+    [[MPCloudService services][1] unlink];
+}
+
+- (void)tearDown
+{
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    [[MPCloudService services][1] unlink];
+    if (self.wasRoot.length)
+        [defaults setObject:self.wasRoot forKey:@"cloud.icloud.root"];
+    else
+        [defaults removeObjectForKey:@"cloud.icloud.root"];
+    [[NSFileManager defaultManager] removeItemAtURL:self.fakeRoot error:NULL];
+    [super tearDown];
+}
 
 - (void)testItBuildsAndAnswersLikeAPane
 {
@@ -677,5 +709,77 @@ static MPCloudOpenWindowController *MPOpenWindow(void)
     }
     return nil;
 }
+
+/// Senza che nessuno scelga niente, iCloud ha già la sua cartella: la fa
+/// lui, col nome dell'applicazione, e da lì si lavora.
+- (void)testICloudMakesItsOwnFolderWithoutBeingAsked
+{
+    MPCloudService *icloud = [MPCloudService services][1];
+    XCTAssertTrue(icloud.isLinked, @"collegato senza aver scelto niente");
+    XCTAssertEqualObjects(icloud.placeName, @"MacDownNext");
+
+    NSURL *made = [self.fakeRoot URLByAppendingPathComponent:@"MacDownNext"];
+    BOOL directory = NO;
+    XCTAssertTrue([[NSFileManager defaultManager]
+        fileExistsAtPath:made.path isDirectory:&directory]);
+    XCTAssertTrue(directory);
+
+    // E non si «scollega»: si cambia cartella.
+    XCTAssertFalse(icloud.canDisconnect);
+    XCTAssertTrue([MPCloudService services][0].canDisconnect);
+
+    // Sceltane un'altra, vale quella; dimenticata quella, si torna a casa.
+    NSURL *altrove = [self.fakeRoot URLByAppendingPathComponent:@"Appunti"];
+    [[NSFileManager defaultManager] createDirectoryAtURL:altrove
+        withIntermediateDirectories:YES attributes:nil error:NULL];
+    [icloud remember:altrove];
+    XCTAssertEqualObjects(icloud.placeName, @"Appunti");
+    [icloud unlink];
+    XCTAssertEqualObjects(icloud.placeName, @"MacDownNext");
+}
+
+
+/// Se iCloud Drive non c'è su questo Mac, non si inventa niente.
+- (void)testWithoutICloudDriveThereIsNothingToConnectTo
+{
+    [[NSFileManager defaultManager] removeItemAtURL:self.fakeRoot error:NULL];
+    MPCloudService *icloud = [MPCloudService services][1];
+    XCTAssertFalse(icloud.isLinked);
+}
+
+/// La riga che si legge quando la cartella è vuota va a capo. Prima era
+/// una frase sola lunga come una pagina, e la finestra si apriva larga
+/// quanto lei.
+- (void)testTheEmptyNoteWrapsInsteadOfWideningTheWindow
+{
+    MPCloudOpenWindowController *open = [[MPCloudOpenWindowController alloc]
+        initWithService:[MPCloudService services].firstObject chosen:nil];
+    NSString *note = @"Qui non c'è ancora niente. Quello che questa "
+                     @"applicazione scrive nella cartella compare qui; i "
+                     @"documenti che c'erano già vanno passati da "
+                     @"Impostazioni ▸ Sincronizza.";
+    [open.list show:@[] note:note];
+    [open.window setFrame:NSMakeRect(100, 100, 760, 460) display:YES];
+    [open.window.contentView layoutSubtreeIfNeeded];
+
+    __block NSTextField *said = nil;
+    void (^__block look)(NSView *) = nil;
+    look = ^(NSView *parent) {
+        for (NSView *child in parent.subviews)
+        {
+            if ([child isKindOfClass:[NSTextField class]]
+                    && [[(NSTextField *)child stringValue] isEqualToString:note])
+                said = (NSTextField *)child;
+            look(child);
+        }
+    };
+    look(open.window.contentView);
+    XCTAssertNotNil(said);
+    XCTAssertLessThanOrEqual(NSWidth(said.frame), 340.0);
+    // Più di una riga: una riga sola di quel testo sarebbe larga il triplo.
+    XCTAssertGreaterThan(NSHeight(said.frame), 30.0);
+    [open close];
+}
+
 
 @end

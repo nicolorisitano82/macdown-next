@@ -305,8 +305,10 @@ invisible there.
 **Settings ▸ Sync** connects a space of yours — **iCloud Drive** or **Google
 Drive**, one card each.
 
-iCloud Drive asks for nothing: you pick a folder of it in the usual panel,
-and that is the whole setup. Everything already in that folder comes across,
+iCloud Drive asks for nothing, not even the folder: a **MacDownNext**
+folder in your iCloud Drive is made the first time and used from then on,
+and **Change Folder…** in the pane points it somewhere else whenever you
+like. Everything already in that folder comes across,
 because there the permission is the Finder, and macOS carries the folder
 between your machines. What follows is about Google Drive, which is the one
 that needs a client of yours.
