@@ -9,6 +9,14 @@
 #import <Cocoa/Cocoa.h>
 
 
+/// Un documento che non sta su questo disco: quello che serve per
+/// mostrarlo in elenco e per riaprirlo dal servizio da cui viene.
+@interface MPSidebarRemoteFile : NSObject
+@property (copy, nonatomic) NSString *name;
+@property (copy, nonatomic) NSString *identifier;
+@end
+
+
 @protocol MPSidebarControllerDelegate <NSObject>
 
 /// A heading was chosen. The range is into the Markdown source.
@@ -16,6 +24,11 @@
 
 /// A file was chosen.
 - (void)sidebarDidSelectFileURL:(NSURL *)url;
+
+@optional
+/// Uno dei documenti che stanno nel servizio è stato scelto.
+- (void)sidebarDidSelectRemoteDocument:(NSString *)identifier
+                                 named:(NSString *)name;
 
 @end
 
@@ -33,6 +46,21 @@
 /// The folder the file list shows. Nil for an unsaved document, which leaves
 /// the list empty rather than guessing at somewhere to point it.
 - (void)setRootURL:(NSURL *)url;
+
+/** L'elenco dei file quando la cartella non è su questo disco.
+ *
+ * Un documento aperto da un servizio collegato ha dei vicini come ne ha
+ * uno su disco: sono i documenti che stanno là dentro. Mostrare la
+ * cartella temporanea da cui non viene, o niente, sarebbe rispondere a una
+ * domanda diversa da quella che si fa aprendo la barra.
+ *
+ * Passare nil torna all'elenco del disco.
+ */
+- (void)showRemoteDocuments:(NSArray<MPSidebarRemoteFile *> *)documents
+                       from:(NSString *)placeName;
+
+/// Il nome del posto che l'elenco sta mostrando, o nil se è il disco.
+@property (readonly, copy, nonatomic) NSString *remotePlaceName;
 
 /// Highlights the heading containing `location`, following the caret.
 - (void)selectHeadingContainingLocation:(NSUInteger)location;

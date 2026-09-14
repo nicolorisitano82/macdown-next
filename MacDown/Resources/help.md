@@ -344,6 +344,11 @@ Then, in **File**:
   already lives on carries a tick and cannot be picked: it is where ⌘S
   already goes.
 
+With such a document in front, the sidebar's **Files** tab shows what is in
+the connected folder rather than a folder on this disk — the document has
+no folder here — and picking one opens it, or brings its window forward if
+it is already open.
+
 A document opened from a service saves back to it with **⌘S** — no save
 panel, because where it came from is already known — and the edited dot
 clears the way it does for a file.

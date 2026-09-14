@@ -8,6 +8,8 @@
 
 #import <Cocoa/Cocoa.h>
 @class MPPreferences;
+@class MPCloudDocument;
+@class MPCloudService;
 
 
 @interface MPDocument : NSDocument
@@ -30,6 +32,15 @@
 - (void)saveToCloudWithCompletion:(void (^)(BOOL done,
                                             NSString *conflict,
                                             NSString *problem))finished;
+
+/** Apre un documento che sta in un servizio, o porta davanti il suo.
+ *
+ * Una strada sola per le due porte da cui ci si arriva — la finestra dei
+ * documenti del servizio e l'elenco nella barra laterale — perché aprire
+ * due volte lo stesso documento vorrebbe dire due finestre che si scrivono
+ * sopra a vicenda.
+ */
++ (void)openRemote:(MPCloudDocument *)remote from:(MPCloudService *)service;
 @property (nonatomic, readonly) MPPreferences *preferences;
 @property (readonly) BOOL previewVisible;
 @property (readonly) BOOL editorVisible;

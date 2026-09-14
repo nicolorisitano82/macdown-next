@@ -274,33 +274,7 @@ static NSString *const kMPMailMenu = @"posta.apri";
                                                MPCloudDocument *chosen) {
         if (!chosen)
             return;
-        [from readDocument:chosen.identifier
-                completion:^(NSString *text, NSString *problem) {
-            if (problem)
-            {
-                [self sayAboutTheCloud:NSLocalizedString(
-                    @"That document could not be read",
-                    @"Failure opening a document from a service")
-                                  text:problem];
-                return;
-            }
-            NSError *making = nil;
-            MPDocument *fresh = (MPDocument *)[[NSDocumentController
-                sharedDocumentController] openUntitledDocumentAndDisplay:YES
-                                                                   error:&making];
-            if (!fresh)
-                return;
-            fresh.markdown = text ?: @"";
-            // Da dove viene: è quello che fa sì che risalvarlo finisca
-            // **lì** invece di creare un secondo documento.
-            fresh.cloudService = from.identifier;
-            fresh.cloudIdentifier = chosen.identifier;
-            fresh.cloudRevision = chosen.revision;
-            // Il nome che ha là fuori, così la finestra non dice «Senza
-            // nome» di un documento che un nome ce l'ha.
-            fresh.displayName = chosen.name;
-            [fresh updateChangeCount:NSChangeCleared];
-        }];
+        [MPDocument openRemote:chosen from:from];
     }];
 }
 

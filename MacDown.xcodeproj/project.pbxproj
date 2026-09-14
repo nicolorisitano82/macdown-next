@@ -10,6 +10,7 @@
 		D2C10000000000000000000A /* MPCloudOpenWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C100000000000000000002 /* MPCloudOpenWindowController.m */; };
 		D2B20000000000000000000A /* MPCloudLedgerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B200000000000000000001 /* MPCloudLedgerTests.m */; };
 		6BAD09D0D176387CE573BB55 /* MPMailerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 18D1D97EF5036CA14217445C /* MPMailerTests.m */; };
+		52CB63014B5053E03CECB086 /* MPSidebarFilesTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 62501866872D0B06D3749981 /* MPSidebarFilesTests.m */; };
 		D2B10000000000000000000A /* MPCloudLedger.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B100000000000000000002 /* MPCloudLedger.m */; };
 		D2A00000000000000000000A /* MPSyncPaneTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2A000000000000000000001 /* MPSyncPaneTests.m */; };
 		D1F000000000000000000014 /* MPCloudService.m in Sources */ = {isa = PBXBuildFile; fileRef = D1F000000000000000000002 /* MPCloudService.m */; };
@@ -357,6 +358,7 @@
 		D2C100000000000000000002 /* MPCloudOpenWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudOpenWindowController.m; sourceTree = "<group>"; };
 		D2B200000000000000000001 /* MPCloudLedgerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudLedgerTests.m; sourceTree = "<group>"; };
 		18D1D97EF5036CA14217445C /* MPMailerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPMailerTests.m; sourceTree = "<group>"; };
+		62501866872D0B06D3749981 /* MPSidebarFilesTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPSidebarFilesTests.m; sourceTree = "<group>"; };
 		D2B100000000000000000001 /* MPCloudLedger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPCloudLedger.h; sourceTree = "<group>"; };
 		D2B100000000000000000002 /* MPCloudLedger.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudLedger.m; sourceTree = "<group>"; };
 		D2A000000000000000000001 /* MPSyncPaneTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPSyncPaneTests.m; sourceTree = "<group>"; };
@@ -1509,6 +1511,7 @@
 				D2A000000000000000000001 /* MPSyncPaneTests.m */,
 				D2B200000000000000000001 /* MPCloudLedgerTests.m */,
 				18D1D97EF5036CA14217445C /* MPMailerTests.m */,
+				62501866872D0B06D3749981 /* MPSidebarFilesTests.m */,
 				1F0D9E0100000000000110 /* MPDiagramPromptTests.m */,
 				1F0D9E0100000000000120 /* MPCompareActionsTests.m */,
 				7DA2311453239F0973310062 /* MPActionLogTests.m */,
@@ -2213,6 +2216,7 @@
 				D2A00000000000000000000A /* MPSyncPaneTests.m in Sources */,
 				D2B20000000000000000000A /* MPCloudLedgerTests.m in Sources */,
 				6BAD09D0D176387CE573BB55 /* MPMailerTests.m in Sources */,
+				52CB63014B5053E03CECB086 /* MPSidebarFilesTests.m in Sources */,
 				1F0D9E0100000000000111 /* MPDiagramPromptTests.m in Sources */,
 				1F0D9E0100000000000121 /* MPCompareActionsTests.m in Sources */,
 				F55A342A5A01CEBCC9F60055 /* MPActionLogTests.m in Sources */,

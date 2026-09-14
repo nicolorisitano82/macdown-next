@@ -5748,6 +5748,60 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
 }
 
 
+/** Apre un documento che sta in un servizio, o porta davanti il suo.
+ *
+ * Ci si arriva da due parti — la finestra «Apri dal servizio collegato…» e
+ * l'elenco nella barra laterale — e la strada dev'essere una: aprire due
+ * volte lo stesso documento vorrebbe dire due finestre che si scrivono
+ * sopra a vicenda.
+ */
++ (void)openRemote:(MPCloudDocument *)remote from:(MPCloudService *)service
+{
+    for (NSDocument *open in [[NSDocumentController sharedDocumentController]
+                                documents])
+    {
+        if (![open isKindOfClass:[MPDocument class]])
+            continue;
+        MPDocument *already = (MPDocument *)open;
+        if ([already.cloudIdentifier isEqualToString:remote.identifier]
+                && [already.cloudService isEqualToString:service.identifier])
+        {
+            [already showWindows];
+            return;
+        }
+    }
+
+    [service readDocument:remote.identifier
+               completion:^(NSString *text, NSString *problem) {
+        if (problem || !text)
+        {
+            NSAlert *alert = [[NSAlert alloc] init];
+            alert.messageText = NSLocalizedString(
+                @"That document could not be read",
+                @"Failure opening a document from a service");
+            alert.informativeText = problem ?: @"";
+            [alert runModal];
+            return;
+        }
+        NSError *making = nil;
+        MPDocument *fresh = (MPDocument *)[[NSDocumentController
+            sharedDocumentController] openUntitledDocumentAndDisplay:YES
+                                                               error:&making];
+        if (!fresh)
+            return;
+        fresh.markdown = text;
+        // Da dove viene: è quello che fa sì che risalvarlo finisca **lì**
+        // invece di creare un secondo documento.
+        fresh.cloudService = service.identifier;
+        fresh.cloudIdentifier = remote.identifier;
+        fresh.cloudRevision = remote.revision;
+        fresh.displayName = remote.name;
+        [fresh updateChangeCount:NSChangeCleared];
+        [fresh refreshSidebarFiles];
+    }];
+}
+
+
 - (void)saveToCloudWithCompletion:(void (^)(BOOL, NSString *, NSString *))finished
 {
     MPCloudService *service = [self cloud];
@@ -5768,6 +5822,7 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
             self.cloudRevision = revision;
             // Salvato davvero: il pallino se ne va, come per un file.
             [self updateChangeCount:NSChangeCleared];
+            [self refreshSidebarFiles];
         }
         if (moved)
         {
@@ -6333,8 +6388,50 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
     // Closed to begin with: a sidebar nobody asked for is in the way.
     [outer setPosition:0.0 ofDividerAtIndex:0];
 
-    [self.sidebar setRootURL:self.fileURL.URLByDeletingLastPathComponent];
+    [self refreshSidebarFiles];
     [self.sidebar updateOutlineWithMarkdown:self.editor.string ?: @""];
+}
+
+
+/** Cosa mostra la scheda «File»: la cartella, o il servizio.
+ *
+ * Un documento aperto da un servizio collegato non ha una cartella su
+ * questo disco — sta in memoria e la sua casa è là fuori — e i suoi vicini
+ * sono i documenti che stanno nella cartella collegata. È quella la
+ * risposta alla domanda che si fa aprendo la barra.
+ */
+- (void)refreshSidebarFiles
+{
+    MPCloudService *service = [self cloud];
+    if (!service || !self.cloudIdentifier.length)
+    {
+        [self.sidebar showRemoteDocuments:nil from:nil];
+        [self.sidebar setRootURL:self.fileURL.URLByDeletingLastPathComponent];
+        return;
+    }
+
+    NSString *place = service.placeName.length ? service.placeName
+                                               : service.name;
+    __weak MPDocument *weakSelf = self;
+    [service documentsWithCompletion:^(NSArray<MPCloudDocument *> *found,
+                                       NSString *problem) {
+        MPDocument *document = weakSelf;
+        if (!document || problem)
+            return;         // niente elenco è meglio di un elenco inventato
+        NSMutableArray<MPSidebarRemoteFile *> *files = [NSMutableArray array];
+        for (MPCloudDocument *one in found)
+        {
+            MPSidebarRemoteFile *file = [[MPSidebarRemoteFile alloc] init];
+            file.name = one.name;
+            file.identifier = one.identifier;
+            [files addObject:file];
+        }
+        [files sortUsingComparator:^NSComparisonResult(MPSidebarRemoteFile *a,
+                                                       MPSidebarRemoteFile *b) {
+            return [a.name localizedStandardCompare:b.name];
+        }];
+        [document.sidebar showRemoteDocuments:files from:place];
+    }];
 }
 
 /// Whether the sidebar is open, as the menu and the toggle both need to know.
@@ -6358,7 +6455,7 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
 
     if (!visible)
     {
-        [self.sidebar setRootURL:self.fileURL.URLByDeletingLastPathComponent];
+        [self refreshSidebarFiles];
         [self.sidebar updateOutlineWithMarkdown:self.editor.string ?: @""];
     }
 }
@@ -6376,6 +6473,22 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
     [self.editor scrollRangeToVisible:range];
     [self.windowForSheet makeFirstResponder:self.editor];
 }
+
+- (void)sidebarDidSelectRemoteDocument:(NSString *)identifier
+                                 named:(NSString *)name
+{
+    MPCloudService *service = [self cloud];
+    if (!service || !identifier.length)
+        return;
+    if ([identifier isEqualToString:self.cloudIdentifier])
+        return;                 // è questo, ed è già davanti
+
+    MPCloudDocument *remote = [[MPCloudDocument alloc] init];
+    remote.identifier = identifier;
+    remote.name = name;
+    [MPDocument openRemote:remote from:service];
+}
+
 
 - (void)sidebarDidSelectFileURL:(NSURL *)url
 {

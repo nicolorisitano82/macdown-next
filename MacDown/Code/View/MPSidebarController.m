@@ -37,6 +37,10 @@
 @end
 
 
+@implementation MPSidebarRemoteFile
+@end
+
+
 typedef NS_ENUM(NSUInteger, MPSidebarMode) {
     MPSidebarModeOutline = 0,
     MPSidebarModeFiles = 1,
@@ -55,6 +59,10 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
 /// Flattened, in document order, for finding the heading around the caret.
 @property (copy, nonatomic) NSArray<MPOutlineNode *> *headingsInOrder;
 @property (strong, nonatomic) MPFileNode *root;
+/// L'elenco che viene da un servizio, quando il documento non sta su
+/// disco. Nil quando la barra mostra una cartella vera.
+@property (copy, nonatomic) NSArray<MPSidebarRemoteFile *> *remoteFiles;
+@property (copy, nonatomic) NSString *remotePlaceName;
 /// Set while the selection is being driven from the caret, so that echoing
 /// it back to the editor is skipped.
 @property (assign, nonatomic) BOOL selectingProgrammatically;
@@ -291,6 +299,17 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
 
 - (void)setRootURL:(NSURL *)url
 {
+    if (url.isFileURL)
+    {
+        // Una cartella vera prende il posto dell'elenco del servizio.
+        self.remoteFiles = nil;
+        self.remotePlaceName = nil;
+    }
+    else if (self.remoteFiles)
+    {
+        return;                 // l'elenco del servizio resta quello
+    }
+
     if (!url.isFileURL)
     {
         self.root = nil;
@@ -307,6 +326,18 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
     if (self.mode == MPSidebarModeFiles && _view)
         [self.outlineView reloadData];
 }
+
+- (void)showRemoteDocuments:(NSArray<MPSidebarRemoteFile *> *)documents
+                       from:(NSString *)placeName
+{
+    self.remoteFiles = documents;
+    self.remotePlaceName = documents ? placeName : nil;
+    if (documents)
+        self.root = nil;        // la cartella di prima non c'entra più
+    if (self.mode == MPSidebarModeFiles && _view)
+        [self.outlineView reloadData];
+}
+
 
 /// Sorted with folders first, then by name, and dotfiles left out.
 - (NSArray<MPFileNode *> *)childrenOfFileNode:(MPFileNode *)node
@@ -390,6 +421,8 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
         return [(MPOutlineNode *)item children];
     }
 
+    if (self.remoteFiles)
+        return item ? @[] : self.remoteFiles;
     if (!item)
         return self.root ? [self childrenOfFileNode:self.root] : @[];
     return [self childrenOfFileNode:(MPFileNode *)item];
@@ -411,6 +444,8 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
 {
     if ([item isKindOfClass:[MPOutlineNode class]])
         return [(MPOutlineNode *)item children].count > 0;
+    if ([item isKindOfClass:[MPSidebarRemoteFile class]])
+        return NO;              // là dentro non si scende: è un elenco
     return [(MPFileNode *)item directory];
 }
 
@@ -462,6 +497,18 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
             : [NSFont systemFontOfSize:12.0];
         cell.textField.textColor = [NSColor labelColor];
     }
+    else if ([item isKindOfClass:[MPSidebarRemoteFile class]])
+    {
+        MPSidebarRemoteFile *remote = item;
+        cell.textField.stringValue = remote.name ?: @"";
+        cell.textField.font = [NSFont systemFontOfSize:12.0];
+        cell.textField.textColor = [NSColor labelColor];
+        // Il documento col simbolo della nuvola: dice da dove viene senza
+        // aggiungere una parola all'elenco.
+        cell.imageView.image = [NSImage imageWithSystemSymbolName:@"doc.text"
+                                       accessibilityDescription:nil];
+        cell.imageView.contentTintColor = [NSColor secondaryLabelColor];
+    }
     else
     {
         MPFileNode *node = item;
@@ -503,6 +550,16 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
     {
         [self.delegate sidebarDidSelectHeadingRange:
             [(MPOutlineNode *)item range]];
+        return;
+    }
+
+    if ([item isKindOfClass:[MPSidebarRemoteFile class]])
+    {
+        MPSidebarRemoteFile *remote = item;
+        if ([self.delegate respondsToSelector:
+                @selector(sidebarDidSelectRemoteDocument:named:)])
+            [self.delegate sidebarDidSelectRemoteDocument:remote.identifier
+                                                    named:remote.name];
         return;
     }
 
