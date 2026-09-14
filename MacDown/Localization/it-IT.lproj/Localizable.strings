@@ -735,3 +735,12 @@
 "That address could not be built." = "Non si è potuto costruire quell’indirizzo.";
 "That mail program could not be opened" = "Quel programma di posta non si è aperto";
 "The email is on the clipboard" = "L’email è negli appunti";
+"Attach" = "Allega";
+"Attach File…" = "Allega file…";
+"Choose a file to attach to the document" = "Scegli un file da allegare al documento";
+"Embed the file in the document (Base64)" = "Incorpora il file nel documento (Base64)";
+"Save the document first: its attachments live beside it." = "Salva prima il documento: i suoi allegati stanno accanto a lui.";
+"That file could not be attached" = "Quel file non si è potuto allegare";
+"That file could not be read." = "Quel file non si è potuto leggere.";
+"The attachments stay inside the message, as links that carry the file: only Mail and Outlook take real attachments from outside." = "Gli allegati restano dentro il messaggio, come link che si portano dietro il file: solo Mail e Outlook prendono allegati veri da fuori.";
+"Writes the file inside the document instead of beside it, so the document depends on nothing — and grows by about a third of the file's size, on a single line." = "Scrive il file dentro il documento invece che accanto, così il documento non dipende da niente — e cresce di circa un terzo della dimensione del file, su una riga sola.";

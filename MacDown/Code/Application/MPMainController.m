@@ -187,6 +187,33 @@ static NSString *const kMPMailMenu = @"posta.apri";
 }
 
 
+/** «Allega file…», accanto alla voce che inserisce un'immagine.
+ *
+ * Trovata per quello che fa — il menu che contiene chi risponde a
+ * `toggleImage:` — e non per come si chiama, che dipende dalla lingua.
+ */
+- (void)addAttachMenu
+{
+    for (NSMenuItem *top in [NSApp mainMenu].itemArray)
+    {
+        NSInteger where = [top.submenu indexOfItemWithTarget:nil
+                                                   andAction:@selector(toggleImage:)];
+        if (where < 0)
+            continue;
+        if ([top.submenu indexOfItemWithTarget:nil
+                                     andAction:@selector(attachFile:)] >= 0)
+            return;
+        NSMenuItem *attach = [[NSMenuItem alloc] initWithTitle:
+            NSLocalizedString(@"Attach File…",
+                @"Menu item: put a file beside the document and link it")
+            action:@selector(attachFile:) keyEquivalent:@""];
+        attach.target = nil;
+        [top.submenu insertItem:attach atIndex:where + 1];
+        return;
+    }
+}
+
+
 #pragma mark - I documenti che stanno in un servizio
 
 /// I servizi in cui si può scrivere adesso.
@@ -344,7 +371,10 @@ static NSString *const kMPMailMenu = @"posta.apri";
 {
     // Dopo il lancio: il menu principale non è detto sia già montato
     // mentre il controller si costruisce.
-    dispatch_async(dispatch_get_main_queue(), ^{ [self addCloudMenu]; });
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self addCloudMenu];
+        [self addAttachMenu];
+    });
 
     // Using private API [WebCache setDisabled:YES] to disable WebView's cache
     id webCacheClass = (id)NSClassFromString(@"WebCache");

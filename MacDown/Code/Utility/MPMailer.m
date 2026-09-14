@@ -110,8 +110,13 @@ static NSString *MPAppleScriptString(NSString *text)
             displayNameAtPath:url.path].stringByDeletingPathExtension;
         client.icon = [workspace iconForFile:url.path];
         NSBundle *bundle = [NSBundle bundleWithURL:url];
-        client.way = [bundle.bundleIdentifier isEqualToString:@"com.apple.mail"]
-            ? MPMailWayAppleMail : MPMailWayApplication;
+        NSString *identifier = bundle.bundleIdentifier.lowercaseString;
+        if ([identifier isEqualToString:@"com.apple.mail"])
+            client.way = MPMailWayAppleMail;
+        else if ([identifier hasPrefix:@"com.microsoft.outlook"])
+            client.way = MPMailWayOutlook;
+        else
+            client.way = MPMailWayApplication;
         [found addObject:client];
     }
 
@@ -144,8 +149,30 @@ static NSString *MPAppleScriptString(NSString *text)
 }
 
 
++ (BOOL)takesAttachments:(MPMailClient *)client
+{
+    return client.way == MPMailWayAppleMail || client.way == MPMailWayOutlook;
+}
+
+
+/// Le righe che appendono gli allegati, dentro uno script già aperto.
++ (NSString *)linesAttaching:(NSArray<NSURL *> *)attachments
+                        with:(NSString *)format
+{
+    NSMutableString *lines = [NSMutableString string];
+    for (NSURL *file in attachments)
+    {
+        if (!file.isFileURL)
+            continue;
+        [lines appendFormat:format, MPAppleScriptString(file.path)];
+    }
+    return lines;
+}
+
+
 + (NSString *)appleMailScriptForSubject:(NSString *)subject
                                 htmlAt:(NSString *)path
+                           attachments:(NSArray<NSURL *> *)attachments
 {
     // L'HTML sta in un file e lo script lo legge: infilarlo nello script
     // vorrebbe dire una riga di codice lunga quanto il documento, con ogni
@@ -157,9 +184,39 @@ static NSString *MPAppleScriptString(NSString *text)
         @"  set theMessage to make new outgoing message with properties "
         @"{subject:\"%@\", visible:true}\n"
         @"  tell theMessage to set html content to theHTML\n"
+        @"%@"
         @"  activate\n"
         @"end tell\n",
-        MPAppleScriptString(path), MPAppleScriptString(subject)];
+        MPAppleScriptString(path), MPAppleScriptString(subject),
+        [self linesAttaching:attachments with:
+            @"  tell content of theMessage to make new attachment with "
+            @"properties {file name:POSIX file \"%@\"} at after the last "
+            @"paragraph\n"]];
+}
+
+
+/** Outlook prende l'oggetto e gli allegati, non il corpo.
+ *
+ * Il suo dizionario ha la classe `attachment` con la proprietà `file`
+ * — scrivibile solo mentre l'allegato si crea, dice la descrizione — ma
+ * del corpo espone solo testo: l'HTML formattato continua a passare dagli
+ * appunti, come per tutti gli altri.
+ */
++ (NSString *)outlookScriptForSubject:(NSString *)subject
+                          attachments:(NSArray<NSURL *> *)attachments
+{
+    return [NSString stringWithFormat:
+        @"tell application \"Microsoft Outlook\"\n"
+        @"  set theMessage to make new outgoing message with properties "
+        @"{subject:\"%@\"}\n"
+        @"%@"
+        @"  open theMessage\n"
+        @"  activate\n"
+        @"end tell\n",
+        MPAppleScriptString(subject),
+        [self linesAttaching:attachments with:
+            @"  make new attachment at theMessage with properties "
+            @"{file:POSIX file \"%@\"}\n"]];
 }
 
 
@@ -167,6 +224,7 @@ static NSString *MPAppleScriptString(NSString *text)
      subject:(NSString *)subject
         html:(NSString *)html
        plain:(NSString *)plain
+ attachments:(NSArray<NSURL *> *)attachments
 wantsPasting:(BOOL *)wantsPasting
      problem:(NSString **)problem
 {
@@ -181,7 +239,28 @@ wantsPasting:(BOOL *)wantsPasting
     }
 
     if (client.way == MPMailWayAppleMail)
-        return [self openMail:subject html:html problem:problem];
+        return [self openMail:subject html:html attachments:attachments
+                      problem:problem];
+
+    if (client.way == MPMailWayOutlook)
+    {
+        // Il corpo resta agli appunti; gli allegati no, quelli li prende.
+        [self putOnThePasteboard:html plain:plain];
+        if (wantsPasting)
+            *wantsPasting = YES;
+        NSDictionary *bad = nil;
+        NSAppleScript *script = [[NSAppleScript alloc] initWithSource:
+            [self outlookScriptForSubject:subject attachments:attachments]];
+        [script executeAndReturnError:&bad];
+        if (bad)
+        {
+            if (problem)
+                *problem = bad[NSAppleScriptErrorBriefMessage]
+                        ?: bad[NSAppleScriptErrorMessage] ?: @"";
+            return NO;
+        }
+        return YES;
+    }
 
     // Le altre due strade sono la stessa: l'email negli appunti, e una
     // finestra di composizione aperta dove si è chiesto.
@@ -219,6 +298,7 @@ wantsPasting:(BOOL *)wantsPasting
 
 /// Il messaggio in Mail, formattato, con uno script.
 + (BOOL)openMail:(NSString *)subject html:(NSString *)html
+     attachments:(NSArray<NSURL *> *)attachments
          problem:(NSString **)problem
 {
     NSString *path = [NSTemporaryDirectory() stringByAppendingPathComponent:
@@ -235,7 +315,8 @@ wantsPasting:(BOOL *)wantsPasting
 
     NSDictionary *bad = nil;
     NSAppleScript *script = [[NSAppleScript alloc] initWithSource:
-        [self appleMailScriptForSubject:subject htmlAt:path]];
+        [self appleMailScriptForSubject:subject htmlAt:path
+                            attachments:attachments]];
     [script executeAndReturnError:&bad];
     if (bad)
     {

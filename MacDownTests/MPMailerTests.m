@@ -123,7 +123,8 @@
 - (void)testTheScriptForMailReadsTheFileInsteadOfCarryingIt
 {
     NSString *script = [MPMailer appleMailScriptForSubject:@"Verbale"
-                                                    htmlAt:@"/tmp/x.html"];
+                                                    htmlAt:@"/tmp/x.html"
+                                               attachments:@[]];
     XCTAssertTrue([script containsString:@"/tmp/x.html"]);
     XCTAssertTrue([script containsString:@"set html content"]);
     XCTAssertTrue([script containsString:@"subject:\"Verbale\""]);
@@ -134,7 +135,7 @@
 - (void)testAnOddSubjectDoesNotBreakTheScript
 {
     NSString *script = [MPMailer appleMailScriptForSubject:
-        @"Il \"verbale\" di\\marzo" htmlAt:@"/tmp/x.html"];
+        @"Il \"verbale\" di\\marzo" htmlAt:@"/tmp/x.html" attachments:@[]];
     XCTAssertTrue([script containsString:@"\\\"verbale\\\""]);
     XCTAssertTrue([script containsString:@"di\\\\marzo"]);
     // E resta uno script che si compila.
@@ -177,7 +178,7 @@
     BOOL pasting = YES;
     NSString *problem = nil;
     BOOL went = [MPMailer open:nil subject:@"x" html:@"<p>x</p>" plain:@"x"
-                  wantsPasting:&pasting problem:&problem];
+                   attachments:@[] wantsPasting:&pasting problem:&problem];
     XCTAssertFalse(went);
     XCTAssertFalse(pasting);
     XCTAssertTrue(problem.length > 0);
@@ -194,5 +195,48 @@
     XCTAssertTrue([plain containsString:@"Presenti: Anna."]);
     XCTAssertFalse([plain containsString:@"<b>"]);
 }
+
+#pragma mark - Gli allegati nel messaggio
+
+- (void)testMailIsToldToAttachEachFile
+{
+    NSString *script = [MPMailer appleMailScriptForSubject:@"Verbale"
+        htmlAt:@"/tmp/x.html"
+        attachments:@[[NSURL fileURLWithPath:@"/tmp/verbale.pdf"],
+                      [NSURL fileURLWithPath:@"/tmp/conti.xlsx"]]];
+    XCTAssertTrue([script containsString:@"make new attachment"]);
+    XCTAssertTrue([script containsString:@"/tmp/verbale.pdf"]);
+    XCTAssertTrue([script containsString:@"/tmp/conti.xlsx"]);
+
+    NSDictionary *bad = nil;
+    NSAppleScript *made = [[NSAppleScript alloc] initWithSource:script];
+    XCTAssertTrue([made compileAndReturnError:&bad], @"%@", bad);
+}
+
+
+- (void)testOutlookIsToldTheSame
+{
+    NSString *script = [MPMailer outlookScriptForSubject:@"Verbale"
+        attachments:@[[NSURL fileURLWithPath:@"/tmp/verbale.pdf"]]];
+    XCTAssertTrue([script containsString:@"Microsoft Outlook"]);
+    XCTAssertTrue([script containsString:@"make new attachment"]);
+    XCTAssertTrue([script containsString:@"/tmp/verbale.pdf"]);
+    XCTAssertTrue([script containsString:@"subject:\"Verbale\""]);
+}
+
+
+/// Chi gli allegati non li prende lo dice, invece di far finta.
+- (void)testOnlyTheProgramsThatCanTakeAttachmentsSaySo
+{
+    for (MPMailClient *client in [MPMailer clients])
+    {
+        BOOL takes = [MPMailer takesAttachments:client];
+        if (client.way == MPMailWayWeb || client.way == MPMailWayApplication)
+            XCTAssertFalse(takes, @"%@", client.name);
+        else
+            XCTAssertTrue(takes, @"%@", client.name);
+    }
+}
+
 
 @end

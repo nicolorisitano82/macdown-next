@@ -10,11 +10,13 @@
 		D2C10000000000000000000A /* MPCloudOpenWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = D2C100000000000000000002 /* MPCloudOpenWindowController.m */; };
 		D2B20000000000000000000A /* MPCloudLedgerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B200000000000000000001 /* MPCloudLedgerTests.m */; };
 		6BAD09D0D176387CE573BB55 /* MPMailerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 18D1D97EF5036CA14217445C /* MPMailerTests.m */; };
+		2A5411B07CB6EB654D74FA95 /* MPAttachmentsTests.m in Sources */ = {isa = PBXBuildFile; fileRef = A59BAF447B5C7897CEDBBC0F /* MPAttachmentsTests.m */; };
 		52CB63014B5053E03CECB086 /* MPSidebarFilesTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 62501866872D0B06D3749981 /* MPSidebarFilesTests.m */; };
 		D2B10000000000000000000A /* MPCloudLedger.m in Sources */ = {isa = PBXBuildFile; fileRef = D2B100000000000000000002 /* MPCloudLedger.m */; };
 		D2A00000000000000000000A /* MPSyncPaneTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D2A000000000000000000001 /* MPSyncPaneTests.m */; };
 		D1F000000000000000000014 /* MPCloudService.m in Sources */ = {isa = PBXBuildFile; fileRef = D1F000000000000000000002 /* MPCloudService.m */; };
 		BE247BC11B734552242E3F2D /* MPMailer.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CCDD97791A7E1FAE7C8414C /* MPMailer.m */; };
+		4FA17074E325DF875325DCFE /* MPAttachments.m in Sources */ = {isa = PBXBuildFile; fileRef = 5A8A87F41A972FEF58E9B8E5 /* MPAttachments.m */; };
 		D1F000000000000000000015 /* MPSyncPreferencesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = D1F000000000000000000004 /* MPSyncPreferencesViewController.m */; };
 		D1E00000000000000000000A /* MPSpanStylerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D1E000000000000000000001 /* MPSpanStylerTests.m */; };
 		D1D00000000000000000000A /* MPSpanStyler.m in Sources */ = {isa = PBXBuildFile; fileRef = D1D000000000000000000002 /* MPSpanStyler.m */; };
@@ -358,14 +360,17 @@
 		D2C100000000000000000002 /* MPCloudOpenWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudOpenWindowController.m; sourceTree = "<group>"; };
 		D2B200000000000000000001 /* MPCloudLedgerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudLedgerTests.m; sourceTree = "<group>"; };
 		18D1D97EF5036CA14217445C /* MPMailerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPMailerTests.m; sourceTree = "<group>"; };
+		A59BAF447B5C7897CEDBBC0F /* MPAttachmentsTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPAttachmentsTests.m; sourceTree = "<group>"; };
 		62501866872D0B06D3749981 /* MPSidebarFilesTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPSidebarFilesTests.m; sourceTree = "<group>"; };
 		D2B100000000000000000001 /* MPCloudLedger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPCloudLedger.h; sourceTree = "<group>"; };
 		D2B100000000000000000002 /* MPCloudLedger.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudLedger.m; sourceTree = "<group>"; };
 		D2A000000000000000000001 /* MPSyncPaneTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPSyncPaneTests.m; sourceTree = "<group>"; };
 		D1F000000000000000000001 /* MPCloudService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPCloudService.h; sourceTree = "<group>"; };
 		AA1DEDF35F4989DF87309DB9 /* MPMailer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPMailer.h; sourceTree = "<group>"; };
+		FA3ADB427464557A00671F72 /* MPAttachments.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPAttachments.h; sourceTree = "<group>"; };
 		D1F000000000000000000002 /* MPCloudService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPCloudService.m; sourceTree = "<group>"; };
 		4CCDD97791A7E1FAE7C8414C /* MPMailer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPMailer.m; sourceTree = "<group>"; };
+		5A8A87F41A972FEF58E9B8E5 /* MPAttachments.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPAttachments.m; sourceTree = "<group>"; };
 		D1F000000000000000000003 /* MPSyncPreferencesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPSyncPreferencesViewController.h; sourceTree = "<group>"; };
 		D1F000000000000000000004 /* MPSyncPreferencesViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPSyncPreferencesViewController.m; sourceTree = "<group>"; };
 		D1E000000000000000000001 /* MPSpanStylerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPSpanStylerTests.m; sourceTree = "<group>"; };
@@ -1182,6 +1187,8 @@
 				D1F000000000000000000002 /* MPCloudService.m */,
 				AA1DEDF35F4989DF87309DB9 /* MPMailer.h */,
 				4CCDD97791A7E1FAE7C8414C /* MPMailer.m */,
+				FA3ADB427464557A00671F72 /* MPAttachments.h */,
+				5A8A87F41A972FEF58E9B8E5 /* MPAttachments.m */,
 				1F0D9E01000000000000F1 /* MPMarkdownText.h */,
 				1F0D9E01000000000000F2 /* MPMarkdownText.m */,
 				1F0D9D63194AC7CF008E1856 /* MPUtilities.h */,
@@ -1511,6 +1518,7 @@
 				D2A000000000000000000001 /* MPSyncPaneTests.m */,
 				D2B200000000000000000001 /* MPCloudLedgerTests.m */,
 				18D1D97EF5036CA14217445C /* MPMailerTests.m */,
+				A59BAF447B5C7897CEDBBC0F /* MPAttachmentsTests.m */,
 				62501866872D0B06D3749981 /* MPSidebarFilesTests.m */,
 				1F0D9E0100000000000110 /* MPDiagramPromptTests.m */,
 				1F0D9E0100000000000120 /* MPCompareActionsTests.m */,
@@ -2138,6 +2146,7 @@
 				1F0D9E0100000000000F2A /* MPMarkdownText.m in Sources */,
 				D1F000000000000000000014 /* MPCloudService.m in Sources */,
 				BE247BC11B734552242E3F2D /* MPMailer.m in Sources */,
+				4FA17074E325DF875325DCFE /* MPAttachments.m in Sources */,
 				D2B10000000000000000000A /* MPCloudLedger.m in Sources */,
 				D1C00000000000000000000A /* MPAttributedSpans.m in Sources */,
 				852D523C1E260A6400BA7162 /* MPTerminalPreferencesViewController.m in Sources */,
@@ -2216,6 +2225,7 @@
 				D2A00000000000000000000A /* MPSyncPaneTests.m in Sources */,
 				D2B20000000000000000000A /* MPCloudLedgerTests.m in Sources */,
 				6BAD09D0D176387CE573BB55 /* MPMailerTests.m in Sources */,
+				2A5411B07CB6EB654D74FA95 /* MPAttachmentsTests.m in Sources */,
 				52CB63014B5053E03CECB086 /* MPSidebarFilesTests.m in Sources */,
 				1F0D9E0100000000000111 /* MPDiagramPromptTests.m in Sources */,
 				1F0D9E0100000000000121 /* MPCompareActionsTests.m in Sources */,

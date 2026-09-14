@@ -214,6 +214,16 @@ typedef NS_ENUM(NSUInteger, MPCloudPick) {
 - (void)readDocument:(NSString *)identifier
           completion:(void (^)(NSString *text, NSString *problem))done;
 
+/** Un file qualunque nella cartella scelta: gli allegati.
+ *
+ * `link` è quello che va scritto nel Markdown — su Drive l'indirizzo che
+ * apre il file, dove una cartella è una cartella il nome e basta — perché
+ * un allegato di un documento che sta in un servizio deve stare lì con lui.
+ */
+- (void)uploadFile:(NSURL *)file named:(NSString *)name
+        completion:(void (^)(NSString *name, NSString *link,
+                             NSString *problem))done;
+
 /// Un documento nuovo nella cartella scelta.
 - (void)createDocumentNamed:(NSString *)name
                        text:(NSString *)text

@@ -24,7 +24,8 @@
 
 /// Come si arriva al messaggio, per un programma dato.
 typedef NS_ENUM(NSUInteger, MPMailWay) {
-    MPMailWayAppleMail,     ///< con uno script: HTML vero
+    MPMailWayAppleMail,     ///< con uno script: HTML vero e allegati
+    MPMailWayOutlook,       ///< con uno script: allegati, corpo dagli appunti
     MPMailWayApplication,   ///< `mailto:` e gli appunti
     MPMailWayWeb,           ///< la finestra di composizione nel browser
 };
@@ -60,8 +61,13 @@ typedef NS_ENUM(NSUInteger, MPMailWay) {
      subject:(NSString *)subject
         html:(NSString *)html
        plain:(NSString *)plain
+ attachments:(NSArray<NSURL *> *)attachments
 wantsPasting:(BOOL *)wantsPasting
      problem:(NSString **)problem;
+
+/// Se quel programma sa ricevere allegati da fuori. `mailto:` no, e non
+/// c'è modo: la RFC non li prevede, e chi li aveva li ha tolti.
++ (BOOL)takesAttachments:(MPMailClient *)client;
 
 /// Il testo semplice di un HTML: l'alternativa che ogni email si porta.
 + (NSString *)plainTextFrom:(NSString *)html;
@@ -69,7 +75,13 @@ wantsPasting:(BOOL *)wantsPasting
 /// Lo script che Mail riceve, dato il file in cui sta l'HTML. Puro, così
 /// si guarda in una prova invece che in un programma di posta.
 + (NSString *)appleMailScriptForSubject:(NSString *)subject
-                                htmlAt:(NSString *)path;
+                                htmlAt:(NSString *)path
+                           attachments:(NSArray<NSURL *> *)attachments;
+
+/// Lo stesso per Outlook, che da uno script prende l'oggetto e gli
+/// allegati ma non il corpo formattato: quello resta agli appunti.
++ (NSString *)outlookScriptForSubject:(NSString *)subject
+                          attachments:(NSArray<NSURL *> *)attachments;
 
 @end
 

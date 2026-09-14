@@ -362,6 +362,40 @@ right, and at the bottom of that window the same three decisions are one
 button away: take single lines across first if you want to build the
 version you actually mean, then press **Keep Mine** to send it up.
 
+## Attaching a file
+
+Markdown has no attachments: it has links and pictures, and that is all.
+Everyone who has given it attachments did the same thing — **the file beside
+the text, and a relative link** — and only the folder differs: `assets/` in
+a textbundle, an attachments folder in an Obsidian vault, `data/` by ID in
+Emacs' org-attach, `_resources/` when Joplin exports. **Insert ▸ Attach
+File…** does that, and where the file lands depends on where the document
+lives:
+
+* a document **on disk** keeps its attachments in `<name>.assets` beside it;
+* a **textbundle** keeps them in `assets/`, which is what the format has
+  always said;
+* a document **in a connected service** sends them to the connected folder,
+  where it lives itself — on Drive the link is the address that opens the
+  file, in a folder it is the name;
+* ticking **Embed the file in the document** writes it inline as a `data:`
+  URL instead. It is still Markdown — a `data:` URL is a URL — and the
+  document then depends on nothing, at the price of growing by about a
+  third of the file's size, on one line.
+
+A picture is written as a picture, a file as a link. A `.md` beside the
+document is not an attachment: it is a neighbour, and it stays where it is.
+
+**What travels, when the document leaves here**
+
+| Export | The attachments |
+|---|---|
+| textbundle, textpack | into `assets/`, like the pictures |
+| HTML | inside the page, as `data:` — a single file stays a single file |
+| email, in Mail and Outlook | real attachments on the message |
+| email, everywhere else | inside the message body, as links carrying the file |
+| Word, OpenDocument, PDF | left as links: those formats have nowhere to put them |
+
 ## The document as an email
 
 **File ▸ Open as Email ▸** lists the mail programs this Mac knows about —

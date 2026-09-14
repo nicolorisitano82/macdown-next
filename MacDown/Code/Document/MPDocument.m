@@ -41,6 +41,7 @@
 #import "MPSidebarController.h"
 #import "MPEpubExport.h"
 #import "MPMailer.h"
+#import "MPAttachments.h"
 #import "MPDocxPostProcessing.h"
 #import "MPRemoteImageFetch.h"
 #import "MPModelStore.h"
@@ -3467,6 +3468,9 @@ NS_INLINE NSString *MPImageTagForSVG(NSString *svg, CGFloat scale)
         if (self.preferences.htmlWikiLinks)
         html = [self htmlByResolvingWikiLinksIn:html];
         html = [self htmlByInliningDiagramsIn:html asImages:NO];
+        // Gli allegati vengono dentro: un HTML salvato altrove porterebbe
+        // link a una cartella rimasta indietro, cioè link rotti.
+        html = MPHTMLWithAttachmentsInlined(html, self.fileURL);
         [html writeToURL:panel.URL atomically:NO encoding:NSUTF8StringEncoding
                    error:NULL];
     }];
@@ -3507,6 +3511,13 @@ NS_INLINE NSString *MPImageTagForSVG(NSString *svg, CGFloat scale)
 - (void)sendAsEmail:(NSString *)html to:(MPMailClient *)client
 {
     NSString *sealed = MPHTMLWithLocalImagesInlined(html, self.fileURL);
+    // Gli allegati del documento viaggiano come allegati del messaggio,
+    // dove il programma li accetta; dove no, restano dentro il corpo come
+    // `data:`, che è meglio di un link a una cartella di questo Mac.
+    NSArray<NSURL *> *attachments = [MPMailer takesAttachments:client]
+        ? MPAttachmentsIn(self.markdown ?: @"", self.fileURL) : @[];
+    if (!attachments.count)
+        sealed = MPHTMLWithAttachmentsInlined(sealed, self.fileURL);
     NSString *subject = self.presumedFileName.length
         ? self.presumedFileName : NSLocalizedString(@"untitled",
             @"Name for a document that has never been saved");
@@ -3515,6 +3526,7 @@ NS_INLINE NSString *MPImageTagForSVG(NSString *svg, CGFloat scale)
     NSString *problem = nil;
     BOOL went = [MPMailer open:client subject:subject html:sealed
                          plain:[MPMailer plainTextFrom:sealed]
+                   attachments:attachments
                   wantsPasting:&pasting problem:&problem];
     if (!went)
     {
@@ -3527,7 +3539,9 @@ NS_INLINE NSString *MPImageTagForSVG(NSString *svg, CGFloat scale)
         return;
     }
     if (pasting)
-        [self sayTheEmailIsOnThePasteboard:client];
+        [self sayTheEmailIsOnThePasteboard:client
+                             withAttachments:!attachments.count
+            && MPAttachmentsIn(self.markdown ?: @"", self.fileURL).count > 0];
 }
 
 
@@ -3539,6 +3553,7 @@ NS_INLINE NSString *MPImageTagForSVG(NSString *svg, CGFloat scale)
  * ha capito, no: c'è la spunta per non risentirlo.
  */
 - (void)sayTheEmailIsOnThePasteboard:(MPMailClient *)client
+                    withAttachments:(BOOL)attachmentsLeftBehind
 {
     NSString *key = @"emailPasteNoticeSeen";
     if ([[NSUserDefaults standardUserDefaults] boolForKey:key])
@@ -3551,6 +3566,17 @@ NS_INLINE NSString *MPImageTagForSVG(NSString *svg, CGFloat scale)
         @"%@ only accepts a subject from outside, so the formatted message "
         @"is on the clipboard: press ⌘V in the new message.",
         @"Why the message has to be pasted"), client.name];
+    if (attachmentsLeftBehind)
+    {
+        // Detto, non nascosto: un allegato che non parte è la cosa che si
+        // scopre dopo, quando chi riceve chiede «e il file?».
+        alert.informativeText = [alert.informativeText
+            stringByAppendingFormat:@"\n\n%@", NSLocalizedString(
+                @"The attachments stay inside the message, as links that "
+                @"carry the file: only Mail and Outlook take real "
+                @"attachments from outside.",
+                @"What happens to attachments in the other programs")];
+    }
     alert.showsSuppressionButton = YES;
     [alert runModal];
     if (alert.suppressionButton.state == NSControlStateValueOn)
@@ -6266,6 +6292,132 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
     else
         handler([panel runModal]);
 }
+
+/** Allega un file al documento.
+ *
+ * Il Markdown non ha allegati, quindi ci si comporta come chi ci ha
+ * provato prima: **il file accanto al testo, e un link relativo**. Dove
+ * finisce dipende da dove sta il documento — accanto a sé in
+ * `<nome>.assets`, in `assets/` dentro un textbundle, nella cartella
+ * collegata se il documento vive in un servizio — e chi vuole un documento
+ * che non dipende da niente lo incorpora come `data:`.
+ */
+- (IBAction)attachFile:(id)sender
+{
+    NSOpenPanel *panel = [NSOpenPanel openPanel];
+    panel.canChooseFiles = YES;
+    panel.canChooseDirectories = NO;
+    panel.allowsMultipleSelection = YES;
+    panel.message = NSLocalizedString(
+        @"Choose a file to attach to the document",
+        @"Attachment chooser prompt");
+    panel.prompt = NSLocalizedString(@"Attach",
+        @"Button of the attachment chooser");
+
+    NSButton *embedToggle = [NSButton checkboxWithTitle:NSLocalizedString(
+        @"Embed the file in the document (Base64)",
+        @"Attachment chooser option") target:nil action:NULL];
+    embedToggle.toolTip = NSLocalizedString(
+        @"Writes the file inside the document instead of beside it, so the "
+        @"document depends on nothing — and grows by about a third of the "
+        @"file's size, on a single line.",
+        @"Attachment chooser option help");
+    embedToggle.frame = NSMakeRect(18.0, 10.0, 420.0, 20.0);
+    NSView *accessory =
+        [[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, 456.0, 40.0)];
+    [accessory addSubview:embedToggle];
+    panel.accessoryView = accessory;
+    panel.accessoryViewDisclosed = YES;
+
+    NSWindow *window = self.windowForSheet;
+    void (^handler)(NSModalResponse) = ^(NSModalResponse result) {
+        if (result != NSModalResponseOK)
+            return;
+        BOOL embedded = (embedToggle.state == NSControlStateValueOn);
+        for (NSURL *url in panel.URLs)
+            [self attachURL:url embedded:embedded];
+    };
+    if (window)
+        [panel beginSheetModalForWindow:window completionHandler:handler];
+    else
+        handler([panel runModal]);
+}
+
+
+- (void)attachURL:(NSURL *)url embedded:(BOOL)embedded
+{
+    if (embedded)
+    {
+        NSString *problem = nil;
+        NSString *uri = MPDataURIForFile(url, &problem);
+        if (!uri)
+        {
+            [self sayAboutTheAttachment:problem];
+            return;
+        }
+        NSString *name = url.lastPathComponent;
+        [self insertAttachmentMarkup:MPIsAPicture(name)
+            ? [NSString stringWithFormat:@"![%@](%@)",
+                name.stringByDeletingPathExtension, uri]
+            : [NSString stringWithFormat:@"[%@](%@)", name, uri]];
+        return;
+    }
+
+    // Un documento che vive in un servizio tiene i suoi allegati lì: una
+    // cartella su questo Mac non la vedrebbe chi apre il documento altrove.
+    MPCloudService *service = [self cloud];
+    if (service && self.cloudIdentifier.length)
+    {
+        [service uploadFile:url named:url.lastPathComponent
+                 completion:^(NSString *name, NSString *link,
+                              NSString *problem) {
+            if (!name)
+            {
+                [self sayAboutTheAttachment:problem];
+                return;
+            }
+            NSString *encoded = [link
+                stringByAddingPercentEncodingWithAllowedCharacters:
+                    [NSCharacterSet URLQueryAllowedCharacterSet]] ?: link;
+            [self insertAttachmentMarkup:MPIsAPicture(name)
+                ? [NSString stringWithFormat:@"![%@](%@)",
+                    name.stringByDeletingPathExtension, encoded]
+                : [NSString stringWithFormat:@"[%@](%@)", name, encoded]];
+        }];
+        return;
+    }
+
+    NSString *problem = nil;
+    NSString *name = MPAttachFileToDocument(url, self.fileURL, &problem);
+    if (!name)
+    {
+        [self sayAboutTheAttachment:problem];
+        return;
+    }
+    [self insertAttachmentMarkup:MPAttachmentMarkdown(name,
+        MPAttachmentsFolderNameFor(self.fileURL))];
+}
+
+
+/// Il link dell'allegato dove sta il cursore, come per un'immagine.
+- (void)insertAttachmentMarkup:(NSString *)markup
+{
+    NSRange selected = self.editor.selectedRange;
+    [self.editor insertText:markup replacementRange:selected];
+    self.editor.selectedRange =
+        NSMakeRange(selected.location + markup.length, 0);
+}
+
+
+- (void)sayAboutTheAttachment:(NSString *)problem
+{
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = NSLocalizedString(@"That file could not be attached",
+        @"Failure attaching a file to the document");
+    alert.informativeText = problem ?: @"";
+    [alert runModal];
+}
+
 
 - (IBAction)toggleOrderedList:(id)sender
 {
