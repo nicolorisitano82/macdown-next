@@ -5,6 +5,8 @@
 
 #import "MPTextBundle.h"
 
+#import "MPAttachments.h"
+
 #import "MPUtilities.h"
 #import "MPZipArchive.h"
 
@@ -99,7 +101,8 @@ static NSString *MPAssetName(NSString *original)
 
 #pragma mark - Reading the markdown
 
-/// Every image destination in the markdown, and where it is written.
+/// Every destination in the markdown that may be a file of this
+/// document — a picture or an attachment — and where it is written.
 ///
 /// Both ways a picture is written: `![alt](destination)` and the definition
 /// a reference points at, `[label]: destination`. What is inside code is
@@ -113,7 +116,7 @@ static NSArray<NSTextCheckingResult *> *MPImageDestinations(NSString *markdown)
             // ![alt](destination "title")   destination may be in <>,
             // and may have balanced parentheses in it: foto (2).png is a
             // name macOS and Windows both produce.
-            @"!\\[[^\\]]*\\]\\(\\s*(?:<([^>]*)>"
+            @"!?\\[[^\\]]*\\]\\(\\s*(?:<([^>]*)>"
             @"|((?:[^\\s()]|\\([^\\s()]*\\))+))"
             @"(?:\\s+\"[^\"]*\")?\\s*\\)"
             // [label]: destination "title"
@@ -191,10 +194,14 @@ static NSURL *MPFileForDestination(NSString *destination, NSURL *documentURL)
                           error:NULL] || directory.boolValue)
         return nil;               // not there, or not a file
 
-    // A picture, and not the neighbouring document a link points at: a
-    // textbundle holds one text, so the other documents stay where they are.
-    return [MPPictureExtensions() containsObject:
-            file.pathExtension.lowercaseString] ? file : nil;
+    // A picture or an attachment, and not the neighbouring document a link
+    // points at: a textbundle holds one text, so the other documents stay
+    // where they are. Everything else the document points at travels with
+    // it, which is what `assets/` has always been for.
+    if ([MPPictureExtensions() containsObject:
+            file.pathExtension.lowercaseString])
+        return file;
+    return MPIsANeighbouringDocument(file.lastPathComponent) ? nil : file;
 }
 
 

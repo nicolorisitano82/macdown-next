@@ -23,6 +23,7 @@
 #import "MPAgentsPreferencesViewController.h"
 #import "MPSyncPreferencesViewController.h"
 #import "MPCloudService.h"
+#import "MPMailer.h"
 #import "MPCloudOpenWindowController.h"
 #import "MPDocument.h"
 #import "MPQuickLookPreferencesViewController.h"
@@ -109,6 +110,9 @@ NS_INLINE void treat()
 /// dipende dalla lingua di chi legge.
 static NSString *const kMPCloudMenu = @"servizi.salva";
 
+/// E quello dei programmi di posta, allo stesso modo.
+static NSString *const kMPMailMenu = @"posta.apri";
+
 
 @interface MPMainController () <NSMenuDelegate>
 @property (readonly) NSWindowController *preferencesWindowController;
@@ -168,6 +172,45 @@ static NSString *const kMPCloudMenu = @"servizi.salva";
         action:@selector(openFromCloud:) keyEquivalent:@""];
     open.target = nil;
     [file insertItem:open atIndex:where + 1];
+
+    // Il documento come email, nel programma che si sceglie. Anche questo
+    // è un elenco fatto quando lo si apre: i programmi di posta si
+    // installano e si tolgono mentre l'applicazione è aperta.
+    NSMenuItem *mail = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(
+        @"Open as Email", @"File menu: submenu of the mail programs")
+        action:NULL keyEquivalent:@""];
+    NSMenu *programs = [[NSMenu alloc] initWithTitle:mail.title];
+    programs.delegate = self;
+    programs.identifier = kMPMailMenu;
+    mail.submenu = programs;
+    [file insertItem:mail atIndex:where + 1];
+}
+
+
+/** «Allega file…», accanto alla voce che inserisce un'immagine.
+ *
+ * Trovata per quello che fa — il menu che contiene chi risponde a
+ * `toggleImage:` — e non per come si chiama, che dipende dalla lingua.
+ */
+- (void)addAttachMenu
+{
+    for (NSMenuItem *top in [NSApp mainMenu].itemArray)
+    {
+        NSInteger where = [top.submenu indexOfItemWithTarget:nil
+                                                   andAction:@selector(toggleImage:)];
+        if (where < 0)
+            continue;
+        if ([top.submenu indexOfItemWithTarget:nil
+                                     andAction:@selector(attachFile:)] >= 0)
+            return;
+        NSMenuItem *attach = [[NSMenuItem alloc] initWithTitle:
+            NSLocalizedString(@"Attach File…",
+                @"Menu item: put a file beside the document and link it")
+            action:@selector(attachFile:) keyEquivalent:@""];
+        attach.target = nil;
+        [top.submenu insertItem:attach atIndex:where + 1];
+        return;
+    }
 }
 
 
@@ -200,6 +243,24 @@ static NSString *const kMPCloudMenu = @"servizi.salva";
  * menu esiste già: l'unico elenco che non mente è quello costruito nel
  * momento in cui lo si guarda.
  */
+/// I programmi di posta, con la loro icona, nell'ordine in cui il sistema
+/// li dà: per primo quello che userebbe da sé.
+- (void)rebuildMailMenu:(NSMenu *)menu
+{
+    [menu removeAllItems];
+    for (MPMailClient *client in [MPMailer clients])
+    {
+        NSMenuItem *item = [menu addItemWithTitle:client.name
+            action:@selector(openAsEmail:) keyEquivalent:@""];
+        item.target = nil;      // va al documento davanti
+        item.representedObject = client;
+        NSImage *icon = [client.icon copy];
+        icon.size = NSMakeSize(16.0, 16.0);
+        item.image = icon;
+    }
+}
+
+
 - (void)rebuildCloudMenu:(NSMenu *)menu
 {
     [menu removeAllItems];
@@ -240,33 +301,7 @@ static NSString *const kMPCloudMenu = @"servizi.salva";
                                                MPCloudDocument *chosen) {
         if (!chosen)
             return;
-        [from readDocument:chosen.identifier
-                completion:^(NSString *text, NSString *problem) {
-            if (problem)
-            {
-                [self sayAboutTheCloud:NSLocalizedString(
-                    @"That document could not be read",
-                    @"Failure opening a document from a service")
-                                  text:problem];
-                return;
-            }
-            NSError *making = nil;
-            MPDocument *fresh = (MPDocument *)[[NSDocumentController
-                sharedDocumentController] openUntitledDocumentAndDisplay:YES
-                                                                   error:&making];
-            if (!fresh)
-                return;
-            fresh.markdown = text ?: @"";
-            // Da dove viene: è quello che fa sì che risalvarlo finisca
-            // **lì** invece di creare un secondo documento.
-            fresh.cloudService = from.identifier;
-            fresh.cloudIdentifier = chosen.identifier;
-            fresh.cloudRevision = chosen.revision;
-            // Il nome che ha là fuori, così la finestra non dice «Senza
-            // nome» di un documento che un nome ce l'ha.
-            fresh.displayName = chosen.name;
-            [fresh updateChangeCount:NSChangeCleared];
-        }];
+        [MPDocument openRemote:chosen from:from];
     }];
 }
 
@@ -336,7 +371,10 @@ static NSString *const kMPCloudMenu = @"servizi.salva";
 {
     // Dopo il lancio: il menu principale non è detto sia già montato
     // mentre il controller si costruisce.
-    dispatch_async(dispatch_get_main_queue(), ^{ [self addCloudMenu]; });
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self addCloudMenu];
+        [self addAttachMenu];
+    });
 
     // Using private API [WebCache setDisabled:YES] to disable WebView's cache
     id webCacheClass = (id)NSClassFromString(@"WebCache");
@@ -503,6 +541,12 @@ static const NSInteger kMPPlugInExportItemTag = 9003;
     if ([menu.identifier isEqualToString:kMPCloudMenu])
     {
         [self rebuildCloudMenu:menu];
+        return;
+    }
+
+    if ([menu.identifier isEqualToString:kMPMailMenu])
+    {
+        [self rebuildMailMenu:menu];
         return;
     }
 

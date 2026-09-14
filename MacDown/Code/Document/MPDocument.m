@@ -40,6 +40,8 @@
 #import "MPMathEditorController.h"
 #import "MPSidebarController.h"
 #import "MPEpubExport.h"
+#import "MPMailer.h"
+#import "MPAttachments.h"
 #import "MPDocxPostProcessing.h"
 #import "MPRemoteImageFetch.h"
 #import "MPModelStore.h"
@@ -2941,6 +2943,9 @@ NS_INLINE BOOL MPWikiTargetExists(NSURL *directory, NSString *target)
     // Before the split, so that both roads out of here — a full load and a
     // body replaced in place — carry the same links.
     html = [self htmlByServingLocalFilesIn:html];
+    // Nell'anteprima un allegato porta l'icona del suo tipo: un link a un
+    // PDF e un link a una pagina si scrivono uguale, e non lo sono.
+    html = MPHTMLWithAttachmentIcons(html, self.fileURL);
 
     NSString *head = MPHeadOfHTML(html);
     NSString *body = MPBodyOfHTML(html);
@@ -3466,10 +3471,121 @@ NS_INLINE NSString *MPImageTagForSVG(NSString *svg, CGFloat scale)
         if (self.preferences.htmlWikiLinks)
         html = [self htmlByResolvingWikiLinksIn:html];
         html = [self htmlByInliningDiagramsIn:html asImages:NO];
+        // Gli allegati vengono dentro: un HTML salvato altrove porterebbe
+        // link a una cartella rimasta indietro, cioè link rotti.
+        html = MPHTMLWithAttachmentsInlined(html, self.fileURL);
         [html writeToURL:panel.URL atomically:NO encoding:NSUTF8StringEncoding
                    error:NULL];
     }];
 }
+
+/** Il documento come email, nel programma di posta che si sceglie.
+ *
+ * L'HTML è quello dell'esportazione, con gli stili dentro e le immagini
+ * portate dentro: un'email che rimanda a un file sul disco di chi l'ha
+ * scritta è un'email piena di riquadri vuoti per chi la riceve. I
+ * diagrammi e le formule diventano immagini per la stessa ragione per cui
+ * lo diventano in Word — nessun programma di posta esegue script.
+ */
+- (IBAction)openAsEmail:(id)sender
+{
+    MPMailClient *client = nil;
+    if ([sender respondsToSelector:@selector(representedObject)]
+            && [[sender representedObject] isKindOfClass:[MPMailClient class]])
+        client = [sender representedObject];
+    if (!client)
+        client = [MPMailer clients].firstObject;
+
+    NSString *html = [self.renderer HTMLForExportWithStyles:YES
+                                               highlighting:YES];
+    if (self.preferences.htmlWikiLinks)
+        html = [self htmlByResolvingWikiLinksIn:html];
+    html = [self htmlByInliningDiagramsIn:html asImages:YES];
+    html = [self htmlByInliningFormulasIn:html asImages:YES];
+
+    __weak MPDocument *weakSelf = self;
+    [self html:html withRemoteImagesFetched:^(NSString *ready,
+                                              NSArray<NSString *> *unreachable) {
+        [weakSelf sendAsEmail:ready to:client];
+    }];
+}
+
+
+- (void)sendAsEmail:(NSString *)html to:(MPMailClient *)client
+{
+    NSString *sealed = MPHTMLWithLocalImagesInlined(html, self.fileURL);
+    // Gli allegati del documento viaggiano come allegati del messaggio,
+    // dove il programma li accetta; dove no, restano dentro il corpo come
+    // `data:`, che è meglio di un link a una cartella di questo Mac.
+    NSArray<NSURL *> *attachments = [MPMailer takesAttachments:client]
+        ? MPAttachmentsIn(self.markdown ?: @"", self.fileURL) : @[];
+    if (!attachments.count)
+        sealed = MPHTMLWithAttachmentsInlined(sealed, self.fileURL);
+    NSString *subject = self.presumedFileName.length
+        ? self.presumedFileName : NSLocalizedString(@"untitled",
+            @"Name for a document that has never been saved");
+
+    BOOL pasting = NO;
+    NSString *problem = nil;
+    BOOL went = [MPMailer open:client subject:subject html:sealed
+                         plain:[MPMailer plainTextFrom:sealed]
+                   attachments:attachments
+                  wantsPasting:&pasting problem:&problem];
+    if (!went)
+    {
+        NSAlert *alert = [[NSAlert alloc] init];
+        alert.messageText = NSLocalizedString(
+            @"That mail program could not be opened",
+            @"Failure opening a document as an email");
+        alert.informativeText = problem ?: @"";
+        [alert runModal];
+        return;
+    }
+    if (pasting)
+        [self sayTheEmailIsOnThePasteboard:client
+                             withAttachments:!attachments.count
+            && MPAttachmentsIn(self.markdown ?: @"", self.fileURL).count > 0];
+}
+
+
+/** Solo Mail riceve un messaggio già formattato.
+ *
+ * Per tutti gli altri `mailto:` porta l'oggetto e nient'altro — è testo
+ * semplice per costruzione — quindi l'email formattata sta negli appunti e
+ * va incollata. Dirlo è l'unica cosa onesta; ripeterlo ogni volta a chi lo
+ * ha capito, no: c'è la spunta per non risentirlo.
+ */
+- (void)sayTheEmailIsOnThePasteboard:(MPMailClient *)client
+                    withAttachments:(BOOL)attachmentsLeftBehind
+{
+    NSString *key = @"emailPasteNoticeSeen";
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:key])
+        return;
+
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = NSLocalizedString(@"The email is on the clipboard",
+        @"Title of the notice about pasting the message");
+    alert.informativeText = [NSString stringWithFormat:NSLocalizedString(
+        @"%@ only accepts a subject from outside, so the formatted message "
+        @"is on the clipboard: press ⌘V in the new message.",
+        @"Why the message has to be pasted"), client.name];
+    if (attachmentsLeftBehind)
+    {
+        // Detto, non nascosto: un allegato che non parte è la cosa che si
+        // scopre dopo, quando chi riceve chiede «e il file?».
+        alert.informativeText = [alert.informativeText
+            stringByAppendingFormat:@"\n\n%@", NSLocalizedString(
+                @"The attachments stay inside the message, as links that "
+                @"carry the file: only Mail and Outlook take real "
+                @"attachments from outside.",
+                @"What happens to attachments in the other programs")];
+    }
+    alert.showsSuppressionButton = YES;
+    [alert runModal];
+    if (alert.suppressionButton.state == NSControlStateValueOn)
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:key];
+}
+
 
 - (IBAction)exportEpub:(id)sender
 {
@@ -5661,6 +5777,60 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
 }
 
 
+/** Apre un documento che sta in un servizio, o porta davanti il suo.
+ *
+ * Ci si arriva da due parti — la finestra «Apri dal servizio collegato…» e
+ * l'elenco nella barra laterale — e la strada dev'essere una: aprire due
+ * volte lo stesso documento vorrebbe dire due finestre che si scrivono
+ * sopra a vicenda.
+ */
++ (void)openRemote:(MPCloudDocument *)remote from:(MPCloudService *)service
+{
+    for (NSDocument *open in [[NSDocumentController sharedDocumentController]
+                                documents])
+    {
+        if (![open isKindOfClass:[MPDocument class]])
+            continue;
+        MPDocument *already = (MPDocument *)open;
+        if ([already.cloudIdentifier isEqualToString:remote.identifier]
+                && [already.cloudService isEqualToString:service.identifier])
+        {
+            [already showWindows];
+            return;
+        }
+    }
+
+    [service readDocument:remote.identifier
+               completion:^(NSString *text, NSString *problem) {
+        if (problem || !text)
+        {
+            NSAlert *alert = [[NSAlert alloc] init];
+            alert.messageText = NSLocalizedString(
+                @"That document could not be read",
+                @"Failure opening a document from a service");
+            alert.informativeText = problem ?: @"";
+            [alert runModal];
+            return;
+        }
+        NSError *making = nil;
+        MPDocument *fresh = (MPDocument *)[[NSDocumentController
+            sharedDocumentController] openUntitledDocumentAndDisplay:YES
+                                                               error:&making];
+        if (!fresh)
+            return;
+        fresh.markdown = text;
+        // Da dove viene: è quello che fa sì che risalvarlo finisca **lì**
+        // invece di creare un secondo documento.
+        fresh.cloudService = service.identifier;
+        fresh.cloudIdentifier = remote.identifier;
+        fresh.cloudRevision = remote.revision;
+        fresh.displayName = remote.name;
+        [fresh updateChangeCount:NSChangeCleared];
+        [fresh refreshSidebarFiles];
+    }];
+}
+
+
 - (void)saveToCloudWithCompletion:(void (^)(BOOL, NSString *, NSString *))finished
 {
     MPCloudService *service = [self cloud];
@@ -5681,6 +5851,7 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
             self.cloudRevision = revision;
             // Salvato davvero: il pallino se ne va, come per un file.
             [self updateChangeCount:NSChangeCleared];
+            [self refreshSidebarFiles];
         }
         if (moved)
         {
@@ -6125,6 +6296,244 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
         handler([panel runModal]);
 }
 
+/** Allega un file al documento.
+ *
+ * Il Markdown non ha allegati, quindi ci si comporta come chi ci ha
+ * provato prima: **il file accanto al testo, e un link relativo**. Dove
+ * finisce dipende da dove sta il documento — accanto a sé in
+ * `<nome>.assets`, in `assets/` dentro un textbundle, nella cartella
+ * collegata se il documento vive in un servizio — e chi vuole un documento
+ * che non dipende da niente lo incorpora come `data:`.
+ */
+- (IBAction)attachFile:(id)sender
+{
+    // Prima di chiedere quale file: dove lo si mette. Un documento senza
+    // un posto sul disco non ha una cartella accanto, e scoprirlo **dopo**
+    // aver scelto il file vuol dire aver fatto due volte la stessa cosa.
+    if (![self hasSomewhereToKeepAttachments])
+    {
+        [self askToSaveBeforeAttaching];
+        return;
+    }
+
+    NSOpenPanel *panel = [NSOpenPanel openPanel];
+    panel.canChooseFiles = YES;
+    panel.canChooseDirectories = NO;
+    panel.allowsMultipleSelection = YES;
+    panel.message = NSLocalizedString(
+        @"Choose a file to attach to the document",
+        @"Attachment chooser prompt");
+    panel.prompt = NSLocalizedString(@"Attach",
+        @"Button of the attachment chooser");
+
+    NSButton *embedToggle = [NSButton checkboxWithTitle:NSLocalizedString(
+        @"Embed the file in the document (Base64)",
+        @"Attachment chooser option") target:nil action:NULL];
+    embedToggle.toolTip = NSLocalizedString(
+        @"Writes the file inside the document instead of beside it, so the "
+        @"document depends on nothing — and grows by about a third of the "
+        @"file's size, on a single line.",
+        @"Attachment chooser option help");
+    embedToggle.frame = NSMakeRect(18.0, 10.0, 420.0, 20.0);
+    NSView *accessory =
+        [[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, 456.0, 40.0)];
+    [accessory addSubview:embedToggle];
+    panel.accessoryView = accessory;
+    panel.accessoryViewDisclosed = YES;
+
+    NSWindow *window = self.windowForSheet;
+    void (^handler)(NSModalResponse) = ^(NSModalResponse result) {
+        if (result != NSModalResponseOK)
+            return;
+        BOOL embedded = (embedToggle.state == NSControlStateValueOn);
+        for (NSURL *url in panel.URLs)
+            [self attachURL:url embedded:embedded];
+    };
+    if (window)
+        [panel beginSheetModalForWindow:window completionHandler:handler];
+    else
+        handler([panel runModal]);
+}
+
+
+/// Se c'è dove tenerli: un file sul disco, o un servizio collegato.
+- (BOOL)hasSomewhereToKeepAttachments
+{
+    if (self.fileURL.isFileURL)
+        return YES;
+    return [self cloud] != nil && self.cloudIdentifier.length > 0;
+}
+
+
+/** Lo dice, e offre di farlo adesso.
+ *
+ * «Salva prima il documento» da solo è un vicolo cieco con un punto: il
+ * pannello di salvataggio è qui, e chi salva si ritrova dove voleva
+ * essere — davanti alla scelta del file da allegare.
+ */
+- (void)askToSaveBeforeAttaching
+{
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = NSLocalizedString(@"Save the document first",
+        @"Title of the alert when attaching to an unsaved document");
+    alert.informativeText = NSLocalizedString(
+        @"Attachments live beside the document: until it has a place of its "
+        @"own, there is nowhere to put them.",
+        @"Why an unsaved document cannot take attachments");
+    [alert addButtonWithTitle:NSLocalizedString(@"Save…",
+        @"Button: save the document now")];
+    [alert addButtonWithTitle:NSLocalizedString(@"Cancel",
+        @"Closes the list of remote documents")];
+
+    if ([alert runModal] != NSAlertFirstButtonReturn)
+        return;
+    [self saveDocumentWithDelegate:self
+                   didSaveSelector:@selector(document:didSave:contextInfo:)
+                       contextInfo:NULL];
+}
+
+
+/// Salvato: si riprende da dove si era interrotti.
+- (void)document:(NSDocument *)document didSave:(BOOL)didSave
+     contextInfo:(void *)contextInfo
+{
+    if (didSave && [self hasSomewhereToKeepAttachments])
+        [self attachFile:nil];
+}
+
+
+- (void)attachURL:(NSURL *)url embedded:(BOOL)embedded
+{
+    if (embedded)
+    {
+        NSString *problem = nil;
+        NSString *uri = MPDataURIForFile(url, &problem);
+        if (!uri)
+        {
+            [self sayAboutTheAttachment:problem];
+            return;
+        }
+        NSString *name = url.lastPathComponent;
+        [self insertAttachmentMarkup:MPIsAPicture(name)
+            ? [NSString stringWithFormat:@"![%@](%@)",
+                name.stringByDeletingPathExtension, uri]
+            : [NSString stringWithFormat:@"[%@](%@)", name, uri]];
+        return;
+    }
+
+    // Un documento che vive in un servizio tiene i suoi allegati lì: una
+    // cartella su questo Mac non la vedrebbe chi apre il documento altrove.
+    MPCloudService *service = [self cloud];
+    if (service && self.cloudIdentifier.length)
+    {
+        [service uploadFile:url named:url.lastPathComponent
+                 completion:^(NSString *name, NSString *link,
+                              NSString *problem) {
+            if (!name)
+            {
+                [self sayAboutTheAttachment:problem];
+                return;
+            }
+            NSString *encoded = [link
+                stringByAddingPercentEncodingWithAllowedCharacters:
+                    [NSCharacterSet URLQueryAllowedCharacterSet]] ?: link;
+            [self insertAttachmentMarkup:MPIsAPicture(name)
+                ? [NSString stringWithFormat:@"![%@](%@)",
+                    name.stringByDeletingPathExtension, encoded]
+                : [NSString stringWithFormat:@"[%@](%@)", name, encoded]];
+        }];
+        return;
+    }
+
+    NSString *problem = nil;
+    NSString *name = MPAttachFileToDocument(url, self.fileURL, &problem);
+    if (!name)
+    {
+        [self sayAboutTheAttachment:problem];
+        return;
+    }
+    [self insertAttachmentMarkup:MPAttachmentMarkdown(name,
+        MPAttachmentsFolderNameFor(self.fileURL))];
+}
+
+
+/// Il link dell'allegato dove sta il cursore, come per un'immagine.
+/** Un allegato su cui si è cliccato: salvarne una copia, o aprirlo.
+ *
+ * Le due cose che si vogliono fare con un file che arriva dentro un
+ * documento, e nessuna delle due scelta da noi.
+ */
+- (void)askAboutAttachment:(NSURL *)file
+{
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = [NSString stringWithFormat:NSLocalizedString(
+        @"Download «%@»?", @"Title of the alert when an attachment is clicked"),
+        file.lastPathComponent];
+    alert.informativeText = NSLocalizedString(
+        @"It is attached to this document. You can keep a copy of it, or "
+        @"open it where it is.",
+        @"What can be done with a clicked attachment");
+    [alert addButtonWithTitle:NSLocalizedString(@"Save a Copy…",
+        @"Button: write the attachment somewhere else")];
+    [alert addButtonWithTitle:NSLocalizedString(@"Open",
+        @"Button: open the attachment where it is")];
+    [alert addButtonWithTitle:NSLocalizedString(@"Cancel",
+        @"Closes the list of remote documents")];
+
+    switch ([alert runModal])
+    {
+        case NSAlertFirstButtonReturn:
+            [self saveACopyOfAttachment:file];
+            break;
+        case NSAlertSecondButtonReturn:
+            [[NSWorkspace sharedWorkspace] openURL:file];
+            break;
+        default:
+            break;
+    }
+}
+
+
+- (void)saveACopyOfAttachment:(NSURL *)file
+{
+    NSSavePanel *panel = [NSSavePanel savePanel];
+    panel.nameFieldStringValue = file.lastPathComponent;
+    NSWindow *window = self.windowForSheet;
+    void (^handler)(NSModalResponse) = ^(NSModalResponse result) {
+        if (result != NSModalResponseOK || !panel.URL)
+            return;
+        NSFileManager *manager = [NSFileManager defaultManager];
+        [manager removeItemAtURL:panel.URL error:NULL];
+        NSError *copying = nil;
+        if (![manager copyItemAtURL:file toURL:panel.URL error:&copying])
+            [self sayAboutTheAttachment:copying.localizedDescription];
+    };
+    if (window)
+        [panel beginSheetModalForWindow:window completionHandler:handler];
+    else
+        handler([panel runModal]);
+}
+
+
+- (void)insertAttachmentMarkup:(NSString *)markup
+{
+    NSRange selected = self.editor.selectedRange;
+    [self.editor insertText:markup replacementRange:selected];
+    self.editor.selectedRange =
+        NSMakeRange(selected.location + markup.length, 0);
+}
+
+
+- (void)sayAboutTheAttachment:(NSString *)problem
+{
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = NSLocalizedString(@"That file could not be attached",
+        @"Failure attaching a file to the document");
+    alert.informativeText = problem ?: @"";
+    [alert runModal];
+}
+
+
 - (IBAction)toggleOrderedList:(id)sender
 {
     [self.editor toggleBlockWithPattern:@"^[0-9]+ \\S" prefix:@"1. "];
@@ -6246,8 +6655,51 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
     // Closed to begin with: a sidebar nobody asked for is in the way.
     [outer setPosition:0.0 ofDividerAtIndex:0];
 
-    [self.sidebar setRootURL:self.fileURL.URLByDeletingLastPathComponent];
+    [self refreshSidebarFiles];
+    [self sidebarNeedsTheAttachments];
     [self.sidebar updateOutlineWithMarkdown:self.editor.string ?: @""];
+}
+
+
+/** Cosa mostra la scheda «File»: la cartella, o il servizio.
+ *
+ * Un documento aperto da un servizio collegato non ha una cartella su
+ * questo disco — sta in memoria e la sua casa è là fuori — e i suoi vicini
+ * sono i documenti che stanno nella cartella collegata. È quella la
+ * risposta alla domanda che si fa aprendo la barra.
+ */
+- (void)refreshSidebarFiles
+{
+    MPCloudService *service = [self cloud];
+    if (!service || !self.cloudIdentifier.length)
+    {
+        [self.sidebar showRemoteDocuments:nil from:nil];
+        [self.sidebar setRootURL:self.fileURL.URLByDeletingLastPathComponent];
+        return;
+    }
+
+    NSString *place = service.placeName.length ? service.placeName
+                                               : service.name;
+    __weak MPDocument *weakSelf = self;
+    [service documentsWithCompletion:^(NSArray<MPCloudDocument *> *found,
+                                       NSString *problem) {
+        MPDocument *document = weakSelf;
+        if (!document || problem)
+            return;         // niente elenco è meglio di un elenco inventato
+        NSMutableArray<MPSidebarRemoteFile *> *files = [NSMutableArray array];
+        for (MPCloudDocument *one in found)
+        {
+            MPSidebarRemoteFile *file = [[MPSidebarRemoteFile alloc] init];
+            file.name = one.name;
+            file.identifier = one.identifier;
+            [files addObject:file];
+        }
+        [files sortUsingComparator:^NSComparisonResult(MPSidebarRemoteFile *a,
+                                                       MPSidebarRemoteFile *b) {
+            return [a.name localizedStandardCompare:b.name];
+        }];
+        [document.sidebar showRemoteDocuments:files from:place];
+    }];
 }
 
 /// Whether the sidebar is open, as the menu and the toggle both need to know.
@@ -6271,7 +6723,8 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
 
     if (!visible)
     {
-        [self.sidebar setRootURL:self.fileURL.URLByDeletingLastPathComponent];
+        [self refreshSidebarFiles];
+        [self sidebarNeedsTheAttachments];
         [self.sidebar updateOutlineWithMarkdown:self.editor.string ?: @""];
     }
 }
@@ -6289,6 +6742,43 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
     [self.editor scrollRangeToVisible:range];
     [self.windowForSheet makeFirstResponder:self.editor];
 }
+
+#pragma mark - Gli allegati nella barra
+
+- (void)sidebarNeedsTheAttachments
+{
+    [self.sidebar showAttachments:
+        MPAttachmentsIn(self.markdown ?: @"", self.fileURL)];
+}
+
+
+- (void)sidebarDidSelectAttachment:(NSURL *)file
+{
+    [self askAboutAttachment:file];
+}
+
+
+- (void)sidebarDidAskToSaveAttachment:(NSURL *)file
+{
+    [self saveACopyOfAttachment:file];
+}
+
+
+- (void)sidebarDidSelectRemoteDocument:(NSString *)identifier
+                                 named:(NSString *)name
+{
+    MPCloudService *service = [self cloud];
+    if (!service || !identifier.length)
+        return;
+    if ([identifier isEqualToString:self.cloudIdentifier])
+        return;                 // è questo, ed è già davanti
+
+    MPCloudDocument *remote = [[MPCloudDocument alloc] init];
+    remote.identifier = identifier;
+    remote.name = name;
+    [MPDocument openRemote:remote from:service];
+}
+
 
 - (void)sidebarDidSelectFileURL:(NSURL *)url
 {
@@ -7891,6 +8381,16 @@ NS_INLINE BOOL MPIsMarkdownFileURL(NSURL *url)
 
 - (void)openOrCreateFileForUrl:(NSURL *)url
 {
+    // Un allegato non si apre e basta: quasi sempre chi ci clicca lo
+    // vuole **avere**, e aprirlo da una cartella nascosta accanto al
+    // documento è il modo di non trovarlo più.
+    NSURL *attachment = MPFileURLFromPreviewURL(url);
+    if (MPLooksLikeAnAttachment(attachment))
+    {
+        [self askAboutAttachment:attachment];
+        return;
+    }
+
     // Out of the preview's scheme and back into a file. The page is served
     // over a scheme of its own so it has an ordinary origin, and a relative
     // link in the document resolves against it — so a link to the file next

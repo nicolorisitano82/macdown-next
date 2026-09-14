@@ -5,6 +5,8 @@
 
 #import "MPCloudService.h"
 
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
+
 #import "MPCloudLedger.h"
 
 #import <AppKit/AppKit.h>
@@ -1005,6 +1007,92 @@ NSData *MPGoogleUploadBody(NSString *boundary, NSDictionary *metadata,
 }
 
 
+/// Lo stesso corpo, per un file che non è testo: un allegato è byte, e
+/// il suo tipo lo dichiara chi lo manda.
+NSData *MPGoogleUploadBodyOfData(NSString *boundary, NSDictionary *metadata,
+                                 NSData *data, NSString *mime)
+{
+    NSMutableData *body = [NSMutableData data];
+    void (^put)(NSString *) = ^(NSString *piece) {
+        [body appendData:[piece dataUsingEncoding:NSUTF8StringEncoding]];
+    };
+    NSData *json = [NSJSONSerialization dataWithJSONObject:metadata
+                                                   options:0 error:NULL];
+    put([NSString stringWithFormat:@"--%@\r\n", boundary]);
+    put(@"Content-Type: application/json; charset=UTF-8\r\n\r\n");
+    [body appendData:json];
+    put([NSString stringWithFormat:@"\r\n--%@\r\n", boundary]);
+    put([NSString stringWithFormat:@"Content-Type: %@\r\n\r\n",
+         mime.length ? mime : @"application/octet-stream"]);
+    [body appendData:data ?: [NSData data]];
+    put([NSString stringWithFormat:@"\r\n--%@--\r\n", boundary]);
+    return body;
+}
+
+
+/** Un file qualunque nella cartella collegata, e come ci si arriva.
+ *
+ * È la strada degli **allegati**: un documento che sta in un servizio
+ * tiene i suoi file lì, dove sta lui, e non in una cartella di questo Mac
+ * che chi apre il documento da un altro computer non vedrà mai.
+ *
+ * `link` è quello che va scritto nel Markdown: su Drive l'indirizzo che
+ * apre il file, dove una cartella è una cartella il nome e basta.
+ */
+- (void)uploadFile:(NSURL *)file named:(NSString *)name
+        completion:(void (^)(NSString *name, NSString *link,
+                             NSString *problem))done
+{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSString *problem = nil;
+        NSString *token = [self freshToken:&problem];
+        NSString *made = nil;
+        NSString *link = nil;
+        NSData *data = [NSData dataWithContentsOfURL:file
+                                             options:NSDataReadingMappedIfSafe
+                                               error:NULL];
+        if (!data)
+            problem = NSLocalizedString(@"That file could not be read.",
+                @"Failure reading a file to upload");
+        else if (token && [self isGoogle])
+        {
+            NSMutableDictionary *metadata =
+                [@{@"name": name ?: file.lastPathComponent} mutableCopy];
+            if (self.placeIdentifier.length)
+                metadata[@"parents"] = @[self.placeIdentifier];
+
+            UTType *type = [UTType typeWithFilenameExtension:
+                file.pathExtension ?: @""];
+            NSString *boundary = [NSUUID UUID].UUIDString;
+            NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:
+                [NSURL URLWithString:
+                    @"https://www.googleapis.com/upload/drive/v3/files"
+                    @"?uploadType=multipart&fields=id,name,webViewLink"]];
+            request.HTTPMethod = @"POST";
+            [request setValue:[NSString stringWithFormat:
+                @"multipart/related; boundary=%@", boundary]
+           forHTTPHeaderField:@"Content-Type"];
+            request.HTTPBody = MPGoogleUploadBodyOfData(boundary, metadata,
+                data, type.preferredMIMEType);
+
+            NSDictionary *answer = MPSend(request, token, NULL);
+            if (answer[@"error"])
+                problem = answer[@"error"][@"message"];
+            else if (answer[@"id"])
+            {
+                made = answer[@"name"];
+                link = answer[@"webViewLink"] ?: answer[@"name"];
+            }
+        }
+        self.problem = problem;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (done)
+                done(made, link, problem);
+        });
+    });
+}
+
+
 - (void)createDocumentNamed:(NSString *)name
                        text:(NSString *)text
                  completion:(void (^)(MPCloudDocument *, NSString *))done
@@ -1737,6 +1825,50 @@ static NSString *MPRevisionOf(NSURL *url)
  * stessa cartella succede eccome, ed è il momento in cui una copia di
  * qualcuno sparisce se non si guarda prima.
  */
+/// In una cartella un allegato è una copia, e il link è il suo nome:
+/// chi apre il documento da un altro Mac lo trova accanto.
+- (void)uploadFile:(NSURL *)file named:(NSString *)name
+        completion:(void (^)(NSString *, NSString *, NSString *))done
+{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSURL *folder = [self folder];
+        NSString *problem = folder ? nil : NSLocalizedString(
+            @"That folder is not there any more. Choose it again.",
+            @"The chosen iCloud folder has gone");
+        NSString *made = nil;
+        if (folder)
+        {
+            NSFileManager *manager = [NSFileManager defaultManager];
+            NSString *wanted = name.length ? name : file.lastPathComponent;
+            NSString *stem = wanted.stringByDeletingPathExtension;
+            NSString *extension = wanted.pathExtension;
+            NSURL *destination = [folder URLByAppendingPathComponent:wanted];
+            for (NSUInteger attempt = 2;
+                 [manager fileExistsAtPath:destination.path] && attempt < 1000;
+                 attempt++)
+            {
+                wanted = extension.length
+                    ? [NSString stringWithFormat:@"%@-%lu.%@", stem,
+                       (unsigned long)attempt, extension]
+                    : [NSString stringWithFormat:@"%@-%lu", stem,
+                       (unsigned long)attempt];
+                destination = [folder URLByAppendingPathComponent:wanted];
+            }
+            NSError *copying = nil;
+            if ([manager copyItemAtURL:file toURL:destination error:&copying])
+                made = wanted;
+            else
+                problem = copying.localizedDescription;
+        }
+        self.problem = problem;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (done)
+                done(made, made, problem);
+        });
+    });
+}
+
+
 - (void)writeDocument:(NSString *)identifier text:(NSString *)text
          fromRevision:(NSString *)fromRevision ifMoved:(MPCloudOnMoved)ifMoved
            completion:(void (^)(NSString *, BOOL, NSString *, NSString *))done

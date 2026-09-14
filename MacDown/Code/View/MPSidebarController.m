@@ -37,15 +37,20 @@
 @end
 
 
+@implementation MPSidebarRemoteFile
+@end
+
+
 typedef NS_ENUM(NSUInteger, MPSidebarMode) {
     MPSidebarModeOutline = 0,
     MPSidebarModeFiles = 1,
+    MPSidebarModeAttachments = 2,
 };
 
 
 @interface MPSidebarController () <NSOutlineViewDataSource,
                                   NSOutlineViewDelegate,
-                                  NSSplitViewDelegate>
+                                  NSSplitViewDelegate, NSMenuDelegate>
 
 @property (strong, nonatomic) NSView *view;
 @property (strong, nonatomic) NSOutlineView *outlineView;
@@ -55,6 +60,12 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
 /// Flattened, in document order, for finding the heading around the caret.
 @property (copy, nonatomic) NSArray<MPOutlineNode *> *headingsInOrder;
 @property (strong, nonatomic) MPFileNode *root;
+/// L'elenco che viene da un servizio, quando il documento non sta su
+/// disco. Nil quando la barra mostra una cartella vera.
+@property (copy, nonatomic) NSArray<MPSidebarRemoteFile *> *remoteFiles;
+@property (copy, nonatomic) NSString *remotePlaceName;
+/// Gli allegati del documento, quelli che il testo si porta dietro.
+@property (copy, nonatomic) NSArray<NSURL *> *attachments;
 /// Set while the selection is being driven from the caret, so that echoing
 /// it back to the editor is skipped.
 @property (assign, nonatomic) BOOL selectingProgrammatically;
@@ -74,7 +85,8 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
 
     NSSegmentedControl *mode = [NSSegmentedControl
         segmentedControlWithLabels:@[NSLocalizedString(@"Outline", @"sidebar outline tab"),
-                                     NSLocalizedString(@"Files", @"sidebar files tab")]
+                                     NSLocalizedString(@"Files", @"sidebar files tab"),
+                                     NSLocalizedString(@"Attached", @"sidebar attachments tab")]
                       trackingMode:NSSegmentSwitchTrackingSelectOne
                             target:self action:@selector(modeChanged:)];
     mode.selectedSegment = 0;
@@ -100,6 +112,8 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
     // heading makes the outline feel like a file dialog rather than a map.
     outline.target = self;
     outline.action = @selector(rowClicked:);
+    outline.menu = [[NSMenu alloc] initWithTitle:@""];
+    outline.menu.delegate = self;
 
     NSTableColumn *column =
         [[NSTableColumn alloc] initWithIdentifier:@"MPSidebarColumn"];
@@ -149,6 +163,10 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
 - (void)modeChanged:(id)sender
 {
     self.mode = (MPSidebarMode)self.modeControl.selectedSegment;
+    if (self.mode == MPSidebarModeAttachments
+            && [self.delegate respondsToSelector:
+                    @selector(sidebarNeedsTheAttachments)])
+        [self.delegate sidebarNeedsTheAttachments];
     [self.outlineView reloadData];
     if (self.mode == MPSidebarModeOutline)
         [self.outlineView expandItem:nil expandChildren:YES];
@@ -291,6 +309,17 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
 
 - (void)setRootURL:(NSURL *)url
 {
+    if (url.isFileURL)
+    {
+        // Una cartella vera prende il posto dell'elenco del servizio.
+        self.remoteFiles = nil;
+        self.remotePlaceName = nil;
+    }
+    else if (self.remoteFiles)
+    {
+        return;                 // l'elenco del servizio resta quello
+    }
+
     if (!url.isFileURL)
     {
         self.root = nil;
@@ -307,6 +336,26 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
     if (self.mode == MPSidebarModeFiles && _view)
         [self.outlineView reloadData];
 }
+
+- (void)showAttachments:(NSArray<NSURL *> *)attachments
+{
+    self.attachments = attachments ?: @[];
+    if (self.mode == MPSidebarModeAttachments && _view)
+        [self.outlineView reloadData];
+}
+
+
+- (void)showRemoteDocuments:(NSArray<MPSidebarRemoteFile *> *)documents
+                       from:(NSString *)placeName
+{
+    self.remoteFiles = documents;
+    self.remotePlaceName = documents ? placeName : nil;
+    if (documents)
+        self.root = nil;        // la cartella di prima non c'entra più
+    if (self.mode == MPSidebarModeFiles && _view)
+        [self.outlineView reloadData];
+}
+
 
 /// Sorted with folders first, then by name, and dotfiles left out.
 - (NSArray<MPFileNode *> *)childrenOfFileNode:(MPFileNode *)node
@@ -347,6 +396,25 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
     node.loadedChildren = children;
     return children;
 }
+
+#pragma mark - NSMenuDelegate
+
+/// Il menu si rifà quando si preme, sulla riga che si è premuta: fuori
+/// dagli allegati non c'è niente da offrire, e un menu vuoto non si apre.
+- (void)menuNeedsUpdate:(NSMenu *)menu
+{
+    [menu removeAllItems];
+    NSInteger row = self.outlineView.clickedRow;
+    if (row < 0)
+        return;
+    NSMenu *made = [self menuForAttachmentAt:row];
+    for (NSMenuItem *item in made.itemArray.copy)
+    {
+        [made removeItem:item];
+        [menu addItem:item];
+    }
+}
+
 
 #pragma mark - NSSplitViewDelegate
 
@@ -390,6 +458,10 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
         return [(MPOutlineNode *)item children];
     }
 
+    if (self.mode == MPSidebarModeAttachments)
+        return item ? @[] : (self.attachments ?: @[]);
+    if (self.remoteFiles)
+        return item ? @[] : self.remoteFiles;
     if (!item)
         return self.root ? [self childrenOfFileNode:self.root] : @[];
     return [self childrenOfFileNode:(MPFileNode *)item];
@@ -411,6 +483,9 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
 {
     if ([item isKindOfClass:[MPOutlineNode class]])
         return [(MPOutlineNode *)item children].count > 0;
+    if ([item isKindOfClass:[MPSidebarRemoteFile class]]
+            || [item isKindOfClass:[NSURL class]])
+        return NO;              // là dentro non si scende: è un elenco
     return [(MPFileNode *)item directory];
 }
 
@@ -462,6 +537,28 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
             : [NSFont systemFontOfSize:12.0];
         cell.textField.textColor = [NSColor labelColor];
     }
+    else if ([item isKindOfClass:[NSURL class]])
+    {
+        NSURL *file = item;
+        cell.textField.stringValue = file.lastPathComponent ?: @"";
+        cell.textField.font = [NSFont systemFontOfSize:12.0];
+        cell.textField.textColor = [NSColor labelColor];
+        cell.imageView.image =
+            [[NSWorkspace sharedWorkspace] iconForFile:file.path];
+        cell.toolTip = file.path;
+    }
+    else if ([item isKindOfClass:[MPSidebarRemoteFile class]])
+    {
+        MPSidebarRemoteFile *remote = item;
+        cell.textField.stringValue = remote.name ?: @"";
+        cell.textField.font = [NSFont systemFontOfSize:12.0];
+        cell.textField.textColor = [NSColor labelColor];
+        // Il documento col simbolo della nuvola: dice da dove viene senza
+        // aggiungere una parola all'elenco.
+        cell.imageView.image = [NSImage imageWithSystemSymbolName:@"doc.text"
+                                       accessibilityDescription:nil];
+        cell.imageView.contentTintColor = [NSColor secondaryLabelColor];
+    }
     else
     {
         MPFileNode *node = item;
@@ -489,6 +586,52 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
     return [extensions containsObject:url.pathExtension.lowercaseString];
 }
 
+/// Il menu del tasto destro su un allegato: quello che si fa con un file.
+- (NSMenu *)menuForAttachmentAt:(NSInteger)row
+{
+    id item = [self.outlineView itemAtRow:row];
+    if (![item isKindOfClass:[NSURL class]])
+        return nil;
+
+    NSMenu *menu = [[NSMenu alloc] initWithTitle:@""];
+    NSMenuItem *save = [menu addItemWithTitle:NSLocalizedString(
+        @"Save a Copy…", @"Button: write the attachment somewhere else")
+        action:@selector(saveClickedAttachment:) keyEquivalent:@""];
+    save.target = self;
+    save.representedObject = item;
+    NSMenuItem *open = [menu addItemWithTitle:NSLocalizedString(@"Open",
+        @"Button: open the attachment where it is")
+        action:@selector(openClickedAttachment:) keyEquivalent:@""];
+    open.target = self;
+    open.representedObject = item;
+    NSMenuItem *reveal = [menu addItemWithTitle:NSLocalizedString(
+        @"Show in Finder", @"Menu item: reveal the attachment on disk")
+        action:@selector(revealClickedAttachment:) keyEquivalent:@""];
+    reveal.target = self;
+    reveal.representedObject = item;
+    return menu;
+}
+
+
+- (void)saveClickedAttachment:(NSMenuItem *)item
+{
+    if ([self.delegate respondsToSelector:
+            @selector(sidebarDidAskToSaveAttachment:)])
+        [self.delegate sidebarDidAskToSaveAttachment:item.representedObject];
+}
+
+- (void)openClickedAttachment:(NSMenuItem *)item
+{
+    [[NSWorkspace sharedWorkspace] openURL:item.representedObject];
+}
+
+- (void)revealClickedAttachment:(NSMenuItem *)item
+{
+    [[NSWorkspace sharedWorkspace] activateFileViewerSelectingURLs:
+        @[item.representedObject]];
+}
+
+
 - (void)rowClicked:(id)sender
 {
     if (self.selectingProgrammatically)
@@ -503,6 +646,24 @@ typedef NS_ENUM(NSUInteger, MPSidebarMode) {
     {
         [self.delegate sidebarDidSelectHeadingRange:
             [(MPOutlineNode *)item range]];
+        return;
+    }
+
+    if ([item isKindOfClass:[NSURL class]])
+    {
+        if ([self.delegate respondsToSelector:
+                @selector(sidebarDidSelectAttachment:)])
+            [self.delegate sidebarDidSelectAttachment:item];
+        return;
+    }
+
+    if ([item isKindOfClass:[MPSidebarRemoteFile class]])
+    {
+        MPSidebarRemoteFile *remote = item;
+        if ([self.delegate respondsToSelector:
+                @selector(sidebarDidSelectRemoteDocument:named:)])
+            [self.delegate sidebarDidSelectRemoteDocument:remote.identifier
+                                                    named:remote.name];
         return;
     }
 

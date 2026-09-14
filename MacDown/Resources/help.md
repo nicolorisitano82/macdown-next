@@ -344,6 +344,11 @@ Then, in **File**:
   already lives on carries a tick and cannot be picked: it is where ⌘S
   already goes.
 
+With such a document in front, the sidebar's **Files** tab shows what is in
+the connected folder rather than a folder on this disk — the document has
+no folder here — and picking one opens it, or brings its window forward if
+it is already open.
+
 A document opened from a service saves back to it with **⌘S** — no save
 panel, because where it came from is already known — and the edited dot
 clears the way it does for a file.
@@ -356,6 +361,72 @@ opens the usual two columns, yours on the left and what is up there on the
 right, and at the bottom of that window the same three decisions are one
 button away: take single lines across first if you want to build the
 version you actually mean, then press **Keep Mine** to send it up.
+
+## Attaching a file
+
+Markdown has no attachments: it has links and pictures, and that is all.
+Everyone who has given it attachments did the same thing — **the file beside
+the text, and a relative link** — and only the folder differs: `assets/` in
+a textbundle, an attachments folder in an Obsidian vault, `data/` by ID in
+Emacs' org-attach, `_resources/` when Joplin exports. **Insert ▸ Attach
+File…** does that, and where the file lands depends on where the document
+lives:
+
+* a document **on disk** keeps its attachments in `<name>.assets` beside it;
+* a **textbundle** keeps them in `assets/`, which is what the format has
+  always said;
+* a document **in a connected service** sends them to the connected folder,
+  where it lives itself — on Drive the link is the address that opens the
+  file, in a folder it is the name;
+* ticking **Embed the file in the document** writes it inline as a `data:`
+  URL instead. It is still Markdown — a `data:` URL is a URL — and the
+  document then depends on nothing, at the price of growing by about a
+  third of the file's size, on one line.
+
+A picture is written as a picture, a file as a link. A `.md` beside the
+document is not an attachment: it is a neighbour, and it stays where it is.
+
+The sidebar has a third tab, **Attached**, listing the files this document
+carries, each with the icon the system gives its kind. A right-click offers
+the three things one does with a file — **Save a Copy…**, **Open**, **Show
+in Finder** — and a click asks the same question the preview asks.
+
+In the preview an attachment carries that icon in front of its name, so a
+link to a PDF does not read like a link to a page, and clicking it asks
+whether to keep a copy or open it where it is. Opening it in place is
+sometimes what you want; finding it again in a folder beside the document
+usually is not, which is why the question is asked at all.
+
+**What travels, when the document leaves here**
+
+| Export | The attachments |
+|---|---|
+| textbundle, textpack | into `assets/`, like the pictures |
+| HTML | inside the page, as `data:` — a single file stays a single file |
+| email, in Mail and Outlook | real attachments on the message |
+| email, everywhere else | inside the message body, as links carrying the file |
+| Word, OpenDocument, PDF | left as links: those formats have nowhere to put them |
+
+## The document as an email
+
+**File ▸ Open as Email ▸** lists the mail programs this Mac knows about —
+whatever handles `mailto:`, with the one the system would pick itself at the
+top — plus Gmail and Outlook on the web. The message carries what the
+preview shows: the styles, the diagrams and formulas as pictures, and every
+local picture *inside* the message rather than as a link to a file on your
+disk, which would be an empty box for everyone you send it to.
+
+There are two roads, and the difference is not ours to hide:
+
+* **Mail** gets the finished message. A script hands it the HTML and a new
+  message opens with it already in place. The first time, macOS asks
+  whether this application may control Mail; without that permission
+  nothing happens, and the alert says what Mail answered.
+* **Everything else** — every other program, and webmail — only accepts a
+  subject from outside: `mailto:` is plain text by construction. So the
+  formatted message goes on the **clipboard**, the new-message window
+  opens, and ⌘V puts it in. You are told once, with a checkbox to not be
+  told again.
 
 ## <a name="rendering-pane"></a>The Rendering Preference Pane
 This is where I keep preferences relating to how I render and style the parsed markdown in the preview window.  
