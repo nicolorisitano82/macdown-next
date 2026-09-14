@@ -6307,6 +6307,15 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
  */
 - (IBAction)attachFile:(id)sender
 {
+    // Prima di chiedere quale file: dove lo si mette. Un documento senza
+    // un posto sul disco non ha una cartella accanto, e scoprirlo **dopo**
+    // aver scelto il file vuol dire aver fatto due volte la stessa cosa.
+    if (![self hasSomewhereToKeepAttachments])
+    {
+        [self askToSaveBeforeAttaching];
+        return;
+    }
+
     NSOpenPanel *panel = [NSOpenPanel openPanel];
     panel.canChooseFiles = YES;
     panel.canChooseDirectories = NO;
@@ -6344,6 +6353,52 @@ NS_INLINE NSString *MPHexForColour(NSColor *colour)
         [panel beginSheetModalForWindow:window completionHandler:handler];
     else
         handler([panel runModal]);
+}
+
+
+/// Se c'è dove tenerli: un file sul disco, o un servizio collegato.
+- (BOOL)hasSomewhereToKeepAttachments
+{
+    if (self.fileURL.isFileURL)
+        return YES;
+    return [self cloud] != nil && self.cloudIdentifier.length > 0;
+}
+
+
+/** Lo dice, e offre di farlo adesso.
+ *
+ * «Salva prima il documento» da solo è un vicolo cieco con un punto: il
+ * pannello di salvataggio è qui, e chi salva si ritrova dove voleva
+ * essere — davanti alla scelta del file da allegare.
+ */
+- (void)askToSaveBeforeAttaching
+{
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = NSLocalizedString(@"Save the document first",
+        @"Title of the alert when attaching to an unsaved document");
+    alert.informativeText = NSLocalizedString(
+        @"Attachments live beside the document: until it has a place of its "
+        @"own, there is nowhere to put them.",
+        @"Why an unsaved document cannot take attachments");
+    [alert addButtonWithTitle:NSLocalizedString(@"Save…",
+        @"Button: save the document now")];
+    [alert addButtonWithTitle:NSLocalizedString(@"Cancel",
+        @"Closes the list of remote documents")];
+
+    if ([alert runModal] != NSAlertFirstButtonReturn)
+        return;
+    [self saveDocumentWithDelegate:self
+                   didSaveSelector:@selector(document:didSave:contextInfo:)
+                       contextInfo:NULL];
+}
+
+
+/// Salvato: si riprende da dove si era interrotti.
+- (void)document:(NSDocument *)document didSave:(BOOL)didSave
+     contextInfo:(void *)contextInfo
+{
+    if (didSave && [self hasSomewhereToKeepAttachments])
+        [self attachFile:nil];
 }
 
 

@@ -748,3 +748,6 @@
 "Download «%@»?" = "Vuoi scaricare «%@»?";
 "It is attached to this document. You can keep a copy of it, or open it where it is." = "È allegato a questo documento. Puoi tenerne una copia, oppure aprirlo dov’è.";
 "Save a Copy…" = "Salva una copia…";
+"Attachments live beside the document: until it has a place of its own, there is nowhere to put them." = "Gli allegati stanno accanto al documento: finché non ha un posto suo, non c’è dove metterli.";
+"Save the document first" = "Salva prima il documento";
+"Save…" = "Salva…";
