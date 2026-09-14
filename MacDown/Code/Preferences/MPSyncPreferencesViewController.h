@@ -23,4 +23,7 @@
 /// Quello che la riga di stato dice adesso, com'è scritto.
 @property (readonly, nonatomic) NSAttributedString *stateText;
 
+/// Il campo dell'ID client, per le prove che guardano dove sta la roba.
+@property (readonly, nonatomic) NSView *clientFieldForTesting;
+
 @end

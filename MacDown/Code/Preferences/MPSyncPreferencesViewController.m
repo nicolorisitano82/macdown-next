@@ -8,17 +8,23 @@
 #import "MPCloudService.h"
 
 
-static const CGFloat kMPPanelWidth = 560.0;
+static const CGFloat kMPPanelWidth = 640.0;
 static const CGFloat kMPPanelPadding = 20.0;
+/// La colonna dei servizi, a sinistra, e quello che resta a destra.
+static const CGFloat kMPServicesWidth = 150.0;
+static const CGFloat kMPGutter = 16.0;
+static const CGFloat kMPDetailWidth = kMPPanelWidth - kMPServicesWidth
+                                    - kMPPanelPadding * 2.0 - kMPGutter;
 
 /// Dove si crea un client OAuth. Sta scritto qui una volta sola perché è
 /// l'unica cosa di questo pannello che non si può spiegare a parole.
 static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/credentials";
 
 
-@interface MPSyncPreferencesViewController ()
+@interface MPSyncPreferencesViewController () <NSTableViewDataSource,
+                                              NSTableViewDelegate>
 
-@property (strong, nonatomic) NSSegmentedControl *picker;
+@property (strong, nonatomic) NSTableView *list;
 /// Cosa si è mosso all'ultima occhiata, detto a parole.
 @property (copy, nonatomic) NSString *movement;
 /// La scheda con dentro tutto quello che riguarda il collegamento.
@@ -58,7 +64,7 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 - (MPCloudService *)chosen
 {
     NSArray *services = [MPCloudService services];
-    NSInteger index = self.picker.selectedSegment;
+    NSInteger index = self.list.selectedRow;
     if (index < 0 || (NSUInteger)index >= services.count)
         index = 0;
     return services[index];
@@ -79,16 +85,26 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     NSView *view = [[NSView alloc] initWithFrame:
         NSMakeRect(0.0, 0.0, kMPPanelWidth, 280.0)];
 
-    NSArray<MPCloudService *> *services = [MPCloudService services];
-    self.picker = [NSSegmentedControl segmentedControlWithLabels:
-        [services valueForKey:@"name"]
-        trackingMode:NSSegmentSwitchTrackingSelectOne
-        target:self action:@selector(pickService:)];
-    // Un servizio che non c'è ancora si vede e non si preme: nasconderlo
-    // vorrebbe dire far cercare alla gente una cosa che è in programma.
-    for (NSUInteger i = 0; i < services.count; i++)
-        [self.picker setEnabled:services[i].available forSegment:(NSInteger)i];
-    self.picker.selectedSegment = 0;
+    // I servizi stanno in colonna, uno sotto l'altro, come nella barra
+    // laterale di una finestra qualunque: le schede in fila mettevano tre
+    // nomi lunghi in una riga sola, e il terzo — che è un segnaposto — ci
+    // stava peggio di tutti.
+    self.list = [[NSTableView alloc] init];
+    self.list.style = NSTableViewStyleSourceList;
+    self.list.headerView = nil;
+    self.list.rowHeight = 28.0;
+    self.list.dataSource = self;
+    self.list.delegate = self;
+    NSTableColumn *only = [[NSTableColumn alloc]
+        initWithIdentifier:@"servizio"];
+    only.resizingMask = NSTableColumnAutoresizingMask;
+    [self.list addTableColumn:only];
+
+    NSScrollView *listScroll = [[NSScrollView alloc] init];
+    listScroll.drawsBackground = NO;
+    listScroll.hasVerticalScroller = YES;
+    listScroll.documentView = self.list;
+    listScroll.translatesAutoresizingMaskIntoConstraints = NO;
 
     // Il pallino dice lo stato prima delle parole: verde collegato,
     // arancione qualcosa da sistemare, grigio non ancora.
@@ -100,8 +116,7 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     [self.dot.widthAnchor constraintEqualToConstant:12.0].active = YES;
 
     // La larghezza della scheda meno i suoi margini, meno il pallino.
-    self.stateLabel = [self paragraph:@""
-        width:kMPPanelWidth - kMPPanelPadding * 2.0 - 28.0 - 20.0];
+    self.stateLabel = [self paragraph:@"" width:kMPDetailWidth - 28.0 - 20.0];
     self.stateLabel.textColor = [NSColor labelColor];
     // Perché un indirizzo dentro un messaggio del servizio si possa
     // premere invece che ricopiare a mano.
@@ -134,7 +149,7 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     [self.buttons addView:self.helpButton inGravity:NSStackViewGravityTrailing];
 
     [self.buttons.widthAnchor constraintEqualToConstant:
-        kMPPanelWidth - kMPPanelPadding * 2.0 - 28.0].active = YES;
+        kMPDetailWidth - 28.0].active = YES;
     NSStackView *inside = [NSStackView stackViewWithViews:
         @[state, self.buttons]];
     inside.orientation = NSUserInterfaceLayoutOrientationVertical;
@@ -147,9 +162,19 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     self.card.borderWidth = 0.0;
     self.card.cornerRadius = 8.0;
     self.card.fillColor = [NSColor controlBackgroundColor];
-    self.card.contentView = inside;
     self.card.contentViewMargins = NSZeroSize;
     self.card.titlePosition = NSNoTitle;
+    // Una NSBox non lega da sola quello che le si mette dentro: senza
+    // questi quattro vincoli il contenuto si disegna dove capita — sopra
+    // quello che viene prima, come si è visto.
+    inside.translatesAutoresizingMaskIntoConstraints = NO;
+    self.card.contentView = inside;
+    [NSLayoutConstraint activateConstraints:@[
+        [inside.leadingAnchor constraintEqualToAnchor:self.card.leadingAnchor],
+        [inside.trailingAnchor constraintEqualToAnchor:self.card.trailingAnchor],
+        [inside.topAnchor constraintEqualToAnchor:self.card.topAnchor],
+        [inside.bottomAnchor constraintEqualToAnchor:self.card.bottomAnchor],
+    ]];
 
     self.clientTitle = [self label:NSLocalizedString(
         @"Client ID", @"Field for the client identifier")];
@@ -192,8 +217,7 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     self.secretRow.hidden = YES;
 
     NSStackView *column = [NSStackView stackViewWithViews:
-        @[self.picker, self.card, self.clientRow, self.secretTitleRow,
-          self.secretRow]];
+        @[self.card, self.clientRow, self.secretTitleRow, self.secretRow]];
     column.orientation = NSUserInterfaceLayoutOrientationVertical;
     column.alignment = NSLayoutAttributeLeading;
     column.spacing = 14.0;
@@ -202,12 +226,20 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
     [column setCustomSpacing:8.0 afterView:self.clientRow];
     [column setCustomSpacing:6.0 afterView:self.secretTitleRow];
 
+    [view addSubview:listScroll];
     [view addSubview:column];
     [NSLayoutConstraint activateConstraints:@[
-        [column.leadingAnchor constraintEqualToAnchor:view.leadingAnchor
+        [listScroll.leadingAnchor constraintEqualToAnchor:view.leadingAnchor
+                                                 constant:kMPPanelPadding],
+        [listScroll.topAnchor constraintEqualToAnchor:view.topAnchor
                                              constant:kMPPanelPadding],
-        [column.trailingAnchor constraintEqualToAnchor:view.trailingAnchor
-                                              constant:-kMPPanelPadding],
+        [listScroll.bottomAnchor constraintEqualToAnchor:view.bottomAnchor
+                                                constant:-kMPPanelPadding],
+        [listScroll.widthAnchor constraintEqualToConstant:kMPServicesWidth],
+
+        [column.leadingAnchor constraintEqualToAnchor:listScroll.trailingAnchor
+                                             constant:kMPGutter],
+        [column.widthAnchor constraintEqualToConstant:kMPDetailWidth],
         [column.topAnchor constraintEqualToAnchor:view.topAnchor
                                          constant:kMPPanelPadding],
         [column.bottomAnchor constraintLessThanOrEqualToAnchor:view.bottomAnchor
@@ -216,6 +248,10 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
         [self.card.trailingAnchor constraintEqualToAnchor:column.trailingAnchor],
     ]];
     self.view = view;
+    // Alla fine, e non appena l'elenco esiste: scegliere una riga chiama
+    // subito chi ascolta, e chi ascolta vuole trovare il pannello finito.
+    [self.list selectRowIndexes:[NSIndexSet indexSetWithIndex:0]
+           byExtendingSelection:NO];
     [self showService];
 }
 
@@ -233,6 +269,8 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 /// Tutto quello che cambia quando si cambia servizio, in un posto solo.
 - (void)showService
 {
+    if (!self.card)
+        return;             // il pannello non è ancora costruito
     MPCloudService *service = [self chosen];
 
     self.clientField.placeholderString = service.clientPlaceholder;
@@ -381,13 +419,70 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
 }
 
 
-#pragma mark - Quello che fanno i comandi
+#pragma mark - L'elenco dei servizi
 
-- (void)pickService:(id)sender
+- (NSInteger)numberOfRowsInTableView:(NSTableView *)table
+{
+    return (NSInteger)[MPCloudService services].count;
+}
+
+/// Un servizio che non c'è ancora si vede e non si sceglie: nasconderlo
+/// vorrebbe dire far cercare alla gente una cosa che è in programma.
+- (BOOL)tableView:(NSTableView *)table shouldSelectRow:(NSInteger)row
+{
+    NSArray<MPCloudService *> *services = [MPCloudService services];
+    return row >= 0 && (NSUInteger)row < services.count
+        && services[(NSUInteger)row].available;
+}
+
+- (NSView *)tableView:(NSTableView *)table
+   viewForTableColumn:(NSTableColumn *)column row:(NSInteger)row
+{
+    MPCloudService *service = [MPCloudService services][(NSUInteger)row];
+    NSTableCellView *cell = [table makeViewWithIdentifier:@"servizio"
+                                                    owner:self];
+    if (!cell)
+    {
+        cell = [[NSTableCellView alloc] initWithFrame:NSZeroRect];
+        cell.identifier = @"servizio";
+        NSImageView *icon = [[NSImageView alloc] init];
+        icon.translatesAutoresizingMaskIntoConstraints = NO;
+        NSTextField *label = [NSTextField labelWithString:@""];
+        label.lineBreakMode = NSLineBreakByTruncatingTail;
+        label.translatesAutoresizingMaskIntoConstraints = NO;
+        [cell addSubview:icon];
+        [cell addSubview:label];
+        cell.imageView = icon;
+        cell.textField = label;
+        [NSLayoutConstraint activateConstraints:@[
+            [icon.leadingAnchor constraintEqualToAnchor:cell.leadingAnchor],
+            [icon.centerYAnchor constraintEqualToAnchor:cell.centerYAnchor],
+            [icon.widthAnchor constraintEqualToConstant:18.0],
+            [label.leadingAnchor constraintEqualToAnchor:icon.trailingAnchor
+                                                constant:6.0],
+            [label.trailingAnchor constraintLessThanOrEqualToAnchor:
+                cell.trailingAnchor],
+            [label.centerYAnchor constraintEqualToAnchor:cell.centerYAnchor],
+        ]];
+    }
+    cell.textField.stringValue = service.name;
+    cell.textField.textColor = service.available
+        ? [NSColor labelColor] : [NSColor tertiaryLabelColor];
+    cell.imageView.image = [NSImage imageWithSystemSymbolName:
+        service.symbolName accessibilityDescription:service.name];
+    cell.imageView.contentTintColor = service.available
+        ? [NSColor controlAccentColor] : [NSColor tertiaryLabelColor];
+    cell.toolTip = service.available ? nil : service.explanation;
+    return cell;
+}
+
+- (void)tableViewSelectionDidChange:(NSNotification *)note
 {
     [self showService];
 }
 
+
+#pragma mark - Quello che fanno i comandi
 
 - (void)controlTextDidChange:(NSNotification *)notification
 {
@@ -631,6 +726,12 @@ static NSString *const kMPConsole = @"https://console.cloud.google.com/apis/cred
                     range:NSMakeRange(0, message.length)];
 
     self.stateLabel.attributedStringValue = written;
+}
+
+
+- (NSView *)clientFieldForTesting
+{
+    return self.clientField;
 }
 
 

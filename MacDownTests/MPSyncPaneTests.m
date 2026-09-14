@@ -578,5 +578,104 @@ static MPCloudOpenWindowController *MPOpenWindow(void)
     [icloud unlink];
 }
 
+/// I servizi stanno in colonna, uno sotto l'altro: erano schede in fila, e
+/// tre nomi lunghi in una riga sola si pestavano i piedi.
+- (void)testTheServicesAreAColumnAndNotTabs
+{
+    MPSyncPreferencesViewController *pane =
+        [[MPSyncPreferencesViewController alloc] init];
+    NSView *view = pane.view;
+    [view layoutSubtreeIfNeeded];
+
+    NSTableView *list = (NSTableView *)[self find:[NSTableView class]
+                                               in:view];
+    XCTAssertNotNil(list, @"l'elenco dei servizi c'è");
+    XCTAssertEqual(list.numberOfRows,
+                   (NSInteger)[MPCloudService services].count);
+    // E non ci sono schede.
+    XCTAssertNil([self find:[NSSegmentedControl class] in:view]);
+
+    NSArray<MPCloudService *> *services = [MPCloudService services];
+    for (NSInteger row = 0; row < list.numberOfRows; row++)
+    {
+        NSTableCellView *cell = (NSTableCellView *)[list viewAtColumn:0
+            row:row makeIfNecessary:YES];
+        XCTAssertEqualObjects(cell.textField.stringValue,
+                              services[(NSUInteger)row].name);
+        // Il segnaposto si vede e non si sceglie.
+        XCTAssertEqual([list.delegate tableView:list shouldSelectRow:row],
+                       services[(NSUInteger)row].available);
+    }
+
+    // A sinistra, e il resto a destra: non sopra, non sotto.
+    NSRect where = [list convertRect:list.bounds toView:view];
+    NSRect field = [pane.clientFieldForTesting
+        convertRect:pane.clientFieldForTesting.bounds toView:view];
+    XCTAssertLessThanOrEqual(NSMaxX(where), NSMinX(field));
+}
+
+
+/// Niente si disegna sopra niente. È il guaio che si è visto davvero: una
+/// NSBox non lega da sola quello che le si mette dentro, e la scheda
+/// finiva stampata sopra la riga dei servizi.
+- (void)testNothingInThePaneIsDrawnOverSomethingElse
+{
+    MPSyncPreferencesViewController *pane =
+        [[MPSyncPreferencesViewController alloc] init];
+    NSView *view = pane.view;
+    [view layoutSubtreeIfNeeded];
+
+    NSMutableArray *boxes = [NSMutableArray array];
+    void (^__block collect)(NSView *) = nil;
+    collect = ^(NSView *parent) {
+        for (NSView *child in parent.subviews)
+        {
+            if (child.hidden)
+                continue;
+            BOOL interesting = [child isKindOfClass:[NSButton class]]
+                || ([child isKindOfClass:[NSTextField class]]
+                    && [(NSTextField *)child stringValue].length)
+                || [child isKindOfClass:[NSTableView class]];
+            if (interesting)
+                [boxes addObject:@[[NSValue valueWithRect:
+                    [child convertRect:child.bounds toView:view]],
+                    child.className]];
+            // Le righe di un elenco stanno *dentro* l'elenco: contarle
+            // sarebbe contare un contenuto come se fosse un vicino.
+            if ([child isKindOfClass:[NSTableView class]])
+                continue;
+            collect(child);
+        }
+    };
+    collect(view);
+    XCTAssertGreaterThan(boxes.count, 4u);
+
+    for (NSUInteger i = 0; i < boxes.count; i++)
+    {
+        for (NSUInteger j = i + 1; j < boxes.count; j++)
+        {
+            NSRect one = NSInsetRect([boxes[i][0] rectValue], 1.0, 1.0);
+            NSRect two = [boxes[j][0] rectValue];
+            XCTAssertFalse(NSIntersectsRect(one, two), @"%@ %@ sopra %@ %@",
+                boxes[i][1], NSStringFromRect(one), boxes[j][1],
+                NSStringFromRect(two));
+        }
+    }
+}
+
+
+/// Il primo di una classe, dentro una vista.
+- (NSView *)find:(Class)kind in:(NSView *)view
+{
+    for (NSView *child in view.subviews)
+    {
+        if ([child isKindOfClass:kind])
+            return child;
+        NSView *deeper = [self find:kind in:child];
+        if (deeper)
+            return deeper;
+    }
+    return nil;
+}
 
 @end
