@@ -438,7 +438,9 @@ be](docs/studio-claude-gpt.md), and which parts of it are worth having, and
 [what the comparison panel still needs](docs/studio-confronto.md), which
 starts from a measurement — one word changed in a re-wrapped document shows
 up as a hundred and eighty changed lines — and [whether an icon in the menu
-bar would earn its place](docs/studio-barra-menu.md), and [what full
+bar would earn its place](docs/studio-barra-menu.md), and [what a Dock tile
+plug-in could be worth](docs/studio-dock.md) — the part of an application
+that runs while the application does not, and [what full
 CommonMark, and John MacFarlane's own Djot, would cost](docs/studio-commonmark.md)
 — which starts from another measurement: the parser this fork inherited
 renders about half of the CommonMark suite the way the specification says,
