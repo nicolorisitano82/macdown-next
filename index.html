@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MacDown Next — a Markdown editor for macOS 26</title>
-<meta name="description" content="A fork of MacDown for macOS 26: an editor that draws what the markup means, diagrams that render, exports that survive the trip, documents that live in iCloud Drive or Google Drive, attachments that travel with the text, a Finder preview, and an updater that asks before it does anything.">
+<meta name="description" content="A fork of MacDown for macOS 26: an editor that draws what the markup means, diagrams that render, exports that survive the trip, documents that live in iCloud Drive or Google Drive, attachments that travel with the text, genetic pedigrees drawn from text, a Finder preview, and an updater that asks before it does anything.">
 <style>
   :root {
     --bg: #ffffff;
@@ -718,6 +718,30 @@
           And they arrive where the document arrives: in <code>assets/</code>
           in a textbundle, inside an exported HTML page, as real attachments
           on a message in Mail and Outlook.
+        </p>
+      </div>
+
+      <div class="card">
+        <p class="tag">Genetics</p>
+        <h3>A family pedigree, written as text</h3>
+        <p>
+          A <code>pedigree</code> fence is a clinical genetic pedigree in a
+          few lines of text, and the preview draws it with the NSGC symbols,
+          2008 and 2022: generations and lines laid out by themselves,
+          conditions shaded with their age at onset, gene test results, sex
+          and gender kept apart, donors, twins, a key in Italian or English.
+          A <code>mermaid</code> block that starts with <code>pedigree</code>
+          is drawn too.
+        </p>
+        <p>
+          <b>✎ Edit</b> on the drawing opens a visual editor in the preview
+          — relatives, couples, diseases, tests — and <b>Done</b> writes the
+          result back into the fence as one step of undo, but only if the
+          fence still holds what the edit started from.
+        </p>
+        <p>
+          It goes where the other diagrams go: into the HTML, email, Word and
+          EPUB exports, into the PDF, and into the Finder's Quick Look.
         </p>
       </div>
     </div>
