@@ -345,6 +345,7 @@
 "Fetch images from the network when exporting" = "Scarica le immagini dalla rete quando esporti";
 "Mermaid" = "Mermaid";
 "Graphviz" = "Graphviz";
+"Pedigree (genetics)" = "Pedigree (genetica)";
 
 /* Elsewhere */
 "Fetching %lu images from the network…" = "Scarico %lu immagini dalla rete…";

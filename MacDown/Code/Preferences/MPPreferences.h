@@ -68,6 +68,7 @@ extern NSString * const MPDidDetectFreshInstallationNotification;
 @property (assign) BOOL htmlLineNumbers;
 @property (assign) BOOL htmlGraphviz;
 @property (assign) BOOL htmlMermaid;
+@property (assign) BOOL htmlPedigree;
 /// Whether [[…]] becomes a link to a neighbouring document.
 @property (assign) BOOL htmlWikiLinks;
 /// Whether a new document starts with the prose checker on.

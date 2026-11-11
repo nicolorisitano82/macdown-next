@@ -2692,6 +2692,11 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
     return self.preferences.htmlGraphviz;
 }
 
+- (BOOL)rendererHasPedigree:(MPRenderer *)renderer
+{
+    return self.preferences.htmlPedigree;
+}
+
 - (MPCodeBlockAccessoryType)rendererCodeBlockAccesory:(MPRenderer *)renderer
 {
     return self.preferences.htmlCodeBlockAccessory;
@@ -2995,6 +3000,7 @@ NS_INLINE BOOL MPWikiTargetExists(NSURL *directory, NSString *target)
         @"document.body.innerHTML = %@[0];"
         @"if (window.MacDownRenderMermaid) MacDownRenderMermaid();"
         @"if (window.MacDownRenderGraphviz) MacDownRenderGraphviz();"
+        @"if (window.MacDownRenderPedigree) MacDownRenderPedigree();"
         @"if (window.Prism && Prism.highlightAll) Prism.highlightAll();"
         @"if (window.MathJax && MathJax.typesetPromise)"
         @" MathJax.typesetPromise();"
@@ -3413,7 +3419,7 @@ NS_INLINE NSString *MPImageTagForSVG(NSString *svg, CGFloat scale)
         // The div carries a data-src attribute since the renderer learned to
         // report source positions, so it can no longer be matched literally.
         @"<div[^>]*><pre[^>]*><code class=\"language-"
-        @"(?:mermaid|dot|neato|fdp|circo|twopi|osage)\">[\\s\\S]*?"
+        @"(?:mermaid|dot|neato|fdp|circo|twopi|osage|pedigree)\">[\\s\\S]*?"
         @"</code></pre></div>";
     NSRegularExpression *regex =
         [NSRegularExpression regularExpressionWithPattern:pattern options:0

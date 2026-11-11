@@ -172,6 +172,17 @@
     }
 }
 
+- (void)testAPedigreeFenceIsAPedigree
+{
+    NSArray<MDDrawingJob *> *jobs = MDDrawingJobsInHTML(
+        @"<div data-src=\"1\"><pre><code class=\"language-pedigree\">"
+        @"pedigree\n a : M\n b : F\n a -- b =&gt; c</code></pre></div>");
+    XCTAssertEqual(jobs.count, 1u);
+    XCTAssertEqual(jobs[0].kind, MDDrawingPedigree);
+    XCTAssertNil(jobs[0].engine);
+    XCTAssertEqualObjects(jobs[0].source, @"pedigree\n a : M\n b : F\n a -- b => c");
+}
+
 - (void)testAMermaidFenceHasNoEngine
 {
     NSArray<MDDrawingJob *> *jobs = MDDrawingJobsInHTML(

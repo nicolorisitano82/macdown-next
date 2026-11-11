@@ -11,6 +11,7 @@
 
 NSString * const MDMermaidResource = @"mermaid";
 NSString * const MDGraphvizResource = @"graphviz";
+NSString * const MDPedigreeResource = @"pedigree";
 NSString * const MDMathResource = @"math";
 
 /// Graphviz picks a layout by engine, and each is spelled as a fence
@@ -121,7 +122,7 @@ NSArray<MDDrawingJob *> *MDDrawingJobsInHTML(NSString *html)
         return @[];
 
     NSString *fences = [NSString stringWithFormat:
-        @"(?:<div[^>]*>)?<pre[^>]*><code class=\"language-(mermaid|%@)\">"
+        @"(?:<div[^>]*>)?<pre[^>]*><code class=\"language-(mermaid|pedigree|%@)\">"
         @"([\\s\\S]*?)</code></pre>(?:</div>)?", kMDGraphvizEngines];
     // The delimiters hoedown leaves behind for a formula, which are the ones
     // MathJax looks for. Display first: "\[" would otherwise never match.
@@ -148,8 +149,9 @@ NSArray<MDDrawingJob *> *MDDrawingJobsInHTML(NSString *html)
         {
             NSString *language = [html substringWithRange:
                 [match rangeAtIndex:1]];
-            job.kind = [language isEqualToString:@"mermaid"]
-                ? MDDrawingMermaid : MDDrawingGraphviz;
+            job.kind = [language isEqualToString:@"mermaid"] ? MDDrawingMermaid
+                : [language isEqualToString:@"pedigree"] ? MDDrawingPedigree
+                : MDDrawingGraphviz;
             job.engine = job.kind == MDDrawingGraphviz ? language : nil;
             job.source = MDUnescaped([html substringWithRange:fence]);
         }
@@ -237,7 +239,8 @@ NSString *MDHTMLByDrawingJobs(NSString *html,
         // A diagram gets a block of its own to sit in; a formula carries its
         // own placement, in the container MathJax wraps it in.
         NSString *replacement =
-            (job.kind == MDDrawingMermaid || job.kind == MDDrawingGraphviz)
+            (job.kind == MDDrawingMermaid || job.kind == MDDrawingGraphviz
+             || job.kind == MDDrawingPedigree)
             ? [NSString stringWithFormat:
                    @"<div class=\"macdown-diagram\">%@</div>", svg]
             : svg;
@@ -254,14 +257,17 @@ NSString *MDHTMLByDrawingJobs(NSString *html,
 /// worth paying once for a document with a flowchart in it, and not at all
 /// for one without.
 static NSString *MDDrawingPage(NSString *mermaid, NSString *viz,
-                               NSString *mathjax)
+                               NSString *mathjax, NSString *pedigree)
 {
     NSMutableString *page = [NSMutableString string];
     [page appendFormat:
         @"<!doctype html><html><head><meta charset=\"utf-8\">"
         @"<style>body{margin:0;width:%.0fpx}</style></head><body>",
         kMDLayoutSize.width];
-    for (NSString *library in @[mermaid ?: @"", viz ?: @"", mathjax ?: @""])
+    // pedigree before mermaid: a mermaid block that starts with `pedigree`
+    // needs the library registered as a mermaid diagram type.
+    for (NSString *library in @[pedigree ?: @"", mermaid ?: @"", viz ?: @"",
+                                mathjax ?: @""])
     {
         if (library.length)
             [page appendFormat:@"<script>%@</script>\n", library];
@@ -281,11 +287,25 @@ static NSString *MDDrawingPage(NSString *mermaid, NSString *viz,
             @" useMaxWidth:true}, gantt:{useWidth:%.0f}});\n",
             kMDLayoutSize.width];
     }
+    if (mermaid.length && pedigree.length)
+        [page appendString:
+            @"var mdExternal = mermaid.registerExternalDiagrams"
+            @"([Pedigree.mermaidPlugin]);\n"];
     [page appendString:
         @"var mdCount = 0;\n"
         @"window.MDDraw = function (kind, code, engine) {\n"
+        @"  if (kind === 'pedigree') {\n"
+        @"    return new Promise(function (resolve) {\n"
+        @"      var lang = (navigator.language || 'en').indexOf('it') === 0"
+        @" ? 'it' : 'en';\n"
+        @"      resolve(Pedigree.render(Pedigree.layout(Pedigree.parse(code),"
+        @" {lang: lang}), {idPrefix: 'mdp' + (mdCount++)}));\n"
+        @"    });\n"
+        @"  }\n"
         @"  if (kind === 'mermaid') {\n"
-        @"    return mermaid.render('md-' + (mdCount++), code)\n"
+        @"    return Promise.resolve(typeof mdExternal !== 'undefined'"
+        @" ? mdExternal : null).catch(function () {}).then(function () {\n"
+        @"      return mermaid.render('md-' + (mdCount++), code); })\n"
         @"      .then(function (r) { return (r && r.svg) ? r.svg"
         @" : String(r); });\n"
         @"  }\n"
@@ -319,6 +339,7 @@ static NSString *MDKindName(MDDrawingKind kind)
     {
         case MDDrawingMermaid:      return @"mermaid";
         case MDDrawingGraphviz:     return @"graphviz";
+        case MDDrawingPedigree:     return @"pedigree";
         case MDDrawingMathDisplay:  return @"math-display";
         case MDDrawingMathInline:   return @"math-inline";
     }
@@ -350,9 +371,17 @@ static NSString *MDKindName(MDDrawingKind kind)
       completion:(void (^)(NSArray *, NSString *))completion
 {
     BOOL wantsMermaid = NO, wantsGraphviz = NO, wantsMath = NO;
+    BOOL wantsPedigree = NO;
     for (MDDrawingJob *job in jobs)
     {
         wantsMermaid |= (job.kind == MDDrawingMermaid);
+        // A pedigree fence, or a mermaid block that is a pedigree.
+        wantsPedigree |= (job.kind == MDDrawingPedigree)
+            || (job.kind == MDDrawingMermaid
+                && [job.source rangeOfString:@"^\\s*pedigree\\b"
+                                     options:NSRegularExpressionSearch
+                                             | NSCaseInsensitiveSearch]
+                       .location != NSNotFound);
         wantsGraphviz |= (job.kind == MDDrawingGraphviz);
         wantsMath |= (job.kind == MDDrawingMathDisplay
                       || job.kind == MDDrawingMathInline);
@@ -369,6 +398,7 @@ static NSString *MDKindName(MDDrawingKind kind)
     NSString *mermaid = wantsMermaid ? read(MDMermaidResource) : nil;
     NSString *viz = wantsGraphviz ? read(MDGraphvizResource) : nil;
     NSString *mathjax = wantsMath ? read(MDMathResource) : nil;
+    NSString *pedigree = wantsPedigree ? read(MDPedigreeResource) : nil;
 
     // A job whose library is missing is a job that cannot be done: its
     // source stays in the page, which is what the preview showed before.
@@ -382,6 +412,9 @@ static NSString *MDKindName(MDDrawingKind kind)
                 break;
             case MDDrawingGraphviz:
                 if (viz.length) [doable addObject:job];
+                break;
+            case MDDrawingPedigree:
+                if (pedigree.length) [doable addObject:job];
                 break;
             default:
                 if (mathjax.length) [doable addObject:job];
@@ -422,7 +455,8 @@ static NSString *MDKindName(MDDrawingKind kind)
                                      kMDLayoutSize.height)
             configuration:configuration];
         renderer.webView.navigationDelegate = renderer;
-        [renderer.webView loadHTMLString:MDDrawingPage(mermaid, viz, mathjax)
+        [renderer.webView loadHTMLString:MDDrawingPage(mermaid, viz, mathjax,
+                                                       pedigree)
                                 baseURL:nil];
 
         // The whole batch, however far it gets. A preview that arrives late

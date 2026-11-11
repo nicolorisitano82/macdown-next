@@ -235,6 +235,7 @@ static NSString *MDBodyForMarkdown(NSString *markdown, int extensions)
         MDMermaidResource: @"mermaid.min",
         MDGraphvizResource: @"viz",
         MDMathResource: @"tex-svg",
+        MDPedigreeResource: @"pedigree",
     };
     for (NSString *name in files)
     {

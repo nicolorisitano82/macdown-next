@@ -76,10 +76,44 @@
     return holder;
   }
 
+  // A mermaid block that starts with `pedigree` is a clinical pedigree: when
+  // pedigree.js is on the page (it is loaded before mermaid when the pedigree
+  // preference is on), it is registered as a mermaid diagram type. The
+  // registration is asynchronous and happens once per page.
+  var registering = null;
+  function externalDiagramsReady() {
+    if (registering)
+      return registering;
+    if (!window.Pedigree || !Pedigree.mermaidPlugin
+        || typeof mermaid.registerExternalDiagrams !== "function")
+      return null;
+    try {
+      registering = mermaid.registerExternalDiagrams([Pedigree.mermaidPlugin]);
+    } catch (e) {
+      registering = null;
+    }
+    return registering;
+  }
+
   function renderAll() {
     if (typeof mermaid === "undefined")
       return;
 
+    var blocks = document.querySelectorAll(".language-mermaid");
+    if (!blocks.length)
+      return;
+
+    var ready = externalDiagramsReady();
+    if (ready && typeof ready.then === "function") {
+      // Rendering waits for the registration; a failed registration only
+      // costs the pedigree blocks, which then show mermaid's own error.
+      ready.then(renderBlocks, renderBlocks);
+      return;
+    }
+    renderBlocks();
+  }
+
+  function renderBlocks() {
     var blocks = document.querySelectorAll(".language-mermaid");
     if (!blocks.length)
       return;

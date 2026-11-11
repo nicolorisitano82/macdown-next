@@ -241,6 +241,7 @@ NS_INLINE BOOL MPAreNilableStringsEqual(NSString *s1, NSString *s2)
 @property (readonly) NSArray *mermaidStylesheets;
 @property (readonly) NSArray *mermaidScripts;
 @property (readonly) NSArray *graphvizScripts;
+@property (readonly) NSArray *pedigreeScripts;
 @property (readonly) NSArray *stylesheets;
 @property (readonly) NSArray *scripts;
 @property (copy) NSString *currentHtml;
@@ -253,6 +254,7 @@ NS_INLINE BOOL MPAreNilableStringsEqual(NSString *s1, NSString *s2)
 @property BOOL syntaxHighlighting;
 @property BOOL mermaid;
 @property BOOL graphviz;
+@property BOOL pedigree;
 @property MPCodeBlockAccessoryType codeBlockAccesory;
 @property BOOL lineNumbers;
 @property BOOL manualRender;
@@ -553,6 +555,20 @@ NS_INLINE void MPFreeHTMLRenderer(hoedown_renderer *htmlRenderer)
     return scripts;
 }
 
+/** Clinical genetic pedigrees (pedigree-dsl, NSGC symbols).
+ *
+ * pedigree.js carries the whole library: parser, layout, SVG renderer, and
+ * the mermaid diagram type that lets a ```mermaid block start with
+ * `pedigree`. pedigree.init.js draws the ```pedigree fences.
+ */
+- (NSArray *)pedigreeScripts
+{
+    return @[
+        [MPScript javaScriptWithURL:MPExtensionURL(@"pedigree", @"js")],
+        [MPScript javaScriptWithURL:MPExtensionURL(@"pedigree.init", @"js")],
+    ];
+}
+
 - (NSArray *)stylesheets
 {
     id<MPRendererDelegate> delegate = self.delegate;
@@ -562,7 +578,8 @@ NS_INLINE void MPFreeHTMLRenderer(hoedown_renderer *htmlRenderer)
         [stylesheets addObjectsFromArray:self.prismStylesheets];
     // One sheet for both kinds of diagram: it is layout and zoom chrome, and
     // carries no colours of its own.
-    if ([delegate rendererHasMermaid:self] || [delegate rendererHasGraphviz:self])
+    if ([delegate rendererHasMermaid:self] || [delegate rendererHasGraphviz:self]
+        || [delegate rendererHasPedigree:self])
         [stylesheets addObjectsFromArray:self.mermaidStylesheets];
 
     // WikiLink styling. Bundle-only, so it cannot be shadowed by a stale copy
@@ -607,12 +624,20 @@ NS_INLINE void MPFreeHTMLRenderer(hoedown_renderer *htmlRenderer)
     BOOL graphviz = [d rendererHasGraphviz:self]
         && [self documentUsesAnyLanguage:@[@"dot", @"neato", @"fdp", @"circo",
                                            @"twopi", @"osage"]];
-    if (mermaid || graphviz)
+    // A pedigree is drawn from its own fence, and from a mermaid block that
+    // starts with `pedigree`: in that case mermaid.init.js registers the
+    // library with mermaid, so it has to be on the page before mermaid is.
+    BOOL pedigreeFence = [d rendererHasPedigree:self]
+        && [self documentUsesAnyLanguage:@[@"pedigree"]];
+    BOOL pedigree = pedigreeFence || (mermaid && [d rendererHasPedigree:self]);
+    if (mermaid || graphviz || pedigreeFence)
     {
         // Before either bootstrap, which both call into it.
         [scripts addObject:[MPScript javaScriptWithURL:
             MPExtensionURL(@"diagram-zoom", @"js")]];
     }
+    if (pedigree)
+        [scripts addObjectsFromArray:self.pedigreeScripts];
     if (mermaid)
         [scripts addObjectsFromArray:self.mermaidScripts];
     if (graphviz)
@@ -718,6 +743,8 @@ NS_INLINE void MPFreeHTMLRenderer(hoedown_renderer *htmlRenderer)
         changed = YES;
     else if ([d rendererHasGraphviz:self] != self.graphviz)
         changed = YES;
+    else if ([d rendererHasPedigree:self] != self.pedigree)
+        changed = YES;
     else if (!MPAreNilableStringsEqual(
             [d rendererHighlightingThemeName:self], self.highlightingThemeName))
         changed = YES;
@@ -745,6 +772,7 @@ NS_INLINE void MPFreeHTMLRenderer(hoedown_renderer *htmlRenderer)
     self.syntaxHighlighting = [delegate rendererHasSyntaxHighlighting:self];
     self.mermaid = [delegate rendererHasMermaid:self];
     self.graphviz = [delegate rendererHasGraphviz:self];
+    self.pedigree = [delegate rendererHasPedigree:self];
     self.highlightingThemeName = [delegate rendererHighlightingThemeName:self];
     self.codeBlockAccesory = [delegate rendererCodeBlockAccesory:self];
 }

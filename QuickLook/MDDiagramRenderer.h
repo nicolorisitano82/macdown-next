@@ -19,6 +19,8 @@ typedef NS_ENUM(NSUInteger, MDDrawingKind) {
     MDDrawingMermaid,
     /// A fence named after one of Graphviz's layout engines.
     MDDrawingGraphviz,
+    /// A ```pedigree fence: a clinical genetic pedigree (pedigree-dsl).
+    MDDrawingPedigree,
     /// `\[…\]` — a formula on a line of its own.
     MDDrawingMathDisplay,
     /// `\(…\)` — a formula inside a line.
@@ -69,6 +71,7 @@ extern NSString *MDSVGWithoutScripts(NSString *svg);
 extern NSString * const MDMermaidResource;   ///< mermaid.min.js
 extern NSString * const MDGraphvizResource;  ///< viz.js
 extern NSString * const MDMathResource;      ///< tex-svg.js
+extern NSString * const MDPedigreeResource;  ///< pedigree.js
 
 
 @interface MDDiagramRenderer : NSObject

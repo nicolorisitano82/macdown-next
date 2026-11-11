@@ -28,6 +28,7 @@
 "Show line numbers" = "Show line numbers";
 "Diagrams" = "Diagrams";
 "Loaded only for documents that contain a diagram." = "Loaded only for documents that contain a diagram.";
+"Pedigree (genetics)" = "Pedigree (genetics)";
 "Math" = "Math";
 "TeX-like math syntax" = "TeX-like math syntax";
 "Use dollar sign ($) as inline delimiter" = "Use dollar sign ($) as inline delimiter";

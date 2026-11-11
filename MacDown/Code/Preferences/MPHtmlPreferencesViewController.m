@@ -380,6 +380,9 @@ static const CGFloat kMPNoteWidth = 400.0;
                             key:@"htmlMermaid"],
         [self checkboxWithTitle:NSLocalizedString(@"Graphviz", @"Preference")
                             key:@"htmlGraphviz"],
+        [self checkboxWithTitle:NSLocalizedString(@"Pedigree (genetics)",
+                                                  @"Preference")
+                            key:@"htmlPedigree"],
         [self noteWithText:NSLocalizedString(
             @"Loaded only for documents that contain a diagram.",
             @"Explains that diagram support costs nothing otherwise")],
