@@ -11,6 +11,14 @@
 // scripts; each drawing in a .macdown-diagram container, in document order,
 // so the export can harvest it; colours follow the system appearance.
 //
+// Edit mode: each drawing has an "✎ Edit" button. The library's visual editor
+// opens in place of the drawing (in a container of its own: the zoom owns
+// clicks and drags on the drawing's), and on Done the new source goes to
+// MacDown through the macdownPedigreeEdit message, with the block's position
+// in the document (data-src, a UTF-8 offset) and the source it started from,
+// so MacDown can check it is replacing what was edited. Only ```pedigree
+// fences: a mermaid block is mermaid's.
+//
 // Written in ES5 on purpose, to match the rest of the bundled extensions.
 
 (function () {
@@ -85,7 +93,88 @@
     // Kept for redrawing when the appearance changes: by then the fence is gone.
     holder.macdownPedigreeSource = source;
     holder.setAttribute("data-pedigree", String(index));
+    // Where the fence starts in the document: hoedown puts it on the <div>
+    // around the <pre> the holder replaced.
+    var wrapper = holder.parentNode;
+    if (wrapper && wrapper.getAttribute && wrapper.getAttribute("data-src") !== null)
+      holder.setAttribute("data-pedigree-src", wrapper.getAttribute("data-src"));
     draw(holder, source, index);
+  }
+
+  /* ---------------------------------------------------------------- edit */
+
+  var STYLE_ID = "macdown-pedigree-edit-style";
+  function injectStyle() {
+    if (document.getElementById(STYLE_ID))
+      return;
+    var style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent =
+      ".macdown-pedigree-edit{position:absolute;top:6px;left:6px;z-index:3;"
+      + "font:12px -apple-system,system-ui,sans-serif;padding:3px 9px;"
+      + "border:1px solid rgba(128,128,128,.5);border-radius:6px;"
+      + "background:rgba(255,255,255,.92);color:#1b1f24;cursor:pointer;"
+      + "opacity:0;transition:opacity .15s ease-in-out}"
+      + ".macdown-diagram:hover .macdown-pedigree-edit,"
+      + ".macdown-pedigree-edit:focus{opacity:1}"
+      + ".macdown-pedigree-editing{margin:1em 0}";
+    document.head.appendChild(style);
+  }
+
+  function canSendEdits() {
+    return !!(window.webkit && window.webkit.messageHandlers
+      && window.webkit.messageHandlers.macdownPedigreeEdit);
+  }
+
+  function addEditButton(holder, source, index) {
+    if (!canSendEdits() || !holder.getAttribute("data-pedigree-src")
+        || typeof Pedigree.attachEditor !== "function")
+      return;
+    injectStyle();
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "macdown-pedigree-edit";
+    button.textContent = language() === "it" ? "\u270E Modifica" : "\u270E Edit";
+    // The zoom pans on mousedown and refits on double-click: keep both away.
+    button.addEventListener("mousedown", function (e) { e.stopPropagation(); });
+    button.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+    button.addEventListener("click", function (e) {
+      e.stopPropagation();
+      e.preventDefault();
+      openEditor(holder, source, index);
+    });
+    holder.appendChild(button);
+  }
+
+  function openEditor(holder, source, index) {
+    var host = document.createElement("div");
+    host.className = "macdown-pedigree-editing";
+    host.pedigreeSource = source;
+    host.pedigreeOptions = { lang: language() };
+    host.dataset.processed = "true";
+    holder.parentNode.replaceChild(host, holder);
+
+    var editor = Pedigree.attachEditor(host);
+    host.addEventListener("pedigree:rendered", function (e) {
+      // The editor's Done: it has just drawn the result into the host.
+      var edited = e.detail && e.detail.source;
+      var fresh = document.createElement("div");
+      fresh.className = "macdown-diagram";
+      fresh.setAttribute("data-pedigree", String(index));
+      fresh.setAttribute("data-pedigree-src", holder.getAttribute("data-pedigree-src"));
+      fresh.macdownPedigreeSource = edited || source;
+      if (host.parentNode)
+        host.parentNode.replaceChild(fresh, host);
+      draw(fresh, fresh.macdownPedigreeSource, index);
+      if (edited && edited.replace(/\s+$/, "") !== source.replace(/\s+$/, "")) {
+        window.webkit.messageHandlers.macdownPedigreeEdit.postMessage({
+          src: Number(holder.getAttribute("data-pedigree-src")),
+          original: source,
+          source: edited
+        });
+      }
+    }, { once: true });
+    editor.open();
   }
 
   function draw(holder, source, index) {
@@ -102,6 +191,7 @@
       var svg = holder.querySelector("svg");
       if (svg && window.MacDownMakeZoomable)
         MacDownMakeZoomable(holder, svg, "pedigree" + index, LAYOUT_WIDTH);
+      addEditButton(holder, source, index);
     } catch (e) {
       holder.className = "macdown-diagram macdown-diagram-error";
       holder.style.height = "";

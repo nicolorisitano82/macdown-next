@@ -1203,6 +1203,8 @@ static const NSTimeInterval kMPScrollHandover = 0.4;
 static const NSTimeInterval kMPTypingQuiet = 1.0;
 static NSString * const kMPMathJaxMessage = @"macdownMathJax";
 static NSString * const kMPDiagramsMessage = @"macdownDiagrams";
+/// A pedigree edited in the preview's visual editor, coming back as source.
+static NSString * const kMPPedigreeEditMessage = @"macdownPedigreeEdit";
 static NSString * const kMPSelectionMessage = @"macdownSelection";
 
 /** Reports scrolling and the page's dimensions back to the document.
@@ -1279,6 +1281,7 @@ static NSString * const kMPScrollReporterSource =
     [content addScriptMessageHandler:self name:kMPScrollMessage];
     [content addScriptMessageHandler:self name:kMPMathJaxMessage];
     [content addScriptMessageHandler:self name:kMPDiagramsMessage];
+    [content addScriptMessageHandler:self name:kMPPedigreeEditMessage];
     [content addScriptMessageHandler:self name:kMPSelectionMessage];
     [content addScriptMessageHandler:self name:MPHoverMessageName];
 
@@ -2476,6 +2479,14 @@ NS_INLINE BOOL MPIsWritingCommandAction(SEL action)
             return;
         self.previewDrivenAt = now;
         [self scrollEditorToPreviewBlock:body[@"block"]];
+        return;
+    }
+
+    if ([message.name isEqualToString:kMPPedigreeEditMessage])
+    {
+        NSDictionary *body = message.body;
+        if ([body isKindOfClass:[NSDictionary class]])
+            [self replacePedigreeEditedInPreview:body];
         return;
     }
 
@@ -5407,6 +5418,64 @@ NS_INLINE NSString *MPMIMETypeForImageURL(NSURL *url)
         }];
         [sheet beginOn:document.windowForSheet];
     }];
+}
+
+
+/** A pedigree edited in the preview, written back into its fence.
+ *
+ * The preview says where the block starts (data-src, a UTF-8 offset into the
+ * text) and what it held when editing began. The text may have moved on
+ * since — typing in the editor does not wait for the preview — so the block
+ * is replaced only if it still holds exactly that: otherwise the edit would
+ * land on somebody's newer words, and a beep is the honest answer. One step
+ * of undo, like any other change.
+ */
+- (void)replacePedigreeEditedInPreview:(NSDictionary *)body
+{
+    NSString *source = body[@"source"];
+    NSString *original = body[@"original"];
+    NSNumber *src = body[@"src"];
+    if (![source isKindOfClass:[NSString class]]
+            || ![original isKindOfClass:[NSString class]]
+            || ![src isKindOfClass:[NSNumber class]] || src.integerValue < 0)
+        return;
+    if (self.readOnly)
+    {
+        NSBeep();
+        return;
+    }
+
+    NSString *text = self.editor.string ?: @"";
+    NSUInteger begin = MPCharacterIndexForUTF8ByteOffset(
+        text, (NSUInteger)src.integerValue);
+    NSRange content = MPFencedBlockContentRange(text, begin);
+    NSCharacterSet *trailing = [NSCharacterSet whitespaceAndNewlineCharacterSet];
+    NSString *(^trimmed)(NSString *) = ^NSString *(NSString *s) {
+        NSUInteger end = s.length;
+        while (end > 0 && [trailing characterIsMember:
+                              [s characterAtIndex:end - 1]])
+            end--;
+        return [s substringToIndex:end];
+    };
+    if (content.location == NSNotFound
+            || ![trimmed([text substringWithRange:content])
+                    isEqualToString:trimmed(original)])
+    {
+        MPNote(@"pedigree: the block changed under the preview edit, not written");
+        NSBeep();
+        return;
+    }
+
+    NSString *replacement = [trimmed(source) stringByAppendingString:@"\n"];
+    if (![self.editor shouldChangeTextInRange:content
+                            replacementString:replacement])
+        return;
+    [self keepAVersionBefore:@"a pedigree edited in the preview"];
+    [self.editor.textStorage replaceCharactersInRange:content
+                                           withString:replacement];
+    [self.editor didChangeText];
+    MPNote(@"pedigree: %lu characters written back from the preview",
+           (unsigned long)replacement.length);
 }
 
 

@@ -79,3 +79,14 @@ extern NSString *MPDiagramBlockForCode(NSString *code);
  */
 extern NSString *MPDiagramInsertionForCode(NSString *code, NSString *text,
                                            NSRange where);
+
+/** Where the inside of the fenced block starting at `begin` lies in `text`.
+ *
+ * `begin` is anywhere on the opening fence's line — what the preview reports
+ * as data-src for a code block. The range runs from the line after the
+ * opening fence to the start of the closing one, line breaks included, so
+ * replacing it keeps both fences. Answers {NSNotFound, 0} when there is no
+ * fence there or it is never closed: a block edited in the preview must not
+ * be written somewhere else.
+ */
+extern NSRange MPFencedBlockContentRange(NSString *text, NSUInteger begin);

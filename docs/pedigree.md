@@ -23,6 +23,28 @@ libreria si registra come tipo di diagramma Mermaid (`registerExternalDiagrams`)
 
 La sintassi completa è nel progetto pedigree-dsl (`STUDIO.md`, `README.md`).
 
+## Modalità edit
+
+Passando sul disegno compare **✎ Modifica**: l'editor visuale di pedigree-dsl si
+apre al posto del disegno (persone, coppie, figli, gemelli, malattie con età
+d'esordio, test genetici, donatori…). Con **Fine** il nuovo testo viene scritto
+nel blocco ` ```pedigree ` del documento, come un'unica modifica annullabile con ⌘Z.
+
+- **Come trova il blocco:** l'anteprima manda il messaggio `macdownPedigreeEdit`
+  con la posizione del blocco nel sorgente (`data-src`, offset UTF-8), il testo di
+  partenza e quello nuovo. `MPFencedBlockContentRange` (`MPDiagramPrompt.m`) trova
+  l'interno del blocco; `-replacePedigreeEditedInPreview:` (`MPDocument.m`) lo
+  sostituisce.
+- **Sicurezza:** il blocco viene sostituito solo se contiene ancora esattamente il
+  testo da cui l'edit è partito. Se nel frattempo è cambiato (hai scritto
+  nell'editor di testo), MacDown emette un bip e non scrive nulla. Nei documenti in
+  sola lettura, lo stesso.
+- **Formattazione:** l'editor riscrive il blocco in forma ordinata, quindi i
+  commenti `%%` e l'allineamento manuale di quel blocco si perdono.
+- **Limiti:** solo i blocchi ` ```pedigree `, non quelli ` ```mermaid `. Se mentre
+  l'editor è aperto l'anteprima si aggiorna (perché scrivi nel testo), l'editor si
+  chiude senza salvare.
+
 ## Dove si vede
 
 | Dove | Come |
@@ -44,7 +66,7 @@ lingua del sistema.
 | File | Cosa |
 |---|---|
 | `MacDown/Resources/Extensions/pedigree.js` | bundle di pedigree-dsl (`dist/pedigree.js`, nessuna dipendenza, `window.Pedigree`) |
-| `MacDown/Resources/Extensions/pedigree.init.js` | disegna i blocchi ` ```pedigree ` |
+| `MacDown/Resources/Extensions/pedigree.init.js` | disegna i blocchi ` ```pedigree ` e apre l'editor |
 | `MacDown/Resources/Extensions/mermaid.init.js` | registra pedigree come tipo Mermaid prima di disegnare |
 | `MPRenderer.m` | `pedigreeScripts`, caricati per i blocchi pedigree e, se la preferenza è attiva, prima di Mermaid |
 

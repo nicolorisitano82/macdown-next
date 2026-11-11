@@ -185,4 +185,42 @@
     XCTAssertTrue([insertion containsString:@"```mermaid"]);
 }
 
+
+#pragma mark - The block a preview edit replaces
+
+- (void)testTheInsideOfAFenceIsFoundFromItsOpeningLine
+{
+    NSString *text = @"Before\n\n```pedigree\npedigree\n a : M\n```\n\nAfter\n";
+    NSUInteger begin = [text rangeOfString:@"```pedigree"].location;
+    NSRange range = MPFencedBlockContentRange(text, begin + 3);
+    XCTAssertEqualObjects([text substringWithRange:range],
+                          @"pedigree\n a : M\n");
+}
+
+- (void)testALongerFenceIsClosedOnlyByAsLongAFence
+{
+    NSString *text = @"````pedigree\npedigree\n```\n a : M\n````\n";
+    NSRange range = MPFencedBlockContentRange(text, 0);
+    XCTAssertEqualObjects([text substringWithRange:range],
+                          @"pedigree\n```\n a : M\n");
+}
+
+- (void)testTildesAndAnEmptyBlock
+{
+    NSString *text = @"~~~pedigree\n~~~\n";
+    NSRange range = MPFencedBlockContentRange(text, 0);
+    XCTAssertEqual(range.location, (NSUInteger)12);
+    XCTAssertEqual(range.length, (NSUInteger)0);
+}
+
+- (void)testNoFenceOrNoClosingIsNotFound
+{
+    XCTAssertEqual(MPFencedBlockContentRange(@"Just prose\n", 0).location,
+                   (NSUInteger)NSNotFound);
+    XCTAssertEqual(MPFencedBlockContentRange(@"```pedigree\na : M\n", 0).location,
+                   (NSUInteger)NSNotFound);
+    XCTAssertEqual(MPFencedBlockContentRange(@"", 0).location,
+                   (NSUInteger)NSNotFound);
+}
+
 @end

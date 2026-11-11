@@ -359,3 +359,44 @@ NSString *MPDiagramInsertionForCode(NSString *code, NSString *text,
         [insertion appendString:@"\n"];
     return insertion;
 }
+
+
+NSRange MPFencedBlockContentRange(NSString *text, NSUInteger begin)
+{
+    NSRange none = NSMakeRange(NSNotFound, 0);
+    if (!text.length || begin >= text.length)
+        return none;
+
+    // The opening line: up to three spaces, then three or more backticks or
+    // tildes. CommonMark closes it with at least as many of the same kind.
+    NSRange opening = [text lineRangeForRange:NSMakeRange(begin, 0)];
+    NSString *line = [text substringWithRange:opening];
+    NSRegularExpression *open = [NSRegularExpression
+        regularExpressionWithPattern:@"^ {0,3}(`{3,}|~{3,})" options:0
+                               error:NULL];
+    NSTextCheckingResult *fence = [open firstMatchInString:line options:0
+                                    range:NSMakeRange(0, line.length)];
+    if (!fence)
+        return none;
+    NSString *marks = [line substringWithRange:[fence rangeAtIndex:1]];
+    NSString *closing = [NSString stringWithFormat:@"^ {0,3}%@{%lu,}[ \\t]*$",
+        [NSRegularExpression escapedPatternForString:
+            [marks substringToIndex:1]], (unsigned long)marks.length];
+    NSRegularExpression *close = [NSRegularExpression
+        regularExpressionWithPattern:closing options:0 error:NULL];
+
+    NSUInteger start = NSMaxRange(opening);
+    NSUInteger at = start;
+    while (at < text.length)
+    {
+        NSRange next = [text lineRangeForRange:NSMakeRange(at, 0)];
+        NSString *candidate = [[text substringWithRange:next]
+            stringByTrimmingCharactersInSet:
+                [NSCharacterSet newlineCharacterSet]];
+        if ([close firstMatchInString:candidate options:0
+                                range:NSMakeRange(0, candidate.length)])
+            return NSMakeRange(start, next.location - start);
+        at = NSMaxRange(next);
+    }
+    return none;
+}

@@ -29,7 +29,9 @@ getting a document out of the app in a shape someone else can open.
   as text (pedigree-dsl: NSGC 2008/2022 symbols, conditions with age at
   onset, genetic test results, key, Italian or English) and is drawn in the
   preview, in exports and in Quick Look. A ` ```mermaid ` block that starts
-  with `pedigree` is drawn too. See [docs/pedigree.md](docs/pedigree.md).
+  with `pedigree` is drawn too. **✎ Edit** on a drawing opens a visual editor
+  in the preview and writes the result back into the fence, as one undo step.
+  See [docs/pedigree.md](docs/pedigree.md).
 * **Zoom and pan on any diagram.** A wide gantt or a large graph is fitted
   to the pane and its labels collide; pinch or ⌃-scroll to magnify, drag to
   pan, double-click to fit again. The zoom survives a refresh, so you keep
