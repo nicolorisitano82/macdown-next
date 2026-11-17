@@ -1,4 +1,4 @@
-/*! pedigree-dsl 1.1.0 | MIT | browser bundle: window.Pedigree (render, editor, formats, genetics) */
+/*! pedigree-dsl 1.2.0 | MIT | browser bundle: window.Pedigree (render, editor, formats, genetics) */
 (() => {
 const __m = {};
 __m.i18n = (() => {
@@ -1293,7 +1293,8 @@ const GENDER_WORD = { M: 'man', F: 'woman', NB: 'non-binary', U: 'unknown' };
 
 /**
  * GA4GH Pedigree conceptual model as JSON: individuals + relationships as
- * (individual, KIN relation, relative) triples. The GA4GH model is still a draft and
+ * (individual, KIN relation, relative) triples, the relation being what the relative
+ * is to the individual (child → isBiologicalMother → mother), as the GA4GH FHIR IG reads it. The GA4GH model is still a draft and
  * fixes no value sets for sex/gender: plain words are used.
  */
 function toGA4GH(model, { id = 'pedigree-1' } = {}) {
@@ -1306,13 +1307,13 @@ function toGA4GH(model, { id = 'pedigree-1' } = {}) {
     const donorFor = (model.links ?? []).filter((l) => l.to === ind.id && ids.has(l.from));
     const { father, mother } = biologicalParents(model, ind.id);
     if (u) for (const p of [u.a, u.b].filter((x) => x && ids.has(x))) {
-      if (ind.adoptedIn) relationships.push(rel(p, 'adoptive', ind.id));
-      else if (p === father) relationships.push(rel(p, 'father', ind.id));
-      else if (p === mother) relationships.push(rel(p, 'mother', ind.id));
+      if (ind.adoptedIn) relationships.push(rel(ind.id, 'adoptive', p));
+      else if (p === father) relationships.push(rel(ind.id, 'father', p));
+      else if (p === mother) relationships.push(rel(ind.id, 'mother', p));
     }
     for (const l of donorFor) {
       const d = model.individuals.get(l.from);
-      relationships.push(rel(l.from, d.surrogate ? 'carrier' : birthSex(d) === 'M' ? 'sperm' : 'ovum', ind.id));
+      relationships.push(rel(ind.id, d.surrogate ? 'carrier' : birthSex(d) === 'M' ? 'sperm' : 'ovum', l.from));
     }
   }
   for (const u of model.unions) {
@@ -1344,22 +1345,141 @@ function toGA4GH(model, { id = 'pedigree-1' } = {}) {
   return { ...out, indexPatients, individuals, relationships };
 }
 
+// ---------------------------------------------------------------- FHIR R4 (GA4GH Pedigree IG)
+const IG = 'http://purl.org/ga4gh/pedigree-fhir-ig/StructureDefinition/';
+const SNOMED = 'http://snomed.info/sct';
+const ONTOLOGY_SYSTEMS = {
+  MONDO: 'http://purl.obolibrary.org/obo/mondo.owl', HP: 'http://human-phenotype-ontology.org',
+  OMIM: 'https://omim.org', ORPHA: 'http://www.orpha.net',
+};
+// deterministic urn:uuid from a string (FNV-1a), so the same pedigree gives the same Bundle
+function uuidFor(text) {
+  const parts = [];
+  for (let k = 0; k < 4; k++) {
+    let hsh = 0x811c9dc5 ^ k;
+    for (let i = 0; i < text.length; i++) { hsh ^= text.charCodeAt(i); hsh = Math.imul(hsh, 0x01000193) >>> 0; }
+    parts.push(hsh.toString(16).padStart(8, '0'));
+  }
+  const hex = parts.join('');
+  return `urn:uuid:${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+const fhirDate = (v) => (/^\d{4}(-\d{2}(-\d{2})?)?$/.test(String(v ?? '')) ? String(v) : null);
+
+/**
+ * FHIR R4 document Bundle following the GA4GH Pedigree FHIR Implementation Guide (0.1.0,
+ * draft): Composition "Pedigree" first (sections proband, reason, individuals,
+ * relationships, other), one Patient per person (PedigreeIndividual), one
+ * FamilyMemberHistory per relationship (PedigreeRelationship, KIN codes), an
+ * AffectedStatus Observation per person and a Condition per condition in the reason
+ * section. Names are left out unless `names: true`.
+ */
+function toFHIR(model, { id = 'pedigree-1', condition = null, names = false, timestamp = new Date().toISOString() } = {}) {
+  const inds = people(model);
+  const ids = new Set(inds.map((i) => i.id));
+  const ref = (kind, key) => uuidFor(`${id}/${kind}/${key}`);
+  const entry = (fullUrl, resource) => ({ fullUrl, resource });
+  const proband = inds.find((i) => i.proband) ?? inds.find((i) => i.consultand) ?? inds[0];
+
+  const patients = inds.map((ind) => {
+    const r = { resourceType: 'Patient', meta: { profile: [`${IG}PedigreeIndividual`] }, identifier: [{ value: ind.id }] };
+    const ext = [];
+    if (ind.assigned || ind.sex === 'NB') {
+      const gi = { M: 'male', F: 'female', NB: 'non-binary', U: 'non-disclose' }[ind.sex];
+      ext.push({ url: 'http://hl7.org/fhir/StructureDefinition/patient-genderIdentity',
+        valueCodeableConcept: { coding: [{ system: 'http://hl7.org/fhir/gender-identity', code: gi }] } });
+    }
+    if (ind.pregnancy) ext.push({ url: `${IG}patient-unborn`, valueBoolean: true });
+    if (ext.length) r.extension = ext;
+    if (names && ind.labels?.[0]) r.name = [{ text: ind.labels[0] }];
+    r.gender = { M: 'male', F: 'female', U: 'unknown' }[birthSex(ind)];
+    if (fhirDate(ind.born)) r.birthDate = fhirDate(ind.born);
+    if (fhirDate(ind.died)) r.deceasedDateTime = fhirDate(ind.died);
+    else if (ind.deceased || ind.stillbirth) r.deceasedBoolean = true;
+    return entry(ref('Patient', ind.id), r);
+  });
+
+  const triples = toGA4GH(model).relationships;
+  const relations = triples.map((t, n) => entry(ref('FamilyMemberHistory', `${n}:${t.individual}:${t.relation.code}:${t.relative}`), {
+    resourceType: 'FamilyMemberHistory',
+    meta: { profile: [`${IG}PedigreeRelationship`] },
+    extension: [{ url: 'http://hl7.org/fhir/StructureDefinition/familymemberhistory-patient-record', valueReference: { reference: ref('Patient', t.relative) } }],
+    status: 'completed',
+    patient: { reference: ref('Patient', t.individual) },
+    relationship: { coding: [{ system: KIN_SYSTEM, code: t.relation.code, display: t.relation.display }] },
+  }));
+
+  const observations = inds.map((ind) => entry(ref('Observation', ind.id), {
+    resourceType: 'Observation',
+    meta: { profile: [`${IG}AffectedStatus`] },
+    status: 'final',
+    code: { coding: [{ system: SNOMED, code: '103309006', display: 'Patient affected' }] },
+    subject: { reference: ref('Patient', ind.id) },
+    valueBoolean: affectedBy(ind, condition),
+  }));
+
+  // the conditions the pedigree is about (reason section); codes when the DSL has them
+  const conditions = [...(model.conditionOrder ?? [])].filter((k) => !condition || k === condition).map((k) => {
+    const text = model.conditions.get(k) || k || model.header?.indication || 'affected';
+    const coding = (model.conditionCodes?.get(k) ?? []).map((c) => {
+      const [prefix, local] = c.split(':');
+      return { system: ONTOLOGY_SYSTEMS[prefix] ?? `urn:curie:${prefix}`, code: prefix === 'HP' || prefix === 'MONDO' ? c : local };
+    });
+    return entry(ref('Condition', k || 'default'), {
+      resourceType: 'Condition',
+      code: { ...(coding.length ? { coding } : {}), text },
+      subject: { reference: ref('Patient', proband?.id) },
+    });
+  });
+
+  const section = (code, title, entries) => ({
+    title, code: { coding: [{ system: 'http://purl.org/ga4gh/pedigree-fhir-ig/CodeSystem/SectionType', code }] },
+    ...(entries.length ? { entry: entries.map((e) => ({ reference: e.fullUrl ?? e })) } : {}),
+  });
+  const composition = {
+    resourceType: 'Composition',
+    meta: { profile: [`${IG}Pedigree`] },
+    status: 'final',
+    type: { coding: [{ system: SNOMED, code: '422432008', display: 'Family history section' }] },
+    ...(proband ? { subject: { reference: ref('Patient', proband.id) } } : {}),
+    date: fhirDate(model.header?.date) ?? timestamp,
+    author: [{ display: model.header?.recordedBy || 'pedigree-dsl' }],
+    title: 'Pedigree',
+    section: [
+      section('proband', 'Proband', proband ? [ref('Patient', proband.id)] : []),
+      section('reason', 'Reason', conditions),
+      section('individuals', 'Individuals', patients),
+      section('relationships', 'Relationships', relations),
+      section('other', 'Other', observations),
+    ],
+  };
+  if (!ids.size) throw new Error('FHIR: the pedigree has no individuals');
+  return {
+    resourceType: 'Bundle',
+    identifier: { system: 'urn:ietf:rfc:3986', value: uuidFor(`${id}/bundle`) },
+    type: 'document',
+    timestamp,
+    entry: [entry(uuidFor(`${id}/Composition`), composition), ...patients, ...relations, ...observations, ...conditions],
+  };
+}
+
 /** One entry point for hosts (CLI, playground). Returns { text, mime, ext, warnings }. */
 const FORMATS = {
   ped: { label: 'PED / PLINK .fam', ext: 'ped', mime: 'text/plain' },
   canrisk: { label: 'CanRisk v4 (BOADICEA)', ext: 'txt', mime: 'text/plain' },
   phenopacket: { label: 'Phenopackets v2 Family (JSON)', ext: 'json', mime: 'application/json' },
   ga4gh: { label: 'GA4GH Pedigree (JSON)', ext: 'json', mime: 'application/json' },
+  fhir: { label: 'FHIR R4 · GA4GH Pedigree IG (JSON)', ext: 'fhir.json', mime: 'application/fhir+json' },
 };
 function exportAs(model, format, options = {}) {
   if (format === 'ped') return { text: toPED(model, options), warnings: [], ...FORMATS.ped };
   if (format === 'canrisk') { const r = toCanRisk(model, options); return { text: r.text, warnings: r.warnings, ...FORMATS.canrisk }; }
   if (format === 'phenopacket') return { text: JSON.stringify(toPhenopacketFamily(model, options), null, 2) + '\n', warnings: [], ...FORMATS.phenopacket };
+  if (format === 'fhir') return { text: JSON.stringify(toFHIR(model, options), null, 2) + '\n', warnings: [], ...FORMATS.fhir };
   if (format === 'ga4gh') return { text: JSON.stringify(toGA4GH(model, options), null, 2) + '\n', warnings: [], ...FORMATS.ga4gh };
   throw new Error(`unknown format '${format}' (${Object.keys(FORMATS).join(', ')})`);
 }
 
-return { birthSex, people, biologicalParents, toPED, pedToDSL, looksLikePED, CANRISK_COLUMNS, canriskColumn, toCanRisk, toPhenopacketFamily, toGA4GH, FORMATS, exportAs };
+return { birthSex, people, biologicalParents, toPED, pedToDSL, looksLikePED, CANRISK_COLUMNS, canriskColumn, toCanRisk, toPhenopacketFamily, toGA4GH, toFHIR, FORMATS, exportAs };
 })();
 
 __m.genetics = (() => {
@@ -1917,7 +2037,23 @@ function layout(model, options = {}) {
     row.forEach((id, i) => { if (i) cx += sep(row[i - 1], id); x.set(id, cx); });
   }
 
-  const unionMid = (u) => (u.b ? (x.get(u.a) + x.get(u.b)) / 2 : x.get(u.a) + stub);
+  // Partners with somebody between them (a third partner, a sibling…): the
+  // partnership line goes over the symbols and the descent drops in the gap
+  // beside the partner with fewer partnerships, not through whoever is between.
+  const isRaised = (u) => !!u.b && gen.get(u.a) === gen.get(u.b)
+    && Math.abs(indexIn.get(u.a) - indexIn.get(u.b)) > 1;
+  const dropPair = (u) => {
+    const p = unionsOf.get(u.a).length > unionsOf.get(u.b).length ? u.b : u.a;
+    const other = p === u.a ? u.b : u.a;
+    const row = rows[gen.get(p)];
+    const n = row[indexIn.get(p) + (indexIn.get(other) > indexIn.get(p) ? 1 : -1)];
+    return [p, n];
+  };
+  const unionMid = (u) => {
+    if (!u.b) return x.get(u.a) + stub;
+    if (isRaised(u)) { const [p, n] = dropPair(u); return (x.get(p) + x.get(n)) / 2; }
+    return (x.get(u.a) + x.get(u.b)) / 2;
+  };
   const kidsCenter = (u) => {
     const xs = kidsOf(u).map((k) => x.get(k));
     return (Math.min(...xs) + Math.max(...xs)) / 2;
@@ -1932,7 +2068,10 @@ function layout(model, options = {}) {
       const p = partnerOf(u, id);
       const side = p ? (x.get(id) < x.get(p) ? -1 : 1) : 0;
       if (p) add(x.get(p) + side * sep(id, p), 2);
-      if (u.children.length) add(kidsCenter(u) + (p ? side * sep(id, p) / 2 : -stub), 1);
+      if (u.children.length) {
+        const off = p && !isRaised(u) ? side * sep(id, p) / 2 : x.get(id) - unionMid(u);
+        add(kidsCenter(u) + off, 1);
+      }
     }
     for (const l of links) if (l.from === id) add(x.get(l.to), 0.5);
     if (!sw) add(x.get(id), 1);
@@ -1962,10 +2101,54 @@ function layout(model, options = {}) {
   const header = HEADER_ORDER.filter((k) => model.header?.[k]).map((k) => [t(lang, `header.${k}`), model.header[k]]);
   const titleH = (model.title ? 34 : 0) + (header.length ? header.length * (o.lineHeight + 2) + 10 : 0);
   const rowY = [];
+  // Raised partnership lines (somebody between the partners): spans that do not
+  // overlap share a level; a row with raised lines gets room above it for them.
+  const lanes = (spans) => {
+    const ends = [];
+    const out = new Map();
+    for (const s of [...spans].sort((p, q) => p.lo - q.lo)) {
+      let j = ends.findIndex((e) => e < s.lo - 6);
+      if (j < 0) { j = ends.length; ends.push(0); }
+      ends[j] = s.hi;
+      out.set(s.i, j);
+    }
+    return { out, count: ends.length };
+  };
+  const raisedLevel = model.unions.map(() => 0);
+  const extraTop = Array(G).fill(0);
+  for (let g = 0; g < G; g++) {
+    const spans = [];
+    model.unions.forEach((u, i) => {
+      if (isRaised(u) && gen.get(u.a) === g) {
+        spans.push({ i, lo: Math.min(x.get(u.a), x.get(u.b)), hi: Math.max(x.get(u.a), x.get(u.b)) });
+      }
+    });
+    if (!spans.length) continue;
+    const { out, count } = lanes(spans);
+    for (const [i, j] of out) raisedLevel[i] = j;
+    extraTop[g] = 14 + 7 * count;
+  }
+  // Sibship lines of different unions over the same children's row: spans that
+  // would overlap (one parent, several partners) go at different heights.
+  const sibLane = model.unions.map(() => 0);
+  const extraGap = Array(G).fill(0);
+  for (let g = 0; g < G; g++) {
+    const spans = [];
+    model.unions.forEach((u, i) => {
+      if (!u.children.length || gen.get(u.children[0].ids[0]) !== g) return;
+      const xs = u.children.map((c) => c.ids.reduce((s, id) => s + x.get(id), 0) / c.ids.length);
+      spans.push({ i, lo: Math.min(unionMid(u), ...xs), hi: Math.max(unionMid(u), ...xs) });
+    });
+    const { out, count } = lanes(spans);
+    for (const [i, j] of out) sibLane[i] = j;
+    extraGap[g] = Math.max(0, count - 3) * 9;
+  }
+
   let y = o.margin + titleH + h + 10;
   for (let g = 0; g < G; g++) {
+    y += extraTop[g];
     rowY.push(y);
-    y += h + labelH[g] + o.vgap + h + 8;
+    y += h + labelH[g] + o.vgap + h + 8 + (extraGap[g + 1] ?? 0);
   }
 
   let minX = Infinity, maxX = -Infinity;
@@ -1997,6 +2180,10 @@ function layout(model, options = {}) {
     rowY,
     unions: model.unions,
     unionLabels,
+    raised: model.unions.map(isRaised),
+    raisedLevel,
+    sibLane,
+    unionDrop: model.unions.map((u) => unionMid(u) + dx),
     links,
     header,
     width: Math.max(maxX + dx + o.margin, 200),
@@ -2336,7 +2523,23 @@ function renderParts(L, { idPrefix = 'ped' } = {}) {
     const a = N(u.a);
     const kids = u.children;
     let mx, startY;
-    if (u.b) {
+    if (u.b && L.raised?.[ui]) {
+      // somebody stands between the partners: the line goes over them
+      const b = N(u.b);
+      const y = a.y - h - 14 - 7 * (L.raisedLevel?.[ui] ?? 0);
+      const d = `M${f(a.x)},${f(topY(a.ind, a.y, h))} V${f(y)} H${f(b.x)} V${f(topY(b.ind, b.y, h))}`;
+      parts.push(`<path class="ln" d="${d}"/>`);
+      if (u.type === 'consanguineous') parts.push(line(Math.min(a.x, b.x), y - 4, Math.max(a.x, b.x), y - 4));
+      hits.push(`<path class="hit" d="${d}"/>`);
+      mx = L.unionDrop[ui];
+      const ulabel = L.unionLabels?.[ui] ?? u.label;
+      if (ulabel) parts.push(`<text class="rel lbl" x="${f((a.x + b.x) / 2)}" y="${f(y - (u.type === 'consanguineous' ? 8 : 4))}" text-anchor="middle">${esc(ulabel)}</text>`);
+      if (u.type === 'divorce') {
+        const sx = mx + (Math.abs(a.x - mx) < Math.abs(b.x - mx) ? 1 : -1) * 14;
+        for (const s of [-3, 3]) parts.push(line(sx + s - 5, y + 8, sx + s + 5, y - 8));
+      }
+      startY = y;
+    } else if (u.b) {
       const b = N(u.b);
       const [l, r] = a.x <= b.x ? [a, b] : [b, a];
       const y = l.y;
@@ -2378,7 +2581,7 @@ function renderParts(L, { idPrefix = 'ped' } = {}) {
     if (!kids.length) return flush();
 
     const childRowTop = Math.min(...kids.flatMap((g) => g.ids).map((id) => N(id).y)) - h;
-    const sibY = childRowTop - Math.min(26, o.vgap * 0.42);
+    const sibY = childRowTop - Math.min(26, o.vgap * 0.42) - 9 * (L.sibLane?.[ui] ?? 0);
     parts.push(line(mx, startY, mx, sibY));
     hits.push(line(mx, startY, mx, sibY, 'hit'));
 
@@ -2850,7 +3053,7 @@ const { anonymize, PRIVACY_LEVELS } = __m.privacy;
 const { describe, describeText } = __m.describe;
 const { toJSON, fromJSON } = __m.json;
 const { kinship, inbreeding, fraction, unionInbreeding, relationship, describeRelationship, checkInheritance, segregation, testedGenes, PATTERNS } = __m.genetics;
-const { toPED, pedToDSL, looksLikePED, toCanRisk, toPhenopacketFamily, toGA4GH, exportAs, FORMATS } = __m.formats;
+const { toPED, pedToDSL, looksLikePED, toCanRisk, toPhenopacketFamily, toGA4GH, toFHIR, exportAs, FORMATS } = __m.formats;
 
 
 
@@ -2894,7 +3097,7 @@ function run({ querySelector = '.pedigree', options = {} } = {}) {
   }
 }
 
-return { parse, layout, render, renderParts, css, serialize, createIndividual, PedigreeSyntaxError, DEFAULTS, pageLang, resolveLang, t, MESSAGES, LANGUAGES, toPED, pedToDSL, looksLikePED, toCanRisk, toPhenopacketFamily, toGA4GH, exportAs, FORMATS, kinship, inbreeding, fraction, unionInbreeding, relationship, describeRelationship, checkInheritance, segregation, testedGenes, PATTERNS, anonymize, PRIVACY_LEVELS, describe, describeText, toJSON, fromJSON, renderPedigree, renderInto, run };
+return { parse, layout, render, renderParts, css, serialize, createIndividual, PedigreeSyntaxError, DEFAULTS, pageLang, resolveLang, t, MESSAGES, LANGUAGES, toPED, pedToDSL, looksLikePED, toCanRisk, toPhenopacketFamily, toGA4GH, toFHIR, exportAs, FORMATS, kinship, inbreeding, fraction, unionInbreeding, relationship, describeRelationship, checkInheritance, segregation, testedGenes, PATTERNS, anonymize, PRIVACY_LEVELS, describe, describeText, toJSON, fromJSON, renderPedigree, renderInto, run };
 })();
 
 __m.editor = (() => {
